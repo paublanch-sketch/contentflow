@@ -7,26 +7,25 @@ const INITIAL_DATA = {
     name: "Entelsat Instalaciones",
     folder: "entelsat",
     posts: [
-      { id: "1", platform: 'IG', headline_visual: 'Rack impecable', copy: 'El orden es eficiencia...', hashtags: [] },
-      { id: "2", platform: 'IG', headline_visual: 'WiFi Hotelero', copy: 'WiFi profesional...', hashtags: [] },
-      { id: "3", platform: 'IG', headline_visual: 'Placas solares', copy: 'Ahorro energético...', hashtags: [] },
-      { id: "4", platform: 'IG', headline_visual: 'Técnico SatFrio', copy: 'Instalación certificada...', hashtags: [] },
-      { id: "5", platform: 'IG', headline_visual: 'App Cámaras', copy: 'Seguridad total...', hashtags: [] },
-      { id: "6", platform: 'IG', headline_visual: 'Gráfico Inverter', copy: 'Ahorra un 40%...', hashtags: [] },
-      { id: "7", platform: 'IG', headline_visual: 'Hotel Costa Sol', copy: 'Partner tecnológico...', hashtags: [] },
-      { id: "8", platform: 'IG', headline_visual: 'Filtros Aire', copy: 'Mantenimiento preventivo...', hashtags: [] },
-      { id: "9", platform: 'IG', headline_visual: 'Cables Peinados', copy: 'Orden y velocidad...', hashtags: [] },
-      { id: "10", platform: 'IG', headline_visual: 'Termostato 24º', copy: 'Confort ideal...', hashtags: [] },
-      { id: "11", platform: 'IG', headline_visual: 'Furgoneta Málaga', copy: 'Cerca de ti...', hashtags: [] },
-      { id: "12", platform: 'IG', headline_visual: '35 Aniversario', copy: 'Conectando confianza...', hashtags: [] }
+      { id: "1", platform: 'IG', headline_visual: 'Rack impecable', copy: 'El orden es eficiencia...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "2", platform: 'IG', headline_visual: 'WiFi Hotelero', copy: 'WiFi profesional...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "3", platform: 'IG', headline_visual: 'Placas solares', copy: 'Ahorro energético...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "4", platform: 'IG', headline_visual: 'Técnico SatFrio', copy: 'Instalación certificada...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "5", platform: 'IG', headline_visual: 'App Cámaras', copy: 'Seguridad total...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "6", platform: 'IG', headline_visual: 'Gráfico Inverter', copy: 'Ahorra un 40%...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "7", platform: 'IG', headline_visual: 'Hotel Costa Sol', copy: 'Partner tecnológico...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "8", platform: 'IG', headline_visual: 'Filtros Aire', copy: 'Mantenimiento preventivo...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "9", platform: 'IG', headline_visual: 'Cables Peinados', copy: 'Orden y velocidad...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "10", platform: 'IG', headline_visual: 'Termostato 24º', copy: 'Confort ideal...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "11", platform: 'IG', headline_visual: 'Furgoneta Málaga', copy: 'Cerca de ti...', hashtags: [], status: 'review', feedback: '', imageUrl: '' },
+      { id: "12", platform: 'IG', headline_visual: '35 Aniversario', copy: 'Conectando confianza...', hashtags: [], status: 'review', feedback: '', imageUrl: '' }
     ]
   },
   astival: {
     name: "Astival",
     folder: "astival",
     posts: [
-      { id: "1", platform: 'IG', headline_visual: 'Post Astival 1', copy: 'Texto Astival...', hashtags: [] },
-      // ... añadir el resto de posts para Astival
+      { id: "1", platform: 'IG', headline_visual: 'Post 1', copy: 'Cargando contenido...', hashtags: [], status: 'review', feedback: '', imageUrl: '' }
     ]
   }
 };
@@ -36,19 +35,17 @@ export default function App() {
   const [clientId, setClientId] = useState<keyof typeof INITIAL_DATA>('entelsat');
   const [isAdmin, setIsAdmin] = useState(true);
 
-  // DETECTAR CLIENTE POR URL
   useEffect(() => {
     const path = window.location.pathname;
     if (path.startsWith('/p/')) {
       const slug = path.split('/')[2] as keyof typeof INITIAL_DATA;
       if (INITIAL_DATA[slug]) {
         setClientId(slug);
-        setIsAdmin(false); // Si entra por /p/ ocultamos el selector
+        setIsAdmin(false);
       }
     }
   }, []);
 
-  // CARGAR DESDE SUPABASE
   useEffect(() => {
     const loadFromCloud = async () => {
       const { data } = await supabase.from('posts').select('*');
@@ -56,7 +53,6 @@ export default function App() {
         setClients(prev => {
           const updated = JSON.parse(JSON.stringify(prev));
           data.forEach(dbPost => {
-            // El ID en la DB debe ser "entelsat-1" para no chocar
             const [clientKey, postId] = dbPost.id.split('-');
             if (updated[clientKey]) {
               const index = updated[clientKey].posts.findIndex((p: any) => p.id === postId);
@@ -78,7 +74,6 @@ export default function App() {
   }, [clientId]);
 
   const handleUpdatePost = async (postId: string, updates: any) => {
-    // 1. UI local
     setClients(prev => ({
       ...prev,
       [clientId]: {
@@ -87,7 +82,6 @@ export default function App() {
       }
     }));
 
-    // 2. Nube (Usamos ID compuesto: entelsat-1)
     const dbId = `${clientId}-${postId}`;
     const postActual = clients[clientId].posts.find(p => p.id === postId);
     
@@ -103,16 +97,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] font-sans">
-      {/* Selector solo para Pau (Admin) */}
       {isAdmin && (
         <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50">
           <div className="flex items-center gap-4">
             <h1 className="font-black text-[#2d6a4f]">CONTENTFLOW</h1>
-            <select 
-              value={clientId} 
-              onChange={(e) => setClientId(e.target.value as any)}
-              className="border p-1 rounded text-sm"
-            >
+            <select value={clientId} onChange={(e) => setClientId(e.target.value as any)} className="border p-1 rounded text-sm">
               {Object.keys(INITIAL_DATA).map(key => (
                 <option key={key} value={key}>{INITIAL_DATA[key as keyof typeof INITIAL_DATA].name}</option>
               ))}
@@ -126,15 +115,10 @@ export default function App() {
         <div className="mb-8 border-l-4 border-[#2d6a4f] pl-4 text-left">
           <h2 className="text-3xl font-bold text-gray-900">{active.name}</h2>
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
-            {isAdmin ? 'Panel de Control' : 'Portal de Aprobación de Contenido'}
+            {isAdmin ? 'Panel de Control' : 'Portal de Aprobación'}
           </p>
         </div>
-
-        <ApprovalWall 
-          posts={active.posts} 
-          clientFolder={active.folder}
-          onUpdatePost={handleUpdatePost} 
-        />
+        <ApprovalWall posts={active.posts} clientFolder={active.folder} onUpdatePost={handleUpdatePost} />
       </div>
     </div>
   );
