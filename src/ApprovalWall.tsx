@@ -5,7 +5,18 @@ import { supabase } from './lib/supabase';
 export default function ApprovalWall({ posts, clientFolder, onUpdatePost }: any) {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
-  // ... (Mantenemos handleUpload igual)
+  const handleUpload = async (postId: string, e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingId(postId);
+    const fileName = `${clientFolder}/post${postId}.png`;
+    const { error } = await supabase.storage.from('post-images').upload(fileName, file, { upsert: true });
+    if (!error) {
+      const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(fileName);
+      onUpdatePost(postId, { imageUrl: urlData.publicUrl });
+    }
+    setUploadingId(null);
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -19,33 +30,32 @@ export default function ApprovalWall({ posts, clientFolder, onUpdatePost }: any)
           }`}>
             <div className="p-4 border-b border-gray-50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
               <span className="text-gray-400">{post.platform}</span>
-              {hasChanges && <span className="text-red-600">⚠ Cambios</span>}
-              {isApproved && <span className="text-green-600">✓ Realizado</span>}
+              {hasChanges && <span className="text-red-600 font-bold tracking-tighter">⚠ Cambios Solicitados</span>}
+              {isApproved && <span className="text-green-600 font-bold tracking-tighter">✓ Post Realizado</span>}
             </div>
 
-            {/* Imagen */}
-            <label className="aspect-square bg-gray-50 flex items-center justify-center cursor-pointer relative group">
+            <label className="aspect-square bg-gray-50 flex items-center justify-center cursor-pointer relative group border-b border-gray-100">
               <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(post.id, e)} />
               {uploadingId === post.id ? <Loader2 className="animate-spin text-[#2d6a4f]" /> : 
                post.imageUrl ? <img src={post.imageUrl} className="w-full h-full object-cover" /> :
                <div className="text-center p-4 text-gray-300"><ImageIcon size={40} className="mx-auto mb-2" /><p className="text-[10px] font-bold">Subir Diseño</p></div>}
             </label>
 
-            <div className="p-6 flex-grow flex flex-col">
+            <div className="p-6 flex-grow flex flex-col text-left">
               {post.feedback && (
                 <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-xl text-xs text-red-800 italic font-medium">
                   "{post.feedback}"
                 </div>
               )}
               
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap text-left mb-6 flex-grow">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap mb-6 flex-grow">
                 {post.copy}
               </p>
 
               {/* BLOQUE DE HASHTAGS (Ahora muy visible) */}
               <div className="flex flex-wrap gap-1.5 pt-4 border-t border-gray-50">
                 {post.hashtags?.map((h: string) => (
-                  <span key={h} className="text-[11px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">
+                  <span key={h} className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                     {h}
                   </span>
                 ))}
