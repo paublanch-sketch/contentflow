@@ -7,28 +7,101 @@ const INITIAL_DATA = {
     name: "Entelsat Instalaciones",
     folder: "entelsat",
     posts: [
-      { id: "1", platform: 'IG', headline_visual: 'Rack impecable', visual_prompt: 'Foto realista de un rack de servidores perfectamente ordenado con cables azules y negros, iluminación LED profesional, estilo tech limpio.', copy: 'El orden es la base de una infraestructura eficiente. Un rack saneado mejora la ventilación y reduce incidencias técnicas. 🌀🔧', hashtags: ['#Entelsat', '#IT', '#Mantenimiento'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "2", platform: 'IG', headline_visual: 'WiFi Hotelero', visual_prompt: 'Ilustración 3D de un hotel moderno con ondas de señal WiFi cubriendo todas las habitaciones, ambiente premium.', copy: 'Instalamos redes profesionales con cobertura total en cada habitación. Garantiza una conexión segura para tus huéspedes. 🏨📶', hashtags: ['#SmartHotel', '#WiFiHotelero', '#CostaDelSol'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "3", platform: 'IG', headline_visual: 'Placas solares', visual_prompt: 'Vista aérea de paneles solares en un tejado residencial bajo el sol de Málaga, alta definición.', copy: '¿Sabías que una comunidad puede ahorrar hasta un 60% en luz? La energía solar es una inversión rentable desde el primer día. ☀️🔋', hashtags: ['#EnergiaSolar', '#Ahorro', '#Sostenibilidad'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "4", platform: 'IG', headline_visual: 'Técnico SatFrio', visual_prompt: 'Técnico instalando un aire acondicionado split en una pared blanca, herramientas a la vista, luz natural.', copy: '35 años de experiencia nos avalan. En SatFrio llevamos el confort a tu hogar con instalaciones certificadas. 🌬️🏠', hashtags: ['#SatFrio', '#Climatizacion', '#ConfortHogar'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "5", platform: 'IG', headline_visual: 'App Cámaras', visual_prompt: 'Mano sosteniendo móvil con una app de seguridad CCTV abierta, fondo de oficina moderna desenfocado.', copy: 'Seguridad inteligente para tu negocio. Controla tus sistemas de CCTV desde cualquier lugar del mundo a través de tu móvil. 🚗🔒', hashtags: ['#Seguridad', '#CCTV', '#SmartBusiness'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "6", platform: 'IG', headline_visual: 'Gráfico Inverter', visual_prompt: 'Infografía comparativa de consumo energético: Motor Inverter vs Tradicional, colores verde y rojo.', copy: 'Ahorra hasta un 40% de luz con tecnología Inverter. Más eficiencia, menos ruido y mayor vida útil para tu equipo. 📉💡', hashtags: ['#AhorroEnergetico', '#Inverter', '#SatFrio'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "7", platform: 'IG', headline_visual: 'Atardecer Costa Sol', visual_prompt: 'Playa de Málaga al atardecer con un hotel de lujo en el horizonte, estilo fotográfico de alta gama.', copy: 'Partner tecnológico de los principales hoteles de la Costa del Sol. Tecnología ICT2 que inspira confianza. 🌊🏨', hashtags: ['#CostaDelSol', '#HotelesMalaga', '#Entelsat'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "8", platform: 'IG', headline_visual: 'Filtros Aire', visual_prompt: 'Close-up de un filtro de aire acondicionado limpio vs uno sucio, resaltando la higiene.', copy: '¿Mal olor al encender el aire? Un mantenimiento preventivo mejora la calidad del aire y optimiza el consumo. 🛠️✨', hashtags: ['#AireLimpio', '#Salud', '#Mantenimiento'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "9", platform: 'IG', headline_visual: 'Cables Peinados', visual_prompt: 'Macro de conectores Ethernet organizados en un panel de parcheo, orden milimétrico.', copy: 'Transformamos el caos en conectividad. Una red bien estructurada es sinónimo de velocidad y seguridad. 🚀🔌', hashtags: ['#Redes', '#InfraestructuraIT', '#Entelsat'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "10", platform: 'IG', headline_visual: 'Termostato 24º', visual_prompt: 'Termostato digital en una pared minimalista marcando 24 grados centígrados, luz suave.', copy: 'El confort ideal está entre 24°C y 26°C. Un uso responsable te permite disfrutar del verano sin sorpresas en la factura. 🌡️✅', hashtags: ['#ConsumoResponsable', '#Confort', '#SatFrio'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "11", platform: 'IG', headline_visual: 'Furgoneta Málaga', visual_prompt: 'Furgoneta de servicio técnico rotulada circulando por una calle con palmeras en Málaga.', copy: 'Equipo técnico profesional siempre cerca de ti en toda la provincia de Málaga. Soluciones rápidas y eficaces. 🚐💨', hashtags: ['#Malaga', '#ServicioTecnico', '#Cercania'], status: 'review', feedback: '', imageUrl: '' },
-      { id: "12", platform: 'IG', headline_visual: '35 Aniversario', visual_prompt: 'Diseño elegante conmemorativo del 35 aniversario, colores azul y dorado, estilo corporativo.', copy: '35 años conectando tecnología y confianza. Gracias por dejarnos formar parte de vuestros proyectos. 🥂🏆', hashtags: ['#Aniversario', '#Trayectoria', '#Entelsat'], status: 'review', feedback: '', imageUrl: '' }
+      { 
+        id: "1", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Rack impecable', 
+        visual_prompt: 'Professional server rack, blue and black ethernet cables perfectly organized with cable ties, cinematic data center lighting, 8k resolution, corporate tech style.',
+        copy: 'El orden es la base de una infraestructura eficiente. Un rack saneado mejora la ventilación y reduce incidencias técnicas. 🌀🔧', 
+        hashtags: ['#Entelsat', '#IT', '#Mantenimiento'] 
+      },
+      { 
+        id: "2", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'WiFi Hotelero', 
+        visual_prompt: 'Modern luxury hotel building at night, glowing digital WiFi signal waves covering all floors, 3d isometric illustration, tech blue colors.',
+        copy: 'Instalamos redes profesionales con cobertura total en cada habitación. Garantiza una conexión segura para tus huéspedes. 🏨📶', 
+        hashtags: ['#SmartHotel', '#WiFiHotelero', '#CostaDelSol'] 
+      },
+      { 
+        id: "3", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Placas solares', 
+        visual_prompt: 'Aerial drone shot of solar panels on a modern house roof, bright sunny day in Malaga, Mediterranean architecture, high contrast, realistic.',
+        copy: '¿Sabías que una comunidad puede ahorrar hasta un 60% en luz? La energía solar es una inversión rentable desde el primer día. ☀️🔋', 
+        hashtags: ['#EnergiaSolar', '#Ahorro', '#Sostenibilidad'] 
+      },
+      { 
+        id: "4", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Técnico SatFrio', 
+        visual_prompt: 'Professional HVAC technician installing a white air conditioning split unit on a living room wall, specialized tools, natural morning light, realistic photography.',
+        copy: '35 años de experiencia nos avalan. En SatFrio llevamos el confort a tu hogar con instalaciones certificadas. 🌬️🏠', 
+        hashtags: ['#SatFrio', '#Climatizacion', '#ConfortHogar'] 
+      },
+      { 
+        id: "5", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'App Cámaras', 
+        visual_prompt: 'Close up of a hand holding a smartphone showing a CCTV security camera app interface, blurred modern office background, sharp focus on screen.',
+        copy: 'Seguridad inteligente para tu negocio. Controla tus sistemas de CCTV desde cualquier lugar del mundo a través de tu móvil. 🚗🔒', 
+        hashtags: ['#Seguridad', '#CCTV', '#SmartBusiness'] 
+      },
+      { 
+        id: "6", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Gráfico Inverter', 
+        visual_prompt: 'Clean infographic design comparing power consumption: Inverter motor vs Traditional motor, green energy savings charts, minimalist style.',
+        copy: 'Ahorra hasta un 40% de luz con tecnología Inverter. Más eficiencia, menos ruido y mayor vida útil para tu equipo. 📉💡', 
+        hashtags: ['#AhorroEnergetico', '#Inverter', '#SatFrio'] 
+      },
+      { 
+        id: "7", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Atardecer Costa Sol', 
+        visual_prompt: 'Cinematic sunset at Marbella beach, luxury hotel silhouette in the background, warm golden hour lighting, high-end travel photography.',
+        copy: 'Partner tecnológico estratégico de los principales hoteles de la Costa del Sol. Tecnología ICT2 que inspira confianza. 🌊🏨', 
+        hashtags: ['#CostaDelSol', '#HotelesMalaga', '#Entelsat'] 
+      },
+      { 
+        id: "8", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Filtros Aire', 
+        visual_prompt: 'Split screen comparison: macro of a dirty dusty air conditioner filter vs a brand new clean white filter, health and hygiene concept.',
+        copy: '¿Mal olor al encender el aire? Un mantenimiento preventivo mejora la calidad del aire y optimiza el consumo. 🛠️✨', 
+        hashtags: ['#AireLimpio', '#Salud', '#Mantenimiento'] 
+      },
+      { 
+        id: "9", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Cables Peinados', 
+        visual_prompt: 'Macro shot of colorful Ethernet patch cables organized in a server rack, perfect symmetry, shallow depth of field, professional IT setup.',
+        copy: 'Transformamos el caos en conectividad. Una red bien estructurada es sinónimo de velocidad y seguridad. 🚀🔌', 
+        hashtags: ['#Redes', '#InfraestructuraIT', '#Entelsat'] 
+      },
+      { 
+        id: "10", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Termostato 24º', 
+        visual_prompt: 'Minimalist smart thermostat on a grey wall showing 24 degrees celsius, soft shadows, modern interior design style.',
+        copy: 'El confort ideal está entre 24°C y 26°C. Un uso responsable te permite disfrutar del verano sin sorpresas en la factura. 🌡️✅', 
+        hashtags: ['#ConsumoResponsable', '#Confort', '#SatFrio'] 
+      },
+      { 
+        id: "11", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: 'Furgoneta Málaga', 
+        visual_prompt: 'White commercial van with corporate branding driving through a sunny Malaga street with palm trees, bright daylight, realistic.',
+        copy: 'Equipo técnico profesional siempre cerca de ti en toda la provincia de Málaga. Soluciones rápidas y eficaces. 🚐💨', 
+        hashtags: ['#Malaga', '#ServicioTecnico', '#Cercania'] 
+      },
+      { 
+        id: "12", platform: 'IG', status: 'review', feedback: '', imageUrl: '',
+        headline_visual: '35 Aniversario', 
+        visual_prompt: 'Elegant corporate celebration background, number 35 in 3D gold, dark blue silk texture, particles of light, premium awards style.',
+        copy: '35 años conectando tecnología y confianza. Gracias por dejarnos formar parte de vuestros proyectos. 🥂🏆', 
+        hashtags: ['#Aniversario', '#Trayectoria', '#Entelsat'] 
+      }
     ]
   },
   astival: {
     name: "Astival",
     folder: "astival",
     posts: [
-      { id: "1", platform: 'IG', headline_visual: 'Oficinas Astival', visual_prompt: 'Foto de fachada de edificio corporativo moderno con cristaleras.', copy: 'En Astival, la excelencia es nuestro estándar diario. 🚀', hashtags: ['#Astival', '#Empresa'], status: 'review', feedback: '', imageUrl: '' }
+      { id: "1", platform: 'IG', headline_visual: 'Oficinas Astival', visual_prompt: 'Modern glass corporate building facade, blue sky reflection, professional business environment.', copy: 'En Astival, la excelencia es nuestro estándar diario. 🚀', hashtags: ['#Astival', '#Empresa'], status: 'review', feedback: '', imageUrl: '' }
     ]
   }
 };
+
 
 export default function App() {
   const [clients, setClients] = useState(INITIAL_DATA);
