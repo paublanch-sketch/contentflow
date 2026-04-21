@@ -88,26 +88,29 @@ export default function App() {
   }, [clientId]);
 
   const handleUpdatePost = async (postId: string, updates: any) => {
-    const isApproving = updates.status === 'approved';
-    const finalUpdates = isApproving ? { ...updates, status: 'published', feedback: '' } : updates;
+  const isApproving = updates.status === 'approved';
+  const finalUpdates = isApproving ? { ...updates, status: 'published', feedback: '' } : updates;
 
-    setClients(prev => ({
-      ...prev,
-      [clientId]: {
-        ...prev[clientId],
-        posts: prev[clientId].posts.map(p => p.id === postId ? { ...p, ...finalUpdates } : p)
-      }
-    }));
+  // Actualizar UI
+  setClients(prev => ({
+    ...prev,
+    [clientId]: {
+      ...prev[clientId],
+      posts: prev[clientId].posts.map(p => p.id === postId ? { ...p, ...finalUpdates } : p)
+    }
+  }));
 
-    const postActual = activeClient.posts.find(p => p.id === postId);
-    await supabase.from('posts').upsert({ 
-      id: `${clientId}-${postId}`, 
-      status: finalUpdates.status,
-      feedback: finalUpdates.feedback,
-      image_url: finalUpdates.imageUrl || postActual?.imageUrl,
-      hashtags: postActual?.hashtags // IMPORTANTE: Guardamos hashtags en la nube
-    });
-  };
+  // Guardar en la tabla 'posts' de Supabase
+  const postActual = clients[clientId].posts.find(p => p.id === postId);
+  await supabase.from('posts').upsert({ 
+    id: `${clientId}-${postId}`, 
+    status: finalUpdates.status,
+    feedback: finalUpdates.feedback,
+    image_url: finalUpdates.imageUrl || postActual?.imageUrl,
+    hashtags: postActual?.hashtags
+  });
+};
+
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] font-sans pb-20">
