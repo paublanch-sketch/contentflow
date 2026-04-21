@@ -12,7 +12,13 @@ dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# ── Seguridad: credenciales y datos sensibles ─────────────────────────────────
+clients_credentials.json
+screenshots/
+*.env
+.env*
+
+# ── Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
