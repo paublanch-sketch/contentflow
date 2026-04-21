@@ -53,21 +53,21 @@ export default function App() {
     const path = window.location.pathname;
     if (path.startsWith('/p/')) {
       const slug = path.split('/')[2] as keyof typeof INITIAL_DATA;
-      if (INITIAL_DATA[slug]) {
-        setClientId(slug);
-        setIsAdmin(false);
-      }
+      if (INITIAL_DATA[slug]) { setClientId(slug); setIsAdmin(false); }
     }
   }, []);
 
+  // CARGA DESDE NUBE
   useEffect(() => {
-    const loadFromCloud = async () => {
+    const load = async () => {
       const { data } = await supabase.from('posts').select('*');
       if (data) {
         setClients(prev => {
           const updated = JSON.parse(JSON.stringify(prev));
           data.forEach(dbPost => {
-            const [cKey, pId] = dbPost.id.split('-');
+            const parts = dbPost.id.split('-');
+            const cKey = parts[0] as keyof typeof INITIAL_DATA;
+            const pId = parts[1];
             if (updated[cKey]) {
               const idx = updated[cKey].posts.findIndex((p: any) => p.id === pId);
               if (idx !== -1) {
@@ -84,33 +84,29 @@ export default function App() {
         });
       }
     };
-    loadFromCloud();
+    load();
   }, [clientId]);
 
   const handleUpdatePost = async (postId: string, updates: any) => {
-  const isApproving = updates.status === 'approved';
-  const finalUpdates = isApproving ? { ...updates, status: 'published', feedback: '' } : updates;
+    const isApproving = updates.status === 'approved';
+    const finalUpdates = isApproving ? { ...updates, status: 'published', feedback: '' } : updates;
 
-  // Actualizar UI
-  setClients(prev => ({
-    ...prev,
-    [clientId]: {
-      ...prev[clientId],
-      posts: prev[clientId].posts.map(p => p.id === postId ? { ...p, ...finalUpdates } : p)
-    }
-  }));
+    setClients(prev => ({
+      ...prev,
+      [clientId]: {
+        ...prev[clientId],
+        posts: prev[clientId].posts.map(p => p.id === postId ? { ...p, ...finalUpdates } : p)
+      }
+    }));
 
-  // Guardar en la tabla 'posts' de Supabase
-  const postActual = clients[clientId].posts.find(p => p.id === postId);
-  await supabase.from('posts').upsert({ 
-    id: `${clientId}-${postId}`, 
-    status: finalUpdates.status,
-    feedback: finalUpdates.feedback,
-    image_url: finalUpdates.imageUrl || postActual?.imageUrl,
-    hashtags: postActual?.hashtags
-  });
-};
-
+    const postActual = activeClient.posts.find(p => p.id === postId);
+    await supabase.from('posts').upsert({ 
+      id: `${clientId}-${postId}`, 
+      status: finalUpdates.status || postActual?.status,
+      feedback: finalUpdates.feedback !== undefined ? finalUpdates.feedback : postActual?.feedback,
+      image_url: finalUpdates.imageUrl || postActual?.imageUrl
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] font-sans pb-20">
@@ -147,4 +143,5 @@ export default function App() {
     </div>
   );
 }
+
 
