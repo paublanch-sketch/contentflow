@@ -341,32 +341,32 @@ function PostCard({
             </>
           )}
 
-          {/* Botón eliminar imagen actual (admin) */}
+          {/* Botón eliminar imagen actual (admin) — siempre visible, z-30 sobre todo */}
           {isAdmin && currentImage && !isScheduled && (
             <button
-              onClick={handleDeleteImage}
-              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={e => { e.stopPropagation(); handleDeleteImage(); }}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 z-30 shadow-md"
               title="Eliminar esta imagen"
-            ><Trash2 size={12} /></button>
+            ><Trash2 size={13} /></button>
           )}
 
-          {/* Overlay para subir/añadir imagen (solo admin) — z-10 para que las flechas del slider (z-20) queden por encima */}
+          {/* Overlay para subir/añadir imagen (solo admin) — pointer-events-none en el fondo para no bloquear botones encima */}
           {isAdmin && !isScheduled && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
               {/* Reemplazar imagen actual */}
-              <label className="cursor-pointer bg-white text-gray-800 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg">
+              <label className="pointer-events-auto cursor-pointer bg-white text-gray-800 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg">
                 <input type="file" className="hidden" accept="image/*"
                   onChange={e => handleFile(post.id, e, imageUrls, 'replace', safeIdx)} />
                 <ImageIcon size={11} /> Reemplazar
               </label>
               <button
                 onClick={() => handleUrl(post.id, imageUrls, 'replace', safeIdx)}
-                className="bg-white text-gray-700 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg border"
+                className="pointer-events-auto bg-white text-gray-700 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg border"
               >
                 <LinkIcon size={11} /> Reemplazar URL
               </button>
               {/* Añadir nueva(s) slide(s) — multiple permite seleccionar varias a la vez */}
-              <label className="cursor-pointer bg-[#2d6a4f] text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-[#1b4332] w-36 justify-center shadow-lg">
+              <label className="pointer-events-auto cursor-pointer bg-[#2d6a4f] text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-[#1b4332] w-36 justify-center shadow-lg">
                 <input type="file" className="hidden" accept="image/*" multiple
                   onChange={e => { handleFile(post.id, e, imageUrls, 'add'); }} />
                 <PlusCircle size={11} /> Añadir slides
@@ -379,15 +379,28 @@ function PostCard({
         {imageUrls.length > 1 && (
           <div className="flex gap-1 p-2 bg-gray-50 overflow-x-auto">
             {imageUrls.map((url, i) => (
-              <button
-                key={url}
-                onClick={() => setCurrentIdx(i)}
-                className={`shrink-0 w-10 h-10 rounded border-2 overflow-hidden transition-all ${
-                  i === safeIdx ? 'border-[#2d6a4f]' : 'border-transparent opacity-60 hover:opacity-100'
-                }`}
-              >
-                <img src={url} className="w-full h-full object-cover" alt={`Slide ${i+1}`} />
-              </button>
+              <div key={url} className="relative shrink-0 group/thumb">
+                <button
+                  onClick={() => setCurrentIdx(i)}
+                  className={`w-10 h-10 rounded border-2 overflow-hidden transition-all block ${
+                    i === safeIdx ? 'border-[#2d6a4f]' : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={url} className="w-full h-full object-cover" alt={`Slide ${i+1}`} />
+                </button>
+                {/* Borrar miniatura (solo admin) */}
+                {isAdmin && !isScheduled && (
+                  <button
+                    onClick={async () => {
+                      const updated = imageUrls.filter((_, idx) => idx !== i);
+                      await onUpdatePost(post.id, { image_url: serializeImageUrls(updated) });
+                      setCurrentIdx(Math.max(0, safeIdx - (i <= safeIdx ? 1 : 0)));
+                    }}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hidden group-hover/thumb:flex z-10 shadow"
+                    title="Eliminar slide"
+                  ><Trash2 size={9} /></button>
+                )}
+              </div>
             ))}
           </div>
         )}
