@@ -228,7 +228,7 @@ export default function App() {
               </a>
             )}
             <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">
-              Interactivos2025
+              Interactivos
             </span>
           </div>
         </nav>
