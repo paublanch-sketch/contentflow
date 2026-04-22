@@ -202,7 +202,7 @@ En TERAFIS & ACTIVA'T somos especialistas en:
     platform: 'IG',
     headline_visual: 'Foto equipo TERAFIS en clínica — texto "32 AÑOS CUIDANDO TU SALUD" con logo',
     visual_prompt: 'Photo of professional physiotherapy team in modern clinic. Warm teal overlay. Bold white text: "32 AÑOS CUIDANDO TU SALUD". Below: "+30.000 PACIENTES TRATADOS". ACTIVA\'T by TERAFIS logo. Trustworthy, warm, professional.',
-    copy: `Por otros 33 años más juntos. 💙
+    copy: `¡Por muchos años más juntos! 💙
 
 Gracias por caminar a nuestro lado.
 
@@ -217,7 +217,7 @@ Mejorar tu salud y recuperar tu bienestar es nuestro objetivo.
 Seguimos. 🙏`,
     hashtags: ['Terafis', 'Activat', 'Aniversario', '32Anos', 'FisioterapiaBarcelona', 'TerapiaIntegrativa', 'CuidatuSalud', 'Bienestar', 'TeCuidamos', 'PobleSec'],
     status: 'review',
-    image_url: '',
+    image_url: 'https://www.canva.com/d/mH5cnAY1ZmOuZvY',
   },
   {
     post_number: 10,
@@ -243,7 +243,7 @@ Porque el mejor ejercicio es el que haces bien.
 🌐 www.terafis.es · 📲 628 626 344`,
     hashtags: ['Activat', 'Fisiopilates', 'EntrenamientoTerapeutico', 'Terafis', 'ReeducacionPostural', 'ReadaptacionDeportiva', 'EjercicioTerapeutico', 'GimnasioBarcelona', 'FisioterapiaBarcelona', 'ActivaTbyTerafis'],
     status: 'review',
-    image_url: '',
+    image_url: 'https://www.canva.com/d/owh5C1iwMGZcq2m',
   },
   {
     post_number: 11,
@@ -265,7 +265,7 @@ Somos especialistas en el abordaje del sistema nervioso autónomo y el eje intes
 📲 Pide tu cita: link en bio.`,
     hashtags: ['EcografiaMusculoesqueletica', 'DiagnosticoDePrecision', 'Terafis', 'NeuromodulacionPercutanea', 'FisioterapiaAvanzada', 'FisioterapiaBarcelona', 'MedicinaIntegrativa', 'TerapiaIntegrativa', 'Activat', 'Traumatologia'],
     status: 'review',
-    image_url: '',
+    image_url: 'https://www.canva.com/d/YpucLVRJ9yHAFx2',
   },
   {
     post_number: 12,
@@ -293,7 +293,7 @@ Para eso ofrecemos:
 ✉ info@terafis.es`,
     hashtags: ['Terafis', 'Activat', 'TuSaludNuestraMision', 'FisioterapiaBarcelona', 'TerapiaIntegrativa', 'SaludIntegral', 'BienestarConTerafis', 'FisioterapiaAvanzada', 'PobleSec', 'CuidatuSalud'],
     status: 'review',
-    image_url: '',
+    image_url: 'https://www.canva.com/d/30VdXK40SVz5-KQ',
   },
 ];
 

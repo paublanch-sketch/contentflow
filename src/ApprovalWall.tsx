@@ -93,11 +93,31 @@ function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
     mode: 'replace' | 'add',
     replaceIdx: number = 0
   ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      await saveToCloud(postId, file, existingUrls, mode, replaceIdx);
-      e.target.value = '';
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (mode === 'add' || files.length > 1) {
+      // Subir todas las fotos seleccionadas como slides nuevas
+      let currentUrls = [...existingUrls];
+      for (let i = 0; i < files.length; i++) {
+        const ts = Date.now() + i;
+        const fileName = `${postId}_${ts}.png`;
+        setUploadingId(postId);
+        const { error } = await supabase.storage
+          .from('post-images')
+          .upload(`${clientId}/${fileName}`, files[i], { upsert: true });
+        if (!error) {
+          const { data } = supabase.storage.from('post-images').getPublicUrl(`${clientId}/${fileName}`);
+          currentUrls = [...currentUrls, `${data.publicUrl}?v=${ts}`];
+        }
+      }
+      await onUpdatePost(postId, { image_url: serializeImageUrls(currentUrls) });
+      setUploadingId(null);
+    } else {
+      // Reemplazar una sola imagen
+      await saveToCloud(postId, files[0], existingUrls, mode, replaceIdx);
     }
+    e.target.value = '';
   };
 
   const handleUrl = async (
@@ -301,21 +321,21 @@ function PostCard({
               )
           }
 
-          {/* Flechas navegación (siempre visibles si hay >1 imagen) */}
+          {/* Flechas navegación (siempre visibles si hay >1 imagen, z-20 para estar por encima del overlay admin) */}
           {imageUrls.length > 1 && (
             <>
               <button
-                onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}
+                onClick={e => { e.stopPropagation(); setCurrentIdx(i => Math.max(0, i - 1)); }}
                 disabled={safeIdx === 0}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/80 disabled:opacity-20 z-10"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 text-white rounded-full p-1.5 hover:bg-black/90 disabled:opacity-20 z-20"
               ><ChevronLeft size={16} /></button>
               <button
-                onClick={() => setCurrentIdx(i => Math.min(imageUrls.length - 1, i + 1))}
+                onClick={e => { e.stopPropagation(); setCurrentIdx(i => Math.min(imageUrls.length - 1, i + 1)); }}
                 disabled={safeIdx === imageUrls.length - 1}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/80 disabled:opacity-20 z-10"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 text-white rounded-full p-1.5 hover:bg-black/90 disabled:opacity-20 z-20"
               ><ChevronRight size={16} /></button>
               {/* Contador */}
-              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
+              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-20">
                 {safeIdx + 1}/{imageUrls.length}
               </span>
             </>
@@ -330,9 +350,9 @@ function PostCard({
             ><Trash2 size={12} /></button>
           )}
 
-          {/* Overlay para subir/añadir imagen (solo admin) */}
+          {/* Overlay para subir/añadir imagen (solo admin) — z-10 para que las flechas del slider (z-20) queden por encima */}
           {isAdmin && !isScheduled && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
               {/* Reemplazar imagen actual */}
               <label className="cursor-pointer bg-white text-gray-800 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg">
                 <input type="file" className="hidden" accept="image/*"
@@ -345,11 +365,11 @@ function PostCard({
               >
                 <LinkIcon size={11} /> Reemplazar URL
               </button>
-              {/* Añadir nueva slide */}
+              {/* Añadir nueva(s) slide(s) — multiple permite seleccionar varias a la vez */}
               <label className="cursor-pointer bg-[#2d6a4f] text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-[#1b4332] w-36 justify-center shadow-lg">
-                <input type="file" className="hidden" accept="image/*"
-                  onChange={e => { handleFile(post.id, e, imageUrls, 'add'); setCurrentIdx(imageUrls.length); }} />
-                <PlusCircle size={11} /> Añadir slide
+                <input type="file" className="hidden" accept="image/*" multiple
+                  onChange={e => { handleFile(post.id, e, imageUrls, 'add'); }} />
+                <PlusCircle size={11} /> Añadir slides
               </label>
             </div>
           )}
