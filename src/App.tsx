@@ -1,6 +1,7 @@
 // ARCHIVO: src/App.tsx
 import { useState, useEffect, useRef } from 'react';
 import ApprovalWall from './ApprovalWall';
+import AdminLogin from './AdminLogin';
 import { supabase } from './lib/supabase';
 import clientsData from './clients.json';
 
@@ -45,6 +46,10 @@ export default function App() {
   const [posts, setPosts]           = useState<Post[]>([]);
   const [loading, setLoading]       = useState(false);
   const [isAdmin, setIsAdmin]       = useState(true);
+  const [isClientPortal, setIsClientPortal] = useState(false);
+  const [adminAuth, setAdminAuth]   = useState<boolean>(
+    () => sessionStorage.getItem('cf_admin_auth') === '1'
+  );
   const [search, setSearch]         = useState('');
   const [showDrop, setShowDrop]     = useState(false);
   const searchRef                   = useRef<HTMLDivElement>(null);
@@ -75,6 +80,7 @@ export default function App() {
   };
 
   // ── Detectar ruta /p/:slug para portal de aprobación del cliente ──
+  // Si NO es /p/:slug → es el panel admin (requiere login)
   useEffect(() => {
     const path = window.location.pathname;
     if (path.startsWith('/p/')) {
@@ -84,9 +90,17 @@ export default function App() {
         setClientId(found.id);
         setSearch(found.name);
         setIsAdmin(false);
+        setIsClientPortal(true);
         return;
       }
+      // Slug no encontrado → no revelar lista de clientes
+      setIsAdmin(false);
+      setIsClientPortal(true);
+      return;
     }
+    // Ruta raíz o cualquier otra → panel admin protegido
+    setIsAdmin(true);
+    setIsClientPortal(false);
     if (CLIENTS.length > 0) {
       setClientId(CLIENTS[0].id);
       setSearch(CLIENTS[0].name);
@@ -136,6 +150,11 @@ export default function App() {
   const activeClient   = CLIENTS.find(c => c.id === clientId);
   const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
   const approvedCount  = posts.filter(p => p.status === 'approved').length;
+
+  // ── Guard: si es panel admin y no hay auth → mostrar login ──
+  if (!isClientPortal && !adminAuth) {
+    return <AdminLogin onLogin={() => setAdminAuth(true)} />;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
