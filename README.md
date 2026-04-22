@@ -1,4 +1,4 @@
-# ContentFlow · Kit Digital J2 · Akira Computer
+# ContentFlow · Kit Digital J2 · Akira Computer / Interactivos2025
 
 Sistema de gestió i aprovació de posts de xarxes socials per a la justificació de la Fase 2 del Kit Digital.
 
@@ -8,14 +8,18 @@ Sistema de gestió i aprovació de posts de xarxes socials per a la justificaci�
 
 | Recurs | URL |
 |---|---|
-| App admin (Pau) | https://contentflow-liard-nine.vercel.app |
-| Portal client | https://contentflow-liard-nine.vercel.app/p/[slug-client] |
+| **App admin** | https://contentflow-liard-nine.vercel.app |
+| **Portal client** | https://contentflow-liard-nine.vercel.app/p/[slug-client] |
 | Supabase Dashboard | https://supabase.com/dashboard/project/afbussamfzqfvozrycsr |
+| Supabase SQL Editor | https://supabase.com/dashboard/project/afbussamfzqfvozrycsr/sql |
 | Repositori GitHub | https://github.com/paublanch-sketch/contentflow |
+| Make.com Escenaris | https://eu1.make.com/1527215/scenarios |
 
-**Exemples d'URL de client:**
-- `natalia-goma-argilaga` → https://contentflow-liard-nine.vercel.app/p/natalia-goma-argilaga
-- `entelsat-instalaciones-y-promociones-integrales-slu` → https://contentflow-liard-nine.vercel.app/p/entelsat-instalaciones-y-promociones-integrales-slu
+**Exemples d'URL de portal client:**
+- Entelsat → https://contentflow-liard-nine.vercel.app/p/entelsat-instalaciones-y-promociones-integrales-slu
+- Natalia Gomà → https://contentflow-liard-nine.vercel.app/p/natalia-goma-argilaga
+
+**Nota accés:** L'app admin no té login — accés per URL directa. El portal client és públic per URL (seguretat per obscuritat). La URL del portal apareix a la navbar admin amb el botó "🔗 Enllaç client".
 
 ---
 
@@ -164,11 +168,32 @@ Vercel redesplega automàticament en 1-2 minuts.
 
 ---
 
+## 🔔 Notificacions Make.com
+
+Quan un client aprova o demana canvis en un post, Make.com envia un email a pau.blanch@interactivos.net.
+
+| Escenari | URL webhook | Estat |
+|---|---|---|
+| ContentFlow Notificació Aprovació | https://hook.eu1.make.com/qlmec519xrgc86oslwykvgsblxfxqr4l | ✅ Actiu |
+| Metricool Publisher | https://hook.eu1.make.com/owpgy88g47ibpstoqt8ktmsg9pek9cs9 | ✅ Actiu |
+
+**Assumpte de l'email:** `ContentFlow · [tipus] · [client] · Post #[número]`
+
+---
+
+## 🎨 Interfície
+
+- **Admin** (https://contentflow-liard-nine.vercel.app) → **Dark theme** (fons negre). Label: "Interactivos2025". Botó "🔗 Enllaç client" a la navbar per copiar l'URL del portal.
+- **Portal client** (/p/[slug]) → Blanc/normal. Ideal per enviar al client per WhatsApp/email.
+
+---
+
 ## 🔐 Seguretat
 
 - `clients_credentials.json` → **mai a GitHub** (gitignored)
 - Conté les credencials d'Instagram/LinkedIn de tots els clients
 - Mantenir còpia de seguretat local
+- Portal client: accés per URL (sense login). Acceptable per a aprovació de posts J2.
 
 ---
 
@@ -185,8 +210,24 @@ Vercel redesplega automàticament en 1-2 minuts.
 
 ---
 
+## ⚠️ Git push bloquejat — com solucionar-ho
+
+Si `git push` falla per `index.lock`, executa des de la terminal:
+
+```bash
+cd ~/[ruta]/AutoRedesSociales/FlowAPP
+rm .git/index.lock
+git add src/App.tsx src/ApprovalWall.tsx
+git commit -m "Dark theme admin, Interactivos2025, portal link, Make notify URL"
+git push
+```
+
+Vercel redesplega automàticament en 1-2 minuts.
+
+---
+
 ## 📋 Clients amb posts generats
 
-- ✅ ENTELSAT INSTALACIONES Y PROMOCIONES INTEGRALES SLU
-- ✅ NATALIA GOMÁ ARGILAGA
-- ⏳ 96 clients pendents
+- ✅ ENTELSAT INSTALACIONES Y PROMOCIONES INTEGRALES SLU → https://contentflow-liard-nine.vercel.app/p/entelsat-instalaciones-y-promociones-integrales-slu
+- ✅ NATALIA GOMÁ ARGILAGA → https://contentflow-liard-nine.vercel.app/p/natalia-goma-argilaga
+- ⏳ 96 clients pendents (veure PENDENTS_J2.md per prioritats)
