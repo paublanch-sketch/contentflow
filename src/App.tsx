@@ -243,7 +243,7 @@ export default function App() {
                 rel="noopener noreferrer"
                 className="text-[10px] font-bold text-[#52b788] border border-[#52b788] px-2 py-0.5 rounded hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest hidden md:block"
               >
-                🔗 Enllaç client
+                🔗 Enlace cliente
               </a>
             )}
             <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">
@@ -255,7 +255,7 @@ export default function App() {
         /* ── Navbar cliente ── */
         <nav className="bg-white border-b p-4 flex justify-center items-center sticky top-0 z-50 shadow-sm">
           <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-xl italic">
-            Portal de Aprovació
+            Portal de Aprobación
           </h1>
         </nav>
       )}

@@ -39,21 +39,29 @@ function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
 
   const saveToCloud = async (postId: string, fileOrBlob: Blob | File) => {
     setUploadingId(postId);
-    const fileName = `${clientId}/${postId}.png`;
+    // Nombre único por timestamp para evitar caché del navegador
+    const ts = Date.now();
+    const fileName = `${clientId}/${postId}_${ts}.png`;
     const { error } = await supabase.storage
       .from('post-images')
       .upload(fileName, fileOrBlob, { upsert: true });
 
     if (!error) {
       const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
-      await onUpdatePost(postId, { image_url: data.publicUrl });
+      // Añadir cache-buster a la URL para forzar recarga en el navegador
+      const url = `${data.publicUrl}?v=${ts}`;
+      await onUpdatePost(postId, { image_url: url });
     }
     setUploadingId(null);
   };
 
   const handleFile = async (postId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) await saveToCloud(postId, file);
+    if (file) {
+      await saveToCloud(postId, file);
+      // Reset input para permitir subir el mismo archivo otra vez
+      e.target.value = '';
+    }
   };
 
   const handleUrl = async (postId: string) => {
