@@ -1,5 +1,5 @@
 // ARCHIVO: src/App.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ApprovalWall from './ApprovalWall';
 import { supabase } from './lib/supabase';
 import clientsData from './clients.json';
@@ -41,10 +41,38 @@ const CLIENTS: Client[] = clientsData as Client[];
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function App() {
-  const [clientId, setClientId]   = useState<string>('');
-  const [posts, setPosts]         = useState<Post[]>([]);
-  const [loading, setLoading]     = useState(false);
-  const [isAdmin, setIsAdmin]     = useState(true);
+  const [clientId, setClientId]     = useState<string>('');
+  const [posts, setPosts]           = useState<Post[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [isAdmin, setIsAdmin]       = useState(true);
+  const [search, setSearch]         = useState('');
+  const [showDrop, setShowDrop]     = useState(false);
+  const searchRef                   = useRef<HTMLDivElement>(null);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDrop(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filteredClients = search.trim()
+    ? CLIENTS.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.id.toLowerCase().includes(search.toLowerCase())
+      )
+    : CLIENTS;
+
+  const selectClient = (id: string) => {
+    setClientId(id);
+    const c = CLIENTS.find(cl => cl.id === id);
+    setSearch(c?.name ?? '');
+    setShowDrop(false);
+  };
 
   // ── Detectar ruta /p/:slug para portal de aprobación del cliente ──
   useEffect(() => {
@@ -54,11 +82,15 @@ export default function App() {
       const found = CLIENTS.find(c => c.id === slug);
       if (found) {
         setClientId(found.id);
+        setSearch(found.name);
         setIsAdmin(false);
         return;
       }
     }
-    if (CLIENTS.length > 0) setClientId(CLIENTS[0].id);
+    if (CLIENTS.length > 0) {
+      setClientId(CLIENTS[0].id);
+      setSearch(CLIENTS[0].name);
+    }
   }, []);
 
   // ── Cargar posts desde Supabase cuando cambia el cliente ──
@@ -112,21 +144,62 @@ export default function App() {
       {/* ── Navbar admin ── */}
       {isAdmin ? (
         <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-          <div className="flex items-center gap-4">
-            <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-lg">
+          <div className="flex items-center gap-3">
+            <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-lg shrink-0">
               ContentFlow
             </h1>
-            <select
-              value={clientId}
-              onChange={e => setClientId(e.target.value)}
-              className="border p-1.5 rounded-lg text-sm font-bold outline-none focus:border-[#2d6a4f] max-w-xs truncate"
-            >
-              {CLIENTS.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+
+            {/* ── Buscador de cliente ── */}
+            <div ref={searchRef} className="relative">
+              <div className="flex items-center border rounded-lg overflow-hidden focus-within:border-[#2d6a4f] bg-white">
+                <span className="pl-2.5 text-gray-400 text-sm">🔍</span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
+                  onFocus={() => setShowDrop(true)}
+                  placeholder="Buscar cliente..."
+                  className="p-1.5 text-sm font-bold outline-none w-64 bg-transparent placeholder-gray-300"
+                />
+                {search && (
+                  <button
+                    onClick={() => { setSearch(''); setShowDrop(true); }}
+                    className="pr-2.5 text-gray-300 hover:text-gray-500 text-xs font-black"
+                  >✕</button>
+                )}
+              </div>
+
+              {/* Dropdown */}
+              {showDrop && filteredClients.length > 0 && (
+                <div className="absolute top-full left-0 mt-1 w-80 bg-white border rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+                  {filteredClients.length === CLIENTS.length && (
+                    <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-300 border-b">
+                      {CLIENTS.length} clientes
+                    </div>
+                  )}
+                  {filteredClients.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => selectClient(c.id)}
+                      className={`w-full text-left px-3 py-2 hover:bg-[#f0faf5] flex items-center gap-2 transition-colors ${
+                        c.id === clientId ? 'bg-[#f0faf5] font-black text-[#2d6a4f]' : 'text-gray-700'
+                      }`}
+                    >
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                        c.platform === 'LI' ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'
+                      }`}>{c.platform}</span>
+                      <span className="text-xs font-semibold truncate">{c.name}</span>
+                    </button>
+                  ))}
+                  {filteredClients.length === 0 && (
+                    <div className="px-3 py-4 text-xs text-gray-400 text-center">Sin resultados</div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {activeClient && (
-              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0 ${
                 activeClient.platform === 'LI'
                   ? 'bg-blue-100 text-blue-700'
                   : 'bg-pink-100 text-pink-700'
