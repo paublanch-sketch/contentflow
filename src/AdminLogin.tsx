@@ -1,30 +1,39 @@
 // ARCHIVO: src/AdminLogin.tsx
 import { useState } from 'react';
 
-// PIN de acceso al panel admin — cámbialo cuando quieras
-const ADMIN_PIN = 'interactivos2026';
+// Credenciales del panel admin
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'interactivos2025';
 
 type Props = {
   onLogin: () => void;
 };
 
 export default function AdminLogin({ onLogin }: Props) {
-  const [pin, setPin]       = useState('');
+  const [user, setUser]     = useState('');
+  const [pass, setPass]     = useState('');
   const [error, setError]   = useState(false);
   const [shake, setShake]   = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === ADMIN_PIN) {
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
       sessionStorage.setItem('cf_admin_auth', '1');
       onLogin();
     } else {
       setError(true);
       setShake(true);
-      setPin('');
+      setPass('');
       setTimeout(() => setShake(false), 500);
     }
   };
+
+  const inputClass = (hasError: boolean) =>
+    `w-full p-3 rounded-lg bg-[#252836] border text-white text-sm font-bold outline-none transition-colors placeholder-gray-600 ${
+      hasError
+        ? 'border-red-500 focus:border-red-400'
+        : 'border-gray-700 focus:border-[#52b788]'
+    }`;
 
   return (
     <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
@@ -44,20 +53,25 @@ export default function AdminLogin({ onLogin }: Props) {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
-            type="password"
-            value={pin}
-            onChange={e => { setPin(e.target.value); setError(false); }}
-            placeholder="Contraseña de acceso"
+            type="text"
+            value={user}
+            onChange={e => { setUser(e.target.value); setError(false); }}
+            placeholder="Usuario"
             autoFocus
-            className={`w-full p-3 rounded-lg bg-[#252836] border text-white text-sm font-bold outline-none transition-colors placeholder-gray-600 ${
-              error
-                ? 'border-red-500 focus:border-red-400'
-                : 'border-gray-700 focus:border-[#52b788]'
-            }`}
+            autoComplete="username"
+            className={inputClass(error)}
+          />
+          <input
+            type="password"
+            value={pass}
+            onChange={e => { setPass(e.target.value); setError(false); }}
+            placeholder="Contraseña"
+            autoComplete="current-password"
+            className={inputClass(error)}
           />
           {error && (
             <p className="text-red-400 text-xs font-bold text-center">
-              Contraseña incorrecta
+              Usuario o contraseña incorrectos
             </p>
           )}
           <button
