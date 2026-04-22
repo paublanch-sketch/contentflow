@@ -7,8 +7,9 @@ import { useState } from 'react';
 import { supabase } from './lib/supabase';
 import type { Post } from './App';
 
-// ─── Configura tu webhook de Make/Zapier aquí ─────────────────────────────────
-const METRICOOL_WEBHOOK_URL = 'https://hook.eu1.make.com/owpgy88g47ibpstoqt8ktmsg9pek9cs9';
+// ─── Webhooks Make.com ────────────────────────────────────────────────────────
+const METRICOOL_WEBHOOK_URL  = 'https://hook.eu1.make.com/owpgy88g47ibpstoqt8ktmsg9pek9cs9';
+const NOTIFY_WEBHOOK_URL     = 'https://hook.eu1.make.com/qlmec519xrgc86oslwykvgsblxfxqr4l';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
 
@@ -16,6 +17,7 @@ const RETRY_DELAY_MS = 1500;
 type Props = {
   posts: Post[];
   clientId: string;
+  clientName: string;
   isAdmin: boolean;
   onUpdatePost: (postId: string, updates: Partial<Post>) => Promise<void>;
 };
@@ -99,12 +101,60 @@ async function callWebhookWithRetry(
   }
 }
 
+// ─── Notificació d'aprovació per email (via Make.com) ────────────────────────
+async function notifyApproval(post: Post, clientName: string) {
+  if (NOTIFY_WEBHOOK_URL.includes('PENDING_SETUP')) return;  // no enviar fins que estigui configurat
+  try {
+    await fetch(NOTIFY_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'approval',
+        client_id: post.client_id,
+        client_name: clientName,
+        post_number: post.post_number,
+        platform: post.platform,
+        copy_preview: post.copy.slice(0, 120) + (post.copy.length > 120 ? '...' : ''),
+        headline_visual: post.headline_visual,
+        portal_url: `${window.location.origin}/p/${post.client_id}`,
+        approved_at: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    // silenciós — la notificació és opcional, no ha de bloquejar l'aprovació
+  }
+}
+
+async function notifyChangesRequested(post: Post, clientName: string, feedback: string) {
+  if (NOTIFY_WEBHOOK_URL.includes('PENDING_SETUP')) return;
+  try {
+    await fetch(NOTIFY_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'changes_requested',
+        client_id: post.client_id,
+        client_name: clientName,
+        post_number: post.post_number,
+        platform: post.platform,
+        feedback,
+        copy_preview: post.copy.slice(0, 120) + (post.copy.length > 120 ? '...' : ''),
+        portal_url: `${window.location.origin}/p/${post.client_id}`,
+        requested_at: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    // silenciós
+  }
+}
+
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
-  post, clientId, isAdmin, onUpdatePost, uploadingId, handleFile, handleUrl
+  post, clientId, clientName, isAdmin, onUpdatePost, uploadingId, handleFile, handleUrl
 }: {
   post: Post;
   clientId: string;
+  clientName: string;
   isAdmin: boolean;
   onUpdatePost: Props['onUpdatePost'];
   uploadingId: string | null;
@@ -269,7 +319,10 @@ function PostCard({
         {!isScheduled && (
           <div className="flex gap-2">
             <button
-              onClick={() => onUpdatePost(post.id, { status: 'approved', feedback: '' })}
+              onClick={async () => {
+                await onUpdatePost(post.id, { status: 'approved', feedback: '' });
+                if (!isAdmin) notifyApproval(post, clientName);
+              }}
               disabled={isApproved}
               className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tighter transition-colors flex items-center justify-center gap-1.5 shadow-sm ${
                 isApproved
@@ -281,9 +334,12 @@ function PostCard({
               {isApproved ? 'Aprobado' : 'Aprobar'}
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const n = prompt('Describe los cambios que necesitas:');
-                if (n) onUpdatePost(post.id, { status: 'changes', feedback: n });
+                if (n) {
+                  await onUpdatePost(post.id, { status: 'changes', feedback: n });
+                  if (!isAdmin) notifyChangesRequested(post, clientName, n);
+                }
               }}
               className="flex-1 py-3 border-2 bg-white text-gray-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
             >
@@ -300,7 +356,7 @@ function PostCard({
 }
 
 // ─── Grid principal ───────────────────────────────────────────────────────────
-export default function ApprovalWall({ posts, clientId, isAdmin, onUpdatePost }: Props) {
+export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onUpdatePost }: Props) {
   const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
 
   return (
@@ -310,6 +366,7 @@ export default function ApprovalWall({ posts, clientId, isAdmin, onUpdatePost }:
           key={post.id}
           post={post}
           clientId={clientId}
+          clientName={clientName}
           isAdmin={isAdmin}
           onUpdatePost={onUpdatePost}
           uploadingId={uploadingId}

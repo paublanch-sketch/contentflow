@@ -139,27 +139,27 @@ export default function App() {
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f7f6f3] font-sans pb-20">
+    <div className={`min-h-screen font-sans pb-20 ${isAdmin ? 'bg-[#0f1117] text-white' : 'bg-[#f7f6f3] text-gray-900'}`}>
 
       {/* ── Navbar admin ── */}
       {isAdmin ? (
-        <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <nav className="bg-[#1a1d27] border-b border-gray-800 p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
           <div className="flex items-center gap-3">
-            <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-lg shrink-0">
+            <h1 className="font-black text-[#52b788] tracking-tighter uppercase text-lg shrink-0">
               ContentFlow
             </h1>
 
             {/* ── Buscador de cliente ── */}
             <div ref={searchRef} className="relative">
-              <div className="flex items-center border rounded-lg overflow-hidden focus-within:border-[#2d6a4f] bg-white">
-                <span className="pl-2.5 text-gray-400 text-sm">🔍</span>
+              <div className="flex items-center border border-gray-700 rounded-lg overflow-hidden focus-within:border-[#52b788] bg-[#252836]">
+                <span className="pl-2.5 text-gray-500 text-sm">🔍</span>
                 <input
                   type="text"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
                   onFocus={() => setShowDrop(true)}
                   placeholder="Buscar cliente..."
-                  className="p-1.5 text-sm font-bold outline-none w-64 bg-transparent placeholder-gray-300"
+                  className="p-1.5 text-sm font-bold outline-none w-64 bg-transparent placeholder-gray-600 text-white"
                 />
                 {search && (
                   <button
@@ -171,9 +171,9 @@ export default function App() {
 
               {/* Dropdown */}
               {showDrop && filteredClients.length > 0 && (
-                <div className="absolute top-full left-0 mt-1 w-80 bg-white border rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-1 w-80 bg-[#1a1d27] border border-gray-700 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
                   {filteredClients.length === CLIENTS.length && (
-                    <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-300 border-b">
+                    <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-700">
                       {CLIENTS.length} clientes
                     </div>
                   )}
@@ -181,18 +181,18 @@ export default function App() {
                     <button
                       key={c.id}
                       onClick={() => selectClient(c.id)}
-                      className={`w-full text-left px-3 py-2 hover:bg-[#f0faf5] flex items-center gap-2 transition-colors ${
-                        c.id === clientId ? 'bg-[#f0faf5] font-black text-[#2d6a4f]' : 'text-gray-700'
+                      className={`w-full text-left px-3 py-2 hover:bg-[#252836] flex items-center gap-2 transition-colors ${
+                        c.id === clientId ? 'bg-[#252836] font-black text-[#52b788]' : 'text-gray-300'
                       }`}
                     >
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                        c.platform === 'LI' ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'
+                        c.platform === 'LI' ? 'bg-blue-900 text-blue-300' : 'bg-pink-900 text-pink-300'
                       }`}>{c.platform}</span>
                       <span className="text-xs font-semibold truncate">{c.name}</span>
                     </button>
                   ))}
                   {filteredClients.length === 0 && (
-                    <div className="px-3 py-4 text-xs text-gray-400 text-center">Sin resultados</div>
+                    <div className="px-3 py-4 text-xs text-gray-500 text-center">Sin resultados</div>
                   )}
                 </div>
               )}
@@ -211,14 +211,24 @@ export default function App() {
           <div className="flex items-center gap-4">
             {posts.length > 0 && (
               <div className="flex gap-3 text-[10px] font-bold uppercase tracking-widest">
-                <span className="text-green-600">{scheduledCount}/12 publicados</span>
+                <span className="text-green-400">{scheduledCount}/12 publicados</span>
                 {approvedCount > 0 && (
-                  <span className="text-amber-500">{approvedCount} listos para publicar</span>
+                  <span className="text-amber-400">{approvedCount} listos para publicar</span>
                 )}
               </div>
             )}
-            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest hidden md:block">
-              Admin: Pau Blanch Mercader
+            {activeClient && (
+              <a
+                href={`https://contentflow-liard-nine.vercel.app/p/${activeClient.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] font-bold text-[#52b788] border border-[#52b788] px-2 py-0.5 rounded hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest hidden md:block"
+              >
+                🔗 Enllaç client
+              </a>
+            )}
+            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">
+              Interactivos
             </span>
           </div>
         </nav>
@@ -226,7 +236,7 @@ export default function App() {
         /* ── Navbar cliente ── */
         <nav className="bg-white border-b p-4 flex justify-center items-center sticky top-0 z-50 shadow-sm">
           <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-xl italic">
-            Portal de Aprobación
+            Portal de Aprovació
           </h1>
         </nav>
       )}
@@ -237,8 +247,8 @@ export default function App() {
         {/* Header de cliente */}
         {activeClient && (
           <div className="mb-8 flex items-start justify-between gap-4">
-            <div className="border-l-4 border-[#2d6a4f] pl-4">
-              <h2 className="text-3xl font-bold text-gray-900 leading-tight">
+            <div className="border-l-4 border-[#52b788] pl-4">
+              <h2 className={`text-3xl font-bold leading-tight ${isAdmin ? 'text-white' : 'text-gray-900'}`}>
                 {activeClient.name}
               </h2>
               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
@@ -249,7 +259,7 @@ export default function App() {
             </div>
             {isAdmin && activeClient.contact && activeClient.contact !== '-' && (
               <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0">
-                <div className="font-bold text-gray-600">{activeClient.contact}</div>
+                <div className="font-bold text-gray-500">{activeClient.contact}</div>
                 {activeClient.email && activeClient.email !== '-' && (
                   <a href={`mailto:${activeClient.email}`} className="hover:text-[#2d6a4f] block">
                     {activeClient.email}
@@ -281,7 +291,7 @@ export default function App() {
         {loading ? (
           <div className="flex items-center justify-center py-40">
             <div className="text-center text-gray-400">
-              <div className="w-10 h-10 border-4 border-[#2d6a4f] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-10 h-10 border-4 border-[#52b788] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-sm font-bold uppercase tracking-widest">Cargando posts...</p>
             </div>
           </div>
@@ -301,6 +311,7 @@ export default function App() {
           <ApprovalWall
             posts={posts}
             clientId={clientId}
+            clientName={activeClient?.name ?? clientId}
             isAdmin={isAdmin}
             onUpdatePost={handleUpdatePost}
           />
