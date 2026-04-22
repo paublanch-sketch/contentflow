@@ -29,7 +29,7 @@ Ya están abiertas las inscripciones para septiembre.
 
 🔗 Link en bio para reservar tu plaza.`,
     hashtags: ['IndigoDJSchool', 'SoldOut', 'CursoDJ', 'EscuelaDJ', 'DJSchool', 'Valladolid', 'FormacionDJ'],
-    status: 'scheduled',
+    status: 'review',
     image_url: '',
   },
   {
