@@ -177,9 +177,10 @@ function PostCard({
     setTimeout(() => setToast(null), 4000);
   };
 
-  const isChanges   = post.status === 'changes';
-  const isApproved  = post.status === 'approved';
-  const isScheduled = post.status === 'scheduled';
+  const isChanges     = post.status === 'changes';
+  const isChangesDone = post.status === 'changes_done';
+  const isApproved    = post.status === 'approved';
+  const isScheduled   = post.status === 'scheduled';
 
   // ── Publicar a Metricool ──
   const handlePublish = async () => {
@@ -215,18 +216,20 @@ function PostCard({
 
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all overflow-hidden shadow-sm flex flex-col ${
-      isChanges   ? 'border-red-400 bg-red-50/20' :
-      isScheduled ? 'border-green-500 bg-green-50/10' :
-      isApproved  ? 'border-amber-400 bg-amber-50/10' :
-                    'border-gray-100'
+      isChanges     ? 'border-red-400 bg-red-50/20' :
+      isChangesDone ? 'border-green-400 bg-green-50/10' :
+      isScheduled   ? 'border-green-500 bg-green-50/10' :
+      isApproved    ? 'border-amber-400 bg-amber-50/10' :
+                      'border-gray-100'
     }`}>
 
       {/* Cabecera de estado */}
       <div className="p-4 border-b border-gray-50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
         <span>{post.platform} · #{post.post_number}</span>
-        {isChanges   && <span className="text-red-600">⚠ Cambios solicitados</span>}
-        {isApproved  && <span className="text-amber-600">✓ Aprobado</span>}
-        {isScheduled && <span className="text-green-600">🚀 Publicado en Metricool</span>}
+        {isChanges     && <span className="text-red-600">⚠ Cambios solicitados</span>}
+        {isChangesDone && <span className="text-green-600">✅ Cambios hechos</span>}
+        {isApproved    && <span className="text-amber-600">✓ Aprobado</span>}
+        {isScheduled   && <span className="text-green-600">🚀 Publicado en Metricool</span>}
         {post.status === 'scheduling' && <span className="text-gray-400 animate-pulse">⏳ Enviando...</span>}
       </div>
 
@@ -273,9 +276,15 @@ function PostCard({
 
       {/* Copy y hashtags */}
       <div className="p-6 flex-grow flex flex-col">
-        {post.feedback && (
+        {post.feedback && isChanges && (
           <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-xl text-xs text-red-800 italic flex gap-2">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            <span>"{post.feedback}"</span>
+          </div>
+        )}
+        {post.feedback && isChangesDone && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-700 italic flex gap-2">
+            <CheckCircle size={14} className="shrink-0 mt-0.5" />
             <span>"{post.feedback}"</span>
           </div>
         )}
@@ -341,18 +350,39 @@ function PostCard({
               <CheckCircle size={12} />
               {isApproved ? 'Aprobado' : 'Aprobar'}
             </button>
-            <button
-              onClick={async () => {
-                const n = prompt('Describe los cambios que necesitas:');
-                if (n) {
-                  await onUpdatePost(post.id, { status: 'changes', feedback: n });
-                  if (!isAdmin) notifyChangesRequested(post, clientName, n);
-                }
-              }}
-              className="flex-1 py-3 border-2 bg-white text-gray-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-            >
-              <MessageSquare size={12} /> Cambios
-            </button>
+            {/* Botón Cambios — toggle entre changes / changes_done / nuevo cambio */}
+            {isChanges ? (
+              <button
+                onClick={async () => {
+                  await onUpdatePost(post.id, { status: 'changes_done' });
+                }}
+                className="flex-1 py-3 bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-600 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle size={12} /> Cambios hechos
+              </button>
+            ) : isChangesDone ? (
+              <button
+                onClick={async () => {
+                  await onUpdatePost(post.id, { status: 'changes' });
+                }}
+                className="flex-1 py-3 border-2 border-green-400 bg-white text-green-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare size={12} /> Ver cambios
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  const n = prompt('Describe los cambios que necesitas:');
+                  if (n) {
+                    await onUpdatePost(post.id, { status: 'changes', feedback: n });
+                    if (!isAdmin) notifyChangesRequested(post, clientName, n);
+                  }
+                }}
+                className="flex-1 py-3 border-2 bg-white text-gray-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare size={12} /> Cambios
+              </button>
+            )}
           </div>
         )}
       </div>

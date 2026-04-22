@@ -6,7 +6,7 @@ import { supabase } from './lib/supabase';
 import clientsData from './clients.json';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-export type PostStatus = 'review' | 'approved' | 'changes' | 'scheduling' | 'scheduled';
+export type PostStatus = 'review' | 'approved' | 'changes' | 'changes_done' | 'scheduling' | 'scheduled';
 
 export type Post = {
   id: string;           // e.g. "entelsat-instalaciones-1"
