@@ -1,11 +1,29 @@
 // ARCHIVO: src/ApprovalWall.tsx
 import {
   CheckCircle, MessageSquare, Image as ImageIcon,
-  Link as LinkIcon, Loader2, AlertCircle, Sparkles, Send
+  Link as LinkIcon, Loader2, AlertCircle, Sparkles, Send,
+  ChevronLeft, ChevronRight, Trash2, PlusCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import { supabase } from './lib/supabase';
 import type { Post } from './App';
+
+// ─── Helpers para carrusel de imágenes ───────────────────────────────────────
+// image_url puede ser: "" | "https://..." | '["url1","url2"]'
+function parseImageUrls(raw: string): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+  } catch {}
+  return [raw];
+}
+function serializeImageUrls(urls: string[]): string {
+  const clean = urls.filter(Boolean);
+  if (clean.length === 0) return '';
+  if (clean.length === 1) return clean[0];
+  return JSON.stringify(clean);
+}
 
 // ─── Webhooks Make.com ────────────────────────────────────────────────────────
 const METRICOOL_WEBHOOK_URL  = 'https://hook.eu1.make.com/owpgy88g47ibpstoqt8ktmsg9pek9cs9';
@@ -37,9 +55,15 @@ function Toast({ msg, type }: { msg: string; type: 'ok' | 'err' }) {
 function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
-  const saveToCloud = async (postId: string, fileOrBlob: Blob | File) => {
+  // mode: 'replace' sustituye la imagen actual del carrusel, 'add' añade una nueva slide
+  const saveToCloud = async (
+    postId: string,
+    fileOrBlob: Blob | File,
+    existingUrls: string[],
+    mode: 'replace' | 'add',
+    replaceIdx: number = 0
+  ) => {
     setUploadingId(postId);
-    // Nombre único por timestamp para evitar caché del navegador
     const ts = Date.now();
     const fileName = `${clientId}/${postId}_${ts}.png`;
     const { error } = await supabase.storage
@@ -48,29 +72,46 @@ function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
 
     if (!error) {
       const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
-      // Añadir cache-buster a la URL para forzar recarga en el navegador
-      const url = `${data.publicUrl}?v=${ts}`;
-      await onUpdatePost(postId, { image_url: url });
+      const newUrl = `${data.publicUrl}?v=${ts}`;
+      let updatedUrls: string[];
+      if (mode === 'add') {
+        updatedUrls = [...existingUrls, newUrl];
+      } else {
+        updatedUrls = existingUrls.length > 0
+          ? existingUrls.map((u, i) => i === replaceIdx ? newUrl : u)
+          : [newUrl];
+      }
+      await onUpdatePost(postId, { image_url: serializeImageUrls(updatedUrls) });
     }
     setUploadingId(null);
   };
 
-  const handleFile = async (postId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (
+    postId: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+    existingUrls: string[],
+    mode: 'replace' | 'add',
+    replaceIdx: number = 0
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      await saveToCloud(postId, file);
-      // Reset input para permitir subir el mismo archivo otra vez
+      await saveToCloud(postId, file, existingUrls, mode, replaceIdx);
       e.target.value = '';
     }
   };
 
-  const handleUrl = async (postId: string) => {
-    const url = prompt('Pega la URL de la imagen para clonarla:');
+  const handleUrl = async (
+    postId: string,
+    existingUrls: string[],
+    mode: 'replace' | 'add',
+    replaceIdx: number = 0
+  ) => {
+    const url = prompt('Pega la URL de la imagen:');
     if (!url) return;
     setUploadingId(postId);
     try {
       const blob = await fetch(url).then(r => r.blob());
-      await saveToCloud(postId, blob);
+      await saveToCloud(postId, blob, existingUrls, mode, replaceIdx);
     } catch {
       alert('CORS Error: Esta web bloquea el acceso directo. Descarga la imagen y súbela desde PC.');
       setUploadingId(null);
@@ -166,8 +207,8 @@ function PostCard({
   isAdmin: boolean;
   onUpdatePost: Props['onUpdatePost'];
   uploadingId: string | null;
-  handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleUrl: (id: string) => void;
+  handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
+  handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
 }) {
   const [scheduling, setScheduling] = useState(false);
   const [toast, setToast]           = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
@@ -181,6 +222,18 @@ function PostCard({
   const isChangesDone = post.status === 'changes_done';
   const isApproved    = post.status === 'approved';
   const isScheduled   = post.status === 'scheduled';
+
+  // ── Carrusel de imágenes ──
+  const imageUrls = parseImageUrls(post.image_url);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const safeIdx = imageUrls.length > 0 ? Math.min(currentIdx, imageUrls.length - 1) : 0;
+  const currentImage = imageUrls[safeIdx] ?? null;
+
+  const handleDeleteImage = async () => {
+    const updated = imageUrls.filter((_, i) => i !== safeIdx);
+    await onUpdatePost(post.id, { image_url: serializeImageUrls(updated) });
+    setCurrentIdx(Math.max(0, safeIdx - 1));
+  };
 
   // ── Publicar a Metricool ──
   const handlePublish = async () => {
@@ -233,13 +286,13 @@ function PostCard({
         {post.status === 'scheduling' && <span className="text-gray-400 animate-pulse">⏳ Enviando...</span>}
       </div>
 
-      {/* Imagen */}
+      {/* Imagen / Carrusel */}
       <div className="flex flex-col border-b border-gray-100">
         <div className="aspect-square bg-gray-50 flex items-center justify-center relative group">
           {uploadingId === post.id
             ? <Loader2 className="animate-spin text-[#2d6a4f]" />
-            : post.image_url
-              ? <img src={post.image_url} className="w-full h-full object-cover" alt="Post" />
+            : currentImage
+              ? <img key={currentImage} src={currentImage} className="w-full h-full object-cover" alt="Post" />
               : (
                 <div className="text-center p-4 text-gray-300">
                   <ImageIcon size={40} className="mx-auto mb-2" />
@@ -247,22 +300,78 @@ function PostCard({
                 </div>
               )
           }
-          {/* Overlay para subir imagen */}
-          {!isScheduled && (
+
+          {/* Flechas navegación (siempre visibles si hay >1 imagen) */}
+          {imageUrls.length > 1 && (
+            <>
+              <button
+                onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}
+                disabled={safeIdx === 0}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/80 disabled:opacity-20 z-10"
+              ><ChevronLeft size={16} /></button>
+              <button
+                onClick={() => setCurrentIdx(i => Math.min(imageUrls.length - 1, i + 1))}
+                disabled={safeIdx === imageUrls.length - 1}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/80 disabled:opacity-20 z-10"
+              ><ChevronRight size={16} /></button>
+              {/* Contador */}
+              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
+                {safeIdx + 1}/{imageUrls.length}
+              </span>
+            </>
+          )}
+
+          {/* Botón eliminar imagen actual (admin) */}
+          {isAdmin && currentImage && !isScheduled && (
+            <button
+              onClick={handleDeleteImage}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Eliminar esta imagen"
+            ><Trash2 size={12} /></button>
+          )}
+
+          {/* Overlay para subir/añadir imagen (solo admin) */}
+          {isAdmin && !isScheduled && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <label className="cursor-pointer bg-white text-gray-800 px-4 py-2 rounded-lg text-[10px] font-bold flex items-center gap-2 hover:bg-gray-100 w-32 justify-center shadow-lg">
-                <input type="file" className="hidden" accept="image/*" onChange={e => handleFile(post.id, e)} />
-                <ImageIcon size={12} /> Desde PC
+              {/* Reemplazar imagen actual */}
+              <label className="cursor-pointer bg-white text-gray-800 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg">
+                <input type="file" className="hidden" accept="image/*"
+                  onChange={e => handleFile(post.id, e, imageUrls, 'replace', safeIdx)} />
+                <ImageIcon size={11} /> Reemplazar
               </label>
               <button
-                onClick={() => handleUrl(post.id)}
-                className="bg-[#2d6a4f] text-white px-4 py-2 rounded-lg text-[10px] font-bold flex items-center gap-2 hover:bg-[#1b4332] w-32 justify-center shadow-lg"
+                onClick={() => handleUrl(post.id, imageUrls, 'replace', safeIdx)}
+                className="bg-white text-gray-700 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg border"
               >
-                <LinkIcon size={12} /> URL
+                <LinkIcon size={11} /> Reemplazar URL
               </button>
+              {/* Añadir nueva slide */}
+              <label className="cursor-pointer bg-[#2d6a4f] text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-[#1b4332] w-36 justify-center shadow-lg">
+                <input type="file" className="hidden" accept="image/*"
+                  onChange={e => { handleFile(post.id, e, imageUrls, 'add'); setCurrentIdx(imageUrls.length); }} />
+                <PlusCircle size={11} /> Añadir slide
+              </label>
             </div>
           )}
         </div>
+
+        {/* Miniaturas del carrusel */}
+        {imageUrls.length > 1 && (
+          <div className="flex gap-1 p-2 bg-gray-50 overflow-x-auto">
+            {imageUrls.map((url, i) => (
+              <button
+                key={url}
+                onClick={() => setCurrentIdx(i)}
+                className={`shrink-0 w-10 h-10 rounded border-2 overflow-hidden transition-all ${
+                  i === safeIdx ? 'border-[#2d6a4f]' : 'border-transparent opacity-60 hover:opacity-100'
+                }`}
+              >
+                <img src={url} className="w-full h-full object-cover" alt={`Slide ${i+1}`} />
+              </button>
+            ))}
+          </div>
+        )}
+
 
         {/* Prompt de imagen */}
         <div className="p-3 bg-gray-50/50 border-t border-gray-100">
