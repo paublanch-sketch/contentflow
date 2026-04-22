@@ -1,73 +1,192 @@
-# React + TypeScript + Vite
+# ContentFlow · Kit Digital J2 · Akira Computer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de gestió i aprovació de posts de xarxes socials per a la justificació de la Fase 2 del Kit Digital.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🌐 URLs clau
 
-## React Compiler
+| Recurs | URL |
+|---|---|
+| App admin (Pau) | https://contentflow-liard-nine.vercel.app |
+| Portal client | https://contentflow-liard-nine.vercel.app/p/[slug-client] |
+| Supabase Dashboard | https://supabase.com/dashboard/project/afbussamfzqfvozrycsr |
+| Repositori GitHub | https://github.com/paublanch-sketch/contentflow |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Exemples d'URL de client:**
+- `natalia-goma-argilaga` → https://contentflow-liard-nine.vercel.app/p/natalia-goma-argilaga
+- `entelsat-instalaciones-y-promociones-integrales-slu` → https://contentflow-liard-nine.vercel.app/p/entelsat-instalaciones-y-promociones-integrales-slu
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🔄 Flux de treball complet
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+1. Pau demana posts per a un client a Claude
+       ↓
+2. Claude llegeix /Clientes/[NOM_CLIENT]/info.txt + sociales.txt
+       ↓
+3. Claude genera 12 posts únics (sense repetir temes del sociales.txt)
+       ↓
+4. Claude lliura fitxer SQL  →  Pau l'executa al Supabase SQL Editor
+       ↓
+5. Posts apareixen a l'app immediatament (status: 'review')
+       ↓
+6. Pau envia la URL del portal al client per WhatsApp / email
+       ↓
+7. Client obre la URL, veu els posts i fa clic a "Aprovar" o "Cambios"
+       ↓
+8. Pau veu els aprovats al panel admin i clica "Publicar a Metricool"
+       ↓
+9. Webhook Make.com rep les dades → publica a Metricool → xarxa social
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📁 Estructura de carpetes
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+AutoRedesSociales/
+├── FlowAPP/                        ← App React + scripts Python
+│   ├── src/
+│   │   ├── App.tsx                 ← App principal (admin + portal client)
+│   │   ├── ApprovalWall.tsx        ← Mur d'aprovació
+│   │   └── clients.json            ← Llista de clients (auto-generat)
+│   ├── supabase_schema.sql         ← Schema BD (executar 1 cop)
+│   ├── generate_clients_json.py    ← Regenera clients.json des d'info.txt
+│   ├── instagram_publisher.py      ← Auto-publicació Instagram via Playwright
+│   └── clients_credentials.json   ← Credencials (LOCAL, mai a GitHub!)
+│
+└── Clientes/                       ← Carpeta de clients
+    └── [NOM CLIENT]/
+        ├── info.txt                ← Dades del client (obligatori)
+        ├── sociales.txt            ← Historial de posts (per no repetir)
+        ├── seo.txt                 ← Keywords SEO (opcional)
+        └── brief.txt               ← Brief de productes/serveis (opcional)
+```
+
+---
+
+## 🗄️ Supabase
+
+**Credencials de connexió:**
+```
+URL:  https://afbussamfzqfvozrycsr.supabase.co
+KEY:  sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg
+```
+
+**Taula `posts` — camps:**
+| Camp | Tipus | Descripció |
+|---|---|---|
+| id | TEXT | `[slug-client]-[1..12]` |
+| client_id | TEXT | Slug del client |
+| post_number | INT | 1 a 12 |
+| platform | TEXT | `IG` o `LI` |
+| headline_visual | TEXT | Idea de la imatge / disseny |
+| visual_prompt | TEXT | Prompt per IA (Midjourney / DALL-E) |
+| copy | TEXT | Text del post |
+| hashtags | TEXT[] | Array de hashtags |
+| status | TEXT | `review` → `approved` → `scheduling` → `scheduled` |
+| feedback | TEXT | Comentari del client si demana canvis |
+| image_url | TEXT | URL pública (Supabase Storage) |
+| webhook_sent_at | TIMESTAMPTZ | Quan s'ha enviat a Metricool |
+
+**Status flow:**
+```
+review  →  approved  →  scheduling  →  scheduled
+  (client aprova)   (Pau clica publicar)  (enviat a Metricool ✓)
+          ↘  changes  (client demana canvis)
+```
+
+---
+
+## ➕ Afegir posts per a un client
+
+### Pas 1 — Generar posts (Claude)
+Demana a Claude: *"genera els 12 posts per a [NOM CLIENT]"*
+
+Claude llegeix la carpeta i genera un fitxer `.sql`.
+
+### Pas 2 — Executar SQL a Supabase
+1. Obre https://supabase.com/dashboard/project/afbussamfzqfvozrycsr/sql
+2. Pega el SQL generat
+3. Clic a **Run**
+
+### Pas 3 — Enviar URL al client
+```
+Hola [NOM],
+
+Aquí tens els teus 12 posts per revisar i aprovar:
+👉 https://contentflow-liard-nine.vercel.app/p/[slug-client]
+
+Revisa'ls i marca cada un com "Aprovat" o "Canvis" directament a la web.
+Gràcies!
+```
+
+---
+
+## 📲 Auto-publicació Instagram (Playwright local)
+
+```bash
+# Publicar tots els aprovats d'un client
+python3 instagram_publisher.py --client [slug-client]
+
+# Publicar un post concret
+python3 instagram_publisher.py --post-id [slug-client]-3
+
+# Dry-run (simula sense publicar, fa screenshot)
+python3 instagram_publisher.py --client [slug-client] --dry-run
+```
+
+**Requisits:**
+```bash
+pip install playwright supabase
+playwright install chromium
+```
+
+⚠️ El script **sempre demana confirmació manual** ("SI") abans de publicar.
+
+---
+
+## 🔄 Regenerar clients.json
+
+Quan s'afegeix un client o es canvia un info.txt:
+
+```bash
+cd FlowAPP
+python3 generate_clients_json.py
+git add src/clients.json
+git commit -m "update clients"
+git push
+```
+
+Vercel redesplega automàticament en 1-2 minuts.
+
+---
+
+## 🔐 Seguretat
+
+- `clients_credentials.json` → **mai a GitHub** (gitignored)
+- Conté les credencials d'Instagram/LinkedIn de tots els clients
+- Mantenir còpia de seguretat local
+
+---
+
+## 🛠️ Stack tècnic
+
+| Capa | Tecnologia |
+|---|---|
+| Frontend | React + TypeScript + Tailwind (Vite) |
+| Hosting | Vercel (auto-deploy des de GitHub `main`) |
+| Base de dades | Supabase (PostgreSQL) |
+| Imatges | Supabase Storage (`post-images` bucket, públic) |
+| Auto-publicació | Playwright Python (local, 0€) |
+| Scheduling | Make.com webhook → Metricool |
+
+---
+
+## 📋 Clients amb posts generats
+
+- ✅ ENTELSAT INSTALACIONES Y PROMOCIONES INTEGRALES SLU
+- ✅ NATALIA GOMÁ ARGILAGA
+- ⏳ 96 clients pendents
