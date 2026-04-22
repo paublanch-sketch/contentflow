@@ -406,14 +406,16 @@ function PostCard({
         )}
 
 
-        {/* Prompt de imagen */}
-        <div className="p-3 bg-gray-50/50 border-t border-gray-100">
-          <div className="flex items-center gap-1.5 mb-1 text-[9px] font-bold text-[#2d6a4f] uppercase tracking-widest">
-            <Sparkles size={10} /> Idea de imagen:
+        {/* Prompt de imagen — solo admin */}
+        {isAdmin && (
+          <div className="p-3 bg-gray-50/50 border-t border-gray-100">
+            <div className="flex items-center gap-1.5 mb-1 text-[9px] font-bold text-[#2d6a4f] uppercase tracking-widest">
+              <Sparkles size={10} /> Idea de imagen:
+            </div>
+            <p className="text-[10px] text-gray-500 italic leading-tight">{post.headline_visual}</p>
+            <p className="text-[9px] text-gray-400 leading-tight mt-1">{post.visual_prompt}</p>
           </div>
-          <p className="text-[10px] text-gray-500 italic leading-tight">{post.headline_visual}</p>
-          <p className="text-[9px] text-gray-400 leading-tight mt-1">{post.visual_prompt}</p>
-        </div>
+        )}
       </div>
 
       {/* Copy y hashtags */}
