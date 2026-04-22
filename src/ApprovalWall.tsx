@@ -361,14 +361,28 @@ function PostCard({
                 <CheckCircle size={12} /> Cambios hechos
               </button>
             ) : isChangesDone ? (
-              <button
-                onClick={async () => {
-                  await onUpdatePost(post.id, { status: 'changes' });
-                }}
-                className="flex-1 py-3 border-2 border-green-400 bg-white text-green-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-              >
-                <MessageSquare size={12} /> Ver cambios
-              </button>
+              <div className="flex flex-col gap-2 flex-1">
+                <button
+                  onClick={async () => {
+                    await onUpdatePost(post.id, { status: 'changes' });
+                  }}
+                  className="w-full py-3 border-2 border-green-400 bg-white text-green-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <MessageSquare size={12} /> Ver cambios
+                </button>
+                <button
+                  onClick={async () => {
+                    const n = prompt('Describe los nuevos cambios que necesitas:');
+                    if (n) {
+                      await onUpdatePost(post.id, { status: 'changes', feedback: n });
+                      if (!isAdmin) notifyChangesRequested(post, clientName, n);
+                    }
+                  }}
+                  className="w-full py-2 bg-white text-gray-400 rounded-xl text-[10px] font-bold uppercase tracking-tighter hover:bg-red-50 hover:text-red-500 hover:border-red-300 border-2 border-gray-200 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <MessageSquare size={10} /> Pedir más cambios
+                </button>
+              </div>
             ) : (
               <button
                 onClick={async () => {
