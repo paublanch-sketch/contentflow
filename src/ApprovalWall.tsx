@@ -455,8 +455,14 @@ function PostCard({
             <button
               onClick={async () => {
                 const downloadBlob = async (url: string, filename: string) => {
+                  // Para URLs de Supabase Storage, añadir ?download para forzar Content-Disposition
+                  const isSupabase = url.includes('supabase.co/storage');
+                  const dlUrl = isSupabase
+                    ? (url.includes('?') ? `${url}&download=${filename}` : `${url}?download=${filename}`)
+                    : url;
                   try {
-                    const res = await fetch(url);
+                    const res = await fetch(dlUrl, { mode: 'cors', credentials: 'omit' });
+                    if (!res.ok) throw new Error('fetch failed');
                     const blob = await res.blob();
                     const blobUrl = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -465,15 +471,15 @@ function PostCard({
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
                   } catch {
-                    // fallback: abrir en nueva pestaña
+                    // fallback: abrir en nueva pestaña (el usuario puede guardar manualmente)
                     window.open(url, '_blank');
                   }
                 };
                 for (let i = 0; i < imageUrls.length; i++) {
                   await downloadBlob(imageUrls[i], `${post.id}_${i + 1}.jpg`);
-                  if (i < imageUrls.length - 1) await new Promise(r => setTimeout(r, 500));
+                  if (i < imageUrls.length - 1) await new Promise(r => setTimeout(r, 800));
                 }
               }}
               className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 text-gray-600 hover:text-purple-700 transition-colors"
