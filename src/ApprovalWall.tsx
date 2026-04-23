@@ -419,6 +419,63 @@ function PostCard({
         )}
       </div>
 
+      {/* Botones de utilidad admin: copiar texto, copiar hashtags, descargar imágenes */}
+      {isAdmin && (
+        <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(post.copy);
+              const btn = document.activeElement as HTMLButtonElement;
+              const orig = btn.textContent;
+              btn.textContent = '✅ Copiado';
+              setTimeout(() => { if (btn) btn.textContent = orig; }, 1500);
+            }}
+            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-green-50 hover:border-green-300 text-gray-600 hover:text-green-700 transition-colors"
+            title="Copiar texto del post"
+          >📋 Copiar texto</button>
+
+          <button
+            onClick={() => {
+              const tags = post.hashtags?.map(h => `#${h}`).join(' ') ?? '';
+              navigator.clipboard.writeText(tags);
+              const btn = document.activeElement as HTMLButtonElement;
+              const orig = btn.textContent;
+              btn.textContent = '✅ Copiado';
+              setTimeout(() => { if (btn) btn.textContent = orig; }, 1500);
+            }}
+            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-gray-600 hover:text-blue-700 transition-colors"
+            title="Copiar hashtags"
+          >#️⃣ Copiar tags</button>
+
+          {imageUrls.length > 0 && (
+            <button
+              onClick={async () => {
+                if (imageUrls.length === 1) {
+                  // Descargar imagen única
+                  const a = document.createElement('a');
+                  a.href = imageUrls[0];
+                  a.download = `${post.id}_1.jpg`;
+                  a.target = '_blank';
+                  a.click();
+                } else {
+                  // Descargar todas en secuencia
+                  for (let i = 0; i < imageUrls.length; i++) {
+                    const a = document.createElement('a');
+                    a.href = imageUrls[i];
+                    a.download = `${post.id}_${i+1}.jpg`;
+                    a.target = '_blank';
+                    a.click();
+                    await new Promise(r => setTimeout(r, 400));
+                  }
+                }
+              }}
+              className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 text-gray-600 hover:text-purple-700 transition-colors"
+              title="Descargar imagen(es)"
+            >⬇️ {imageUrls.length > 1 ? `Descargar ${imageUrls.length} imágenes` : 'Descargar imagen'}</button>
+          )}
+        </div>
+      )}
+
       {/* Copy y hashtags */}
       <div className="p-6 flex-grow flex flex-col">
         {post.feedback && isChanges && (
