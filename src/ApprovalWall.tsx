@@ -231,8 +231,12 @@ function PostCard({
   handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
 }) {
-  const [scheduling, setScheduling] = useState(false);
-  const [toast, setToast]           = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+  const [scheduling, setScheduling]   = useState(false);
+  const [toast, setToast]             = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+  const [editingCopy, setEditingCopy] = useState(false);
+  const [copyDraft, setCopyDraft]     = useState(post.copy);
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagsDraft, setTagsDraft]     = useState(post.hashtags?.join(' ') ?? '');
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type });
@@ -490,18 +494,87 @@ function PostCard({
             <span>"{post.feedback}"</span>
           </div>
         )}
-        <p className="text-sm text-gray-700 leading-relaxed mb-6 flex-grow font-medium">
-          {post.copy}
-        </p>
-        <div className="flex flex-wrap gap-1.5 pt-4 border-t border-gray-50">
-          {post.hashtags?.length > 0
-            ? post.hashtags.map(h => (
-                <span key={h} className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                  {h}
-                </span>
-              ))
-            : <span className="text-[10px] text-gray-300 italic uppercase">Sin hashtags</span>
-          }
+        {/* ── Copy editable (solo admin) ── */}
+        {isAdmin && editingCopy ? (
+          <div className="mb-6 flex-grow flex flex-col gap-2">
+            <textarea
+              className="w-full text-sm text-gray-800 leading-relaxed border border-[#52b788] rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-[#52b788]/40 min-h-[160px] font-medium"
+              value={copyDraft}
+              onChange={e => setCopyDraft(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  await onUpdatePost(post.id, { copy: copyDraft });
+                  setEditingCopy(false);
+                  showToast('Texto guardado', 'ok');
+                }}
+                className="flex-1 py-1.5 bg-[#2d6a4f] text-white rounded-lg text-[11px] font-black uppercase hover:bg-[#1b4332]"
+              >Guardar</button>
+              <button
+                onClick={() => { setCopyDraft(post.copy); setEditingCopy(false); }}
+                className="flex-1 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-[11px] font-black uppercase hover:bg-gray-50"
+              >Cancelar</button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 flex-grow relative group/copy">
+            <p className="text-sm text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">{post.copy}</p>
+            {isAdmin && !isScheduled && (
+              <button
+                onClick={() => { setCopyDraft(post.copy); setEditingCopy(true); }}
+                className="absolute top-0 right-0 opacity-0 group-hover/copy:opacity-100 transition-opacity bg-white border border-gray-200 text-gray-400 hover:text-[#2d6a4f] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm"
+              >✏️ Editar</button>
+            )}
+          </div>
+        )}
+
+        {/* ── Hashtags editables (solo admin) ── */}
+        <div className="pt-4 border-t border-gray-50">
+          {isAdmin && editingTags ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Hashtags (sin # separados por espacios)</p>
+              <input
+                className="w-full text-[11px] border border-[#52b788] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#52b788]/40"
+                value={tagsDraft}
+                onChange={e => setTagsDraft(e.target.value)}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    const newTags = tagsDraft.split(/\s+/).map(t => t.replace(/^#/, '')).filter(Boolean);
+                    await onUpdatePost(post.id, { hashtags: newTags });
+                    setEditingTags(false);
+                    showToast('Hashtags guardados', 'ok');
+                  }}
+                  className="flex-1 py-1.5 bg-[#2d6a4f] text-white rounded-lg text-[11px] font-black uppercase hover:bg-[#1b4332]"
+                >Guardar</button>
+                <button
+                  onClick={() => { setTagsDraft(post.hashtags?.join(' ') ?? ''); setEditingTags(false); }}
+                  className="flex-1 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-[11px] font-black uppercase hover:bg-gray-50"
+                >Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <div className="relative group/tags flex flex-wrap gap-1.5">
+              {post.hashtags?.length > 0
+                ? post.hashtags.map(h => (
+                    <span key={h} className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      #{h}
+                    </span>
+                  ))
+                : <span className="text-[10px] text-gray-300 italic uppercase">Sin hashtags</span>
+              }
+              {isAdmin && !isScheduled && (
+                <button
+                  onClick={() => { setTagsDraft(post.hashtags?.join(' ') ?? ''); setEditingTags(true); }}
+                  className="opacity-0 group-hover/tags:opacity-100 transition-opacity ml-1 bg-white border border-gray-200 text-gray-400 hover:text-[#2d6a4f] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm"
+                >✏️ Editar</button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

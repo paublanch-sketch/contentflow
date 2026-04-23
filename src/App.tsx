@@ -137,7 +137,7 @@ export default function App() {
       prev.map(p => p.id === postId ? { ...p, ...updates } : p)
     );
 
-    const allowed = ['status', 'feedback', 'image_url', 'webhook_sent_at'] as const;
+    const allowed = ['status', 'feedback', 'image_url', 'webhook_sent_at', 'copy', 'hashtags'] as const;
     const dbUpdates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in updates) dbUpdates[key] = (updates as any)[key];
