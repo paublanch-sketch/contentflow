@@ -2,7 +2,7 @@
 import {
   CheckCircle, MessageSquare, Image as ImageIcon,
   Link as LinkIcon, Loader2, AlertCircle, Sparkles,
-  ChevronLeft, ChevronRight, Trash2, PlusCircle, Instagram, Linkedin, Facebook
+  ChevronLeft, ChevronRight, Trash2, PlusCircle
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabase';
@@ -80,9 +80,9 @@ function ConfirmDeleteModal({ postNumber, onConfirm, onCancel }: {
 
 // ─── Modal confirmación publicar Instagram ────────────────────────────────────
 const PLATFORM_CFG: Record<string, { label: string; icon: React.ReactNode; border: string; btnCls: string }> = {
-  IG: { label: 'Instagram', icon: <Instagram size={22} className="text-white" />, border: 'border-pink-200',  btnCls: 'bg-gradient-to-r from-pink-500 to-purple-600' },
-  LI: { label: 'LinkedIn',  icon: <Linkedin  size={22} className="text-white" />, border: 'border-blue-200',  btnCls: 'bg-gradient-to-r from-blue-600 to-blue-800'   },
-  FB: { label: 'Facebook',  icon: <Facebook  size={22} className="text-white" />, border: 'border-indigo-200',btnCls: 'bg-gradient-to-r from-blue-700 to-indigo-800'  },
+  IG: { label: 'Instagram', icon: <span className="text-lg">📸</span>, border: 'border-pink-200',   btnCls: 'bg-gradient-to-r from-pink-500 to-purple-600' },
+  LI: { label: 'LinkedIn',  icon: <span className="text-lg">💼</span>, border: 'border-blue-200',   btnCls: 'bg-gradient-to-r from-blue-600 to-blue-800'   },
+  FB: { label: 'Facebook',  icon: <span className="text-lg">📘</span>, border: 'border-indigo-200', btnCls: 'bg-gradient-to-r from-blue-700 to-indigo-800'  },
 };
 
 function ConfirmPublishModal({ postNumber, platform, onConfirm, onCancel }: {
@@ -212,17 +212,17 @@ function PublishButton({ platform, onClick }: { platform: string; onClick: () =>
   const cfg: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
     IG: {
       label: 'Publicar en Instagram',
-      icon:  <Instagram size={14} />,
+      icon:  <span>📸</span>,
       cls:   'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90',
     },
     LI: {
       label: 'Publicar en LinkedIn',
-      icon:  <Linkedin size={14} />,
+      icon:  <span>💼</span>,
       cls:   'bg-gradient-to-r from-blue-600 to-blue-800 hover:opacity-90',
     },
     FB: {
       label: 'Publicar en Facebook',
-      icon:  <Facebook size={14} />,
+      icon:  <span>📘</span>,
       cls:   'bg-gradient-to-r from-blue-700 to-indigo-800 hover:opacity-90',
     },
   };
@@ -567,7 +567,7 @@ function PostCard({
           {isApproved    && <span className="text-amber-600">✓ Aprobado</span>}
           {isScheduled && (
             <span className="text-green-600 flex items-center gap-1">
-              {post.platform === 'IG' ? <Instagram size={11} /> : post.platform === 'LI' ? <Linkedin size={11} /> : <Facebook size={11} />}
+              {post.platform === 'IG' ? '📸' : post.platform === 'LI' ? '💼' : '📘'}
               Publicado
               {post.webhook_sent_at && (
                 <span className="text-gray-400 font-normal normal-case tracking-normal">
@@ -877,7 +877,7 @@ function PostCard({
         {isScheduled && (
           <div className="flex flex-col items-center gap-1 py-3 px-4 bg-green-50 rounded-xl border border-green-200">
             <span className="text-[11px] font-black text-green-700 uppercase tracking-widest flex items-center gap-1.5">
-              {post.platform === 'IG' ? <Instagram size={12} /> : post.platform === 'LI' ? <Linkedin size={12} /> : <Facebook size={12} />}
+              {post.platform === 'IG' ? '📸' : post.platform === 'LI' ? '💼' : '📘'}
               Publicado en {post.platform === 'IG' ? 'Instagram' : post.platform === 'LI' ? 'LinkedIn' : 'Facebook'}
             </span>
             {post.webhook_sent_at && (
