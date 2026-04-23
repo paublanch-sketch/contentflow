@@ -163,17 +163,50 @@ async def instagram_login(page, username: str, password: str) -> bool:
     return False
 
 
-async def create_instagram_post(page, image_path: str, caption: str, dry_run: bool = False) -> bool:
-    """
-    Crea un post en Instagram web.
-    image_path: ruta local a la imagen (JPG/PNG, mínimo 1080x1080 recomendado)
-    caption: texto del post (copy + hashtags)
-    """
-    print(f"  → Iniciando creación de post...")
-
-    # Click en el botón "+" de nueva publicación
+def parse_image_urls(raw: str) -> list:
+    """Parsea image_url: puede ser vacío, URL única o JSON array de URLs."""
+    if not raw:
+        return []
     try:
-        # Instagram usa SVG de "plus" o texto "New post"
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return [u for u in parsed if u]
+    except Exception:
+        pass
+    return [raw]
+
+
+async def download_url_to_tmp(url: str, suffix: str = '.jpg') -> str | None:
+    """Descarga una URL a /tmp y devuelve la ruta local."""
+    import urllib.request
+    import tempfile
+    try:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        print(f"  → Descargando {url[:60]}...")
+        urllib.request.urlretrieve(url, tmp.name)
+        return tmp.name
+    except Exception as e:
+        print(f"  ❌ Error descargando imagen: {e}")
+        return None
+
+
+async def create_instagram_post(
+    page,
+    image_paths: list,   # lista de rutas locales (1 = imagen única, >1 = carrusel)
+    caption: str,
+    dry_run: bool = False
+) -> bool:
+    """
+    Crea un post en Instagram web. Soporta imagen única y carrusel.
+    image_paths: lista de rutas locales a las imágenes (JPG/PNG).
+    caption: texto del post (copy + hashtags).
+    """
+    is_carousel = len(image_paths) > 1
+    print(f"  → Iniciando creación de {'CARRUSEL' if is_carousel else 'imagen única'} ({len(image_paths)} imagen/s)...")
+
+    # ── 1. Abrir modal de nueva publicación ──────────────────────────────────
+    opened = False
+    try:
         new_post_btn = page.locator(
             'a[href="/create/style/"], '
             'svg[aria-label="New post"], '
@@ -181,17 +214,24 @@ async def create_instagram_post(page, image_path: str, caption: str, dry_run: bo
         ).first
         await new_post_btn.click(timeout=8000)
         await page.wait_for_timeout(1500)
+        opened = True
     except PWTimeout:
-        # Alternativa: buscar por texto
+        pass
+
+    if not opened:
         try:
             create_link = page.get_by_role('link', name='Create')
             if not await create_link.is_visible(timeout=3000):
                 create_link = page.get_by_role('link', name='Crear')
             await create_link.click()
             await page.wait_for_timeout(1500)
+            opened = True
         except PWTimeout:
-            print("  ❌ No se encontró el botón de nueva publicación")
-            return False
+            pass
+
+    if not opened:
+        print("  ❌ No se encontró el botón de nueva publicación")
+        return False
 
     # Seleccionar "Post" del menú si aparece
     try:
@@ -202,31 +242,75 @@ async def create_instagram_post(page, image_path: str, caption: str, dry_run: bo
     except PWTimeout:
         pass
 
-    # Upload de imagen — usar el input[type="file"] oculto
-    print(f"  → Subiendo imagen: {image_path}")
+    # ── 2. Subir primera imagen ──────────────────────────────────────────────
+    print(f"  → Subiendo imagen 1/{len(image_paths)}: {Path(image_paths[0]).name}")
     try:
         file_input = page.locator('input[type="file"]').first
-        await file_input.set_input_files(image_path, timeout=10000)
+        await file_input.set_input_files(image_paths[0], timeout=10000)
         await page.wait_for_timeout(3000)
     except Exception as e:
-        print(f"  ❌ Error al subir imagen: {e}")
+        print(f"  ❌ Error al subir imagen principal: {e}")
         return False
 
-    # Click "Next" (puede aparecer varias veces: crop → filters → caption)
-    for step_name in ['Crop/Recorte', 'Filtros', 'Caption']:
+    # ── 3. Si es carrusel, activar modo "Seleccionar varias" y subir el resto ─
+    if is_carousel:
+        print(f"  → Activando modo carrusel...")
+        # Instagram muestra botón "Select multiple" / "Seleccionar varias" en la vista de recorte
+        try:
+            multi_btn = page.locator(
+                'button:has-text("Select multiple"), '
+                'button:has-text("Seleccionar varias"), '
+                'svg[aria-label="Select multiple"], '
+                'svg[aria-label="Seleccionar varias"]'
+            ).first
+            if await multi_btn.is_visible(timeout=5000):
+                await multi_btn.click()
+                await page.wait_for_timeout(1500)
+                print(f"  ✅ Modo carrusel activado")
+            else:
+                print(f"  ⚠️  Botón 'Seleccionar varias' no visible, intentando click en ícono de carrusel...")
+        except PWTimeout:
+            pass
+
+        # Subir las imágenes restantes una a una con el botón "+"
+        for idx, img_path in enumerate(image_paths[1:], start=2):
+            print(f"  → Añadiendo slide {idx}/{len(image_paths)}: {Path(img_path).name}")
+            try:
+                # El botón "+" para añadir más imágenes en modo carrusel
+                add_more_btn = page.locator(
+                    'button[aria-label="Open media gallery"], '
+                    'button[aria-label="Abrir galería multimedia"], '
+                    'svg[aria-label="Add photo or video"], '
+                    'svg[aria-label="Añadir foto o vídeo"]'
+                ).first
+                if await add_more_btn.is_visible(timeout=4000):
+                    await add_more_btn.click()
+                    await page.wait_for_timeout(1000)
+
+                # El input de archivo que aparece para añadir más slides
+                extra_input = page.locator('input[type="file"]').first
+                await extra_input.set_input_files(img_path, timeout=8000)
+                await page.wait_for_timeout(2500)
+            except Exception as e:
+                print(f"  ⚠️  No se pudo añadir slide {idx}: {e}")
+                # Continuar con las demás slides
+
+    # ── 4. Avanzar pasos: Recorte → Filtros → Caption ───────────────────────
+    steps = ['Recorte/Crop', 'Filtros/Filters', 'Caption']
+    for step_name in steps:
         try:
             next_btn = page.locator(
                 'button:has-text("Next"), '
                 'button:has-text("Siguiente")'
             ).last
-            if await next_btn.is_visible(timeout=5000):
+            if await next_btn.is_visible(timeout=6000):
                 await next_btn.click()
                 print(f"  → Paso: {step_name}")
                 await page.wait_for_timeout(2000)
         except PWTimeout:
             print(f"  ⚠️  No se encontró 'Siguiente' en paso {step_name}")
 
-    # Escribir el caption
+    # ── 5. Escribir el caption ───────────────────────────────────────────────
     print(f"  → Escribiendo caption ({len(caption)} chars)...")
     try:
         caption_area = page.locator(
@@ -243,18 +327,22 @@ async def create_instagram_post(page, image_path: str, caption: str, dry_run: bo
         print("  ⚠️  No se encontró el área de caption. Intentando con teclado...")
         await page.keyboard.type(caption)
 
-    # Screenshot antes de publicar (como prueba)
+    # ── 6. Screenshot previo ─────────────────────────────────────────────────
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
     pre_shot = SCREENSHOTS_DIR / f"{ts}_pre_publish.png"
-    await page.screenshot(path=str(pre_shot))
+    await page.screenshot(path=str(pre_shot), full_page=False)
     print(f"  📸 Screenshot guardado: {pre_shot.name}")
 
     if dry_run:
-        print("  🔵 DRY-RUN: no se ha publicado. Revisa el screenshot.")
+        print()
+        print("  ┌─────────────────────────────────────────────────────┐")
+        print("  │  🔵 SIMULACRO (--dry-run)                           │")
+        print("  │  No se ha publicado nada.                           │")
+        print(f"  │  Revisa el screenshot: {pre_shot.name:<28}│")
+        print("  └─────────────────────────────────────────────────────┘")
         return True
 
-    # ── CONFIRMACIÓN OBLIGATORIA ─────────────────────────────────────────────
-    # NUNCA se publica sin que Pau pulse Enter explícitamente aquí.
+    # ── 7. Confirmación obligatoria antes de publicar ────────────────────────
     print()
     print("  ┌─────────────────────────────────────────────────────┐")
     print("  │  👀 Revisa el navegador y el screenshot antes de    │")
@@ -269,7 +357,7 @@ async def create_instagram_post(page, image_path: str, caption: str, dry_run: bo
         print("  🚫 Publicación cancelada por el usuario.")
         return False
 
-    # Publicar
+    # ── 8. Publicar ──────────────────────────────────────────────────────────
     print(f"  → Publicando...")
     try:
         share_btn = page.locator(
@@ -282,7 +370,6 @@ async def create_instagram_post(page, image_path: str, caption: str, dry_run: bo
         print("  ❌ No se encontró el botón 'Compartir'")
         return False
 
-    # Screenshot de confirmación
     post_shot = SCREENSHOTS_DIR / f"{ts}_published.png"
     await page.screenshot(path=str(post_shot))
     print(f"  📸 Screenshot de confirmación: {post_shot.name}")
@@ -295,24 +382,40 @@ async def create_instagram_post(page, image_path: str, caption: str, dry_run: bo
 # ═════════════════════════════════════════════════════════════════════════════
 
 async def publish_post(post: dict, creds: dict, dry_run: bool = False):
-    """Publica un post en Instagram para el cliente dado."""
+    """Publica un post en Instagram para el cliente dado. Soporta imagen única y carrusel."""
     username = creds.get('username', '')
     password = creds.get('password', '')
-    image_path = post.get('image_url', '')  # URL pública o ruta local
-    caption = post.get('copy', '') + '\n\n' + ' '.join(post.get('hashtags', []))
+    raw_image_url = post.get('image_url', '')
+    hashtags = post.get('hashtags', [])
+    # Añadir # solo si no lo tienen ya
+    tags_str = ' '.join(h if h.startswith('#') else f'#{h}' for h in hashtags)
+    caption = post.get('copy', '') + ('\n\n' + tags_str if tags_str else '')
 
-    # Si image_url es una URL pública, descargarla a temp
-    if image_path.startswith('http'):
-        import urllib.request
-        tmp_img = f"/tmp/post_{post['id']}.jpg"
-        print(f"  → Descargando imagen desde URL...")
-        urllib.request.urlretrieve(image_path, tmp_img)
-        image_path = tmp_img
+    # ── Parsear URLs (imagen única o carrusel JSON) ──────────────────────────
+    image_urls = parse_image_urls(raw_image_url)
 
-    if not os.path.exists(image_path):
-        print(f"  ⚠️  Imagen no encontrada: {image_path}")
-        print("       Sube la imagen al post en ContentFlow primero.")
+    if not image_urls:
+        print(f"  ⚠️  El post no tiene imágenes asociadas.")
+        print("       Sube las imágenes al post en ContentFlow primero y vuelve a intentarlo.")
         return False
+
+    # ── Descargar todas las URLs a ficheros temporales ───────────────────────
+    local_paths = []
+    for i, url in enumerate(image_urls):
+        if url.startswith('http'):
+            local = await download_url_to_tmp(url, suffix=f'_slide{i+1}.jpg')
+            if local:
+                local_paths.append(local)
+            else:
+                print(f"  ❌ No se pudo descargar slide {i+1}. Abortando.")
+                return False
+        elif os.path.exists(url):
+            local_paths.append(url)
+        else:
+            print(f"  ❌ Ruta no encontrada: {url}")
+            return False
+
+    print(f"  → {len(local_paths)} imagen/s lista/s para publicar")
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
@@ -337,9 +440,18 @@ async def publish_post(post: dict, creds: dict, dry_run: bool = False):
             await browser.close()
             return False
 
-        ok = await create_instagram_post(page, image_path, caption, dry_run=dry_run)
+        ok = await create_instagram_post(page, local_paths, caption, dry_run=dry_run)
 
         await browser.close()
+
+        # Limpiar temporales
+        for p_path in local_paths:
+            if p_path.startswith('/tmp/'):
+                try:
+                    os.remove(p_path)
+                except Exception:
+                    pass
+
         return ok
 
 

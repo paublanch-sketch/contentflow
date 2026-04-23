@@ -161,6 +161,12 @@ export default function App() {
     }
   };
 
+  // ── Borrar post ──
+  const handleDeletePost = async (postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    await supabase.from('posts').delete().eq('id', postId);
+  };
+
   // ── Crear post vacío ──
   const handleCreatePost = async () => {
     if (!clientId || creatingPost) return;
@@ -398,6 +404,7 @@ export default function App() {
             clientName={activeClient?.name ?? clientId}
             isAdmin={isAdmin}
             onUpdatePost={handleUpdatePost}
+            onDeletePost={handleDeletePost}
           />
         )}
       </div>

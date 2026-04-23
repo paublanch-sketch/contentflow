@@ -2,9 +2,9 @@
 import {
   CheckCircle, MessageSquare, Image as ImageIcon,
   Link as LinkIcon, Loader2, AlertCircle, Sparkles, Send,
-  ChevronLeft, ChevronRight, Trash2, PlusCircle
+  ChevronLeft, ChevronRight, Trash2, PlusCircle, Instagram
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import type { Post } from './App';
 
@@ -31,6 +31,9 @@ const NOTIFY_WEBHOOK_URL     = 'https://hook.eu1.make.com/qlmec519xrgc86oslwykvg
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
 
+// ─── Servidor local de publicación (publisher_server.py) ─────────────────────
+const PUBLISHER_URL = 'http://localhost:8765';
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Props = {
   posts: Post[];
@@ -38,7 +41,178 @@ type Props = {
   clientName: string;
   isAdmin: boolean;
   onUpdatePost: (postId: string, updates: Partial<Post>) => Promise<void>;
+  onDeletePost: (postId: string) => Promise<void>;
 };
+
+// ─── Modal de confirmación de borrado ─────────────────────────────────────────
+function ConfirmDeleteModal({ postNumber, onConfirm, onCancel }: {
+  postNumber: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-red-200">
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            <Trash2 size={22} className="text-red-500" />
+          </div>
+          <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
+            ¿Borrar el post #{postNumber}?
+          </h3>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Esta acción eliminará el post permanentemente de la base de datos.
+            <strong className="block text-red-500 mt-1">No se puede deshacer.</strong>
+          </p>
+          <div className="flex gap-3 w-full mt-2">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={12} /> Sí, borrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal confirmación publicar Instagram ────────────────────────────────────
+function ConfirmPublishModal({ postNumber, username, onConfirm, onCancel }: {
+  postNumber: number;
+  username: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+            <Instagram size={22} className="text-white" />
+          </div>
+          <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
+            ¿Publicar el Post #{postNumber}?
+          </h3>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Se abrirá Chrome, iniciará sesión en Instagram
+            {username ? <><strong className="text-gray-700"> @{username}</strong></> : ''} y
+            publicará el post automáticamente.
+          </p>
+          <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 w-full">
+            ⚠️ Asegúrate de que <code className="font-mono">publisher_server.py</code> está corriendo en tu Mac.
+          </p>
+          <div className="flex gap-3 w-full mt-1">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
+            >
+              <Instagram size={12} /> Publicar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal estado publicación Instagram ───────────────────────────────────────
+type PublishJobStatus = 'running' | 'needs_2fa' | 'wrong_credentials' | 'success' | 'error';
+
+function PublishStatusModal({ status, message, jobId, onClose }: {
+  status: PublishJobStatus;
+  message: string;
+  jobId: string;
+  onClose: () => void;
+}) {
+  const [continuing, setContinuing] = useState(false);
+
+  const handle2FA = async () => {
+    setContinuing(true);
+    try {
+      await fetch(`${PUBLISHER_URL}/continue/${jobId}`, { method: 'POST' });
+    } catch { /* silencioso */ }
+    setContinuing(false);
+  };
+
+  const canClose = ['success', 'error', 'wrong_credentials'].includes(status);
+
+  const icons: Record<PublishJobStatus, React.ReactNode> = {
+    running:           <Loader2 size={32} className="animate-spin text-blue-500" />,
+    needs_2fa:         <span className="text-4xl">📱</span>,
+    wrong_credentials: <span className="text-4xl">🔐</span>,
+    success:           <CheckCircle size={32} className="text-green-500" />,
+    error:             <AlertCircle size={32} className="text-red-500" />,
+  };
+
+  const titles: Record<PublishJobStatus, string> = {
+    running:           'Publicando en Instagram...',
+    needs_2fa:         'Verificación en 2 pasos',
+    wrong_credentials: 'Credenciales incorrectas',
+    success:           '¡Publicado! 🎉',
+    error:             'Error al publicar',
+  };
+
+  const borderColors: Record<PublishJobStatus, string> = {
+    running:           'border-blue-200',
+    needs_2fa:         'border-amber-300',
+    wrong_credentials: 'border-red-300',
+    success:           'border-green-300',
+    error:             'border-red-200',
+  };
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className={`bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 ${borderColors[status]}`}>
+        <div className="flex flex-col items-center text-center gap-4">
+          {icons[status]}
+          <h3 className="text-base font-black text-gray-900">{titles[status]}</h3>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{message}</p>
+
+          {status === 'needs_2fa' && (
+            <button
+              onClick={handle2FA}
+              disabled={continuing}
+              className="w-full py-3 bg-[#2d6a4f] text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#1b4332] disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {continuing ? <Loader2 size={14} className="animate-spin" /> : '✅'}
+              Ya introduje el código
+            </button>
+          )}
+
+          {status === 'wrong_credentials' && (
+            <div className="text-[11px] text-gray-500 bg-gray-50 rounded-lg px-3 py-2 w-full text-left">
+              Abre <code className="font-mono text-[10px]">clients_credentials.json</code> y comprueba
+              usuario y contraseña para este cliente.
+            </div>
+          )}
+
+          {canClose && (
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors"
+            >
+              {status === 'success' ? '🎉 Cerrar' : 'Cerrar'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Toast interno ────────────────────────────────────────────────────────────
 function Toast({ msg, type }: { msg: string; type: 'ok' | 'err' }) {
@@ -220,23 +394,32 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
-  post, clientId, clientName, isAdmin, onUpdatePost, uploadingId, handleFile, handleUrl
+  post, clientId, clientName, isAdmin, onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl
 }: {
   post: Post;
   clientId: string;
   clientName: string;
   isAdmin: boolean;
   onUpdatePost: Props['onUpdatePost'];
+  onDeletePost: Props['onDeletePost'];
   uploadingId: string | null;
   handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
 }) {
-  const [scheduling, setScheduling]   = useState(false);
-  const [toast, setToast]             = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
-  const [editingCopy, setEditingCopy] = useState(false);
-  const [copyDraft, setCopyDraft]     = useState(post.copy);
-  const [editingTags, setEditingTags] = useState(false);
-  const [tagsDraft, setTagsDraft]     = useState(post.hashtags?.join(' ') ?? '');
+  const [scheduling, setScheduling]       = useState(false);
+  const [toast, setToast]                 = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+  const [editingCopy, setEditingCopy]     = useState(false);
+  const [copyDraft, setCopyDraft]         = useState(post.copy);
+
+  // ── Instagram Publisher ──
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [publishJobId, setPublishJobId]             = useState<string | null>(null);
+  const [publishStatus, setPublishStatus]           = useState<PublishJobStatus | null>(null);
+  const [publishMessage, setPublishMessage]         = useState('');
+  const pollRef                                     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [editingTags, setEditingTags]     = useState(false);
+  const [tagsDraft, setTagsDraft]         = useState(post.hashtags?.join(' ') ?? '');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type });
@@ -259,6 +442,82 @@ function PostCard({
     await onUpdatePost(post.id, { image_url: serializeImageUrls(updated) });
     setCurrentIdx(Math.max(0, safeIdx - 1));
   };
+
+  // ── Publicar directo a Instagram via publisher_server.py ──
+  const handlePublishIG = async () => {
+    setShowPublishConfirm(false);
+
+    // 1. Comprobar que el servidor local está activo
+    try {
+      const health = await fetch(`${PUBLISHER_URL}/health`, {
+        signal: AbortSignal.timeout(2500),
+      });
+      if (!health.ok) throw new Error('not ok');
+    } catch {
+      showToast(
+        'El servidor no responde. Ejecuta: python3 publisher_server.py',
+        'err'
+      );
+      return;
+    }
+
+    // 2. Iniciar job
+    let res: Response;
+    try {
+      res = await fetch(`${PUBLISHER_URL}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: post.id }),
+      });
+    } catch {
+      showToast('Error de red conectando con publisher_server.py', 'err');
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.error === 'wrong_credentials') {
+        setPublishJobId('_error');
+        setPublishStatus('wrong_credentials');
+        setPublishMessage(data.message ?? 'Credenciales no encontradas');
+      } else {
+        showToast(data.error ?? 'Error al iniciar publicación', 'err');
+      }
+      return;
+    }
+
+    const jobId = data.job_id as string;
+    setPublishJobId(jobId);
+    setPublishStatus('running');
+    setPublishMessage('Iniciando...');
+
+    // 3. Polling de estado cada 1.5s
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const sr   = await fetch(`${PUBLISHER_URL}/status/${jobId}`);
+        const sd   = await sr.json() as { status: PublishJobStatus; message: string };
+        setPublishStatus(sd.status);
+        setPublishMessage(sd.message);
+
+        if (['success', 'error', 'wrong_credentials'].includes(sd.status)) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          // Si publicado con éxito, actualizar UI sin esperar al reload
+          if (sd.status === 'success') {
+            await onUpdatePost(post.id, {
+              status: 'scheduled',
+              webhook_sent_at: new Date().toISOString(),
+            });
+          }
+        }
+      } catch { /* servidor ocupado, reintentar */ }
+    }, 1500);
+  };
+
+  // Limpiar polling al desmontar
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   // ── Publicar a Metricool ──
   const handlePublish = async () => {
@@ -301,14 +560,60 @@ function PostCard({
                       'border-gray-100'
     }`}>
 
+      {/* Modal confirmación borrar */}
+      {showDeleteModal && (
+        <ConfirmDeleteModal
+          postNumber={post.post_number}
+          onConfirm={async () => {
+            setShowDeleteModal(false);
+            await onDeletePost(post.id);
+          }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
+
+      {/* Modal confirmación publicar Instagram */}
+      {showPublishConfirm && (
+        <ConfirmPublishModal
+          postNumber={post.post_number}
+          username={''}
+          onConfirm={handlePublishIG}
+          onCancel={() => setShowPublishConfirm(false)}
+        />
+      )}
+
+      {/* Modal estado publicación */}
+      {publishStatus && publishJobId && (
+        <PublishStatusModal
+          status={publishStatus}
+          message={publishMessage}
+          jobId={publishJobId}
+          onClose={() => {
+            setPublishStatus(null);
+            setPublishJobId(null);
+          }}
+        />
+      )}
+
       {/* Cabecera de estado */}
       <div className="p-4 border-b border-gray-50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
         <span>{post.platform} · #{post.post_number}</span>
-        {isChanges     && <span className="text-red-600">⚠ Cambios solicitados</span>}
-        {isChangesDone && <span className="text-green-600">✅ Cambios hechos</span>}
-        {isApproved    && <span className="text-amber-600">✓ Aprobado</span>}
-        {isScheduled   && <span className="text-green-600">🚀 Publicado en Metricool</span>}
-        {post.status === 'scheduling' && <span className="text-gray-400 animate-pulse">⏳ Enviando...</span>}
+        <div className="flex items-center gap-2">
+          {isChanges     && <span className="text-red-600">⚠ Cambios solicitados</span>}
+          {isChangesDone && <span className="text-green-600">✅ Cambios hechos</span>}
+          {isApproved    && <span className="text-amber-600">✓ Aprobado</span>}
+          {isScheduled   && <span className="text-green-600">🚀 Publicado en Metricool</span>}
+          {post.status === 'scheduling' && <span className="text-gray-400 animate-pulse">⏳ Enviando...</span>}
+          {isAdmin && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="ml-1 text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded hover:bg-red-50"
+              title="Borrar post"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Imagen / Carrusel */}
@@ -590,18 +895,30 @@ function PostCard({
       {/* Acciones */}
       <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2 mt-auto">
 
-        {/* Botón publicar Metricool — solo admin + approved */}
+        {/* Botones publicar — solo admin + approved */}
         {isAdmin && isApproved && (
-          <button
-            onClick={handlePublish}
-            disabled={scheduling}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:from-blue-700 hover:to-blue-800 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {scheduling
-              ? <><Loader2 size={14} className="animate-spin" /> Enviando a Metricool...</>
-              : <><Send size={14} /> 🚀 Publicar a Metricool</>
-            }
-          </button>
+          <div className="flex flex-col gap-2">
+            {/* Instagram directo */}
+            {post.platform === 'IG' && (
+              <button
+                onClick={() => setShowPublishConfirm(true)}
+                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2"
+              >
+                <Instagram size={14} /> Publicar en Instagram
+              </button>
+            )}
+            {/* Metricool / webhook */}
+            <button
+              onClick={handlePublish}
+              disabled={scheduling}
+              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:from-blue-700 hover:to-blue-800 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {scheduling
+                ? <><Loader2 size={14} className="animate-spin" /> Enviando a Metricool...</>
+                : <><Send size={14} /> Enviar a Metricool</>
+              }
+            </button>
+          </div>
         )}
 
         {/* Scheduled — estado final, sin botones */}
@@ -692,24 +1009,52 @@ function PostCard({
 }
 
 // ─── Grid principal ───────────────────────────────────────────────────────────
-export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onUpdatePost }: Props) {
+export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onUpdatePost, onDeletePost }: Props) {
   const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
 
+  const activePosts    = posts.filter(p => p.status !== 'scheduled');
+  const publishedPosts = posts.filter(p => p.status === 'scheduled');
+
+  const cardProps = (post: Post) => ({
+    key: post.id,
+    post,
+    clientId,
+    clientName,
+    isAdmin,
+    onUpdatePost,
+    onDeletePost,
+    uploadingId,
+    handleFile,
+    handleUrl,
+  });
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
-      {posts.map(post => (
-        <PostCard
-          key={post.id}
-          post={post}
-          clientId={clientId}
-          clientName={clientName}
-          isAdmin={isAdmin}
-          onUpdatePost={onUpdatePost}
-          uploadingId={uploadingId}
-          handleFile={handleFile}
-          handleUrl={handleUrl}
-        />
-      ))}
+    <div className="space-y-12">
+      {/* Posts activos */}
+      {activePosts.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+          {activePosts.map(post => <PostCard {...cardProps(post)} />)}
+        </div>
+      )}
+
+      {/* Sección Publicados */}
+      {publishedPosts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-green-200" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border-2 border-green-300 rounded-full">
+              <Instagram size={14} className="text-green-600" />
+              <span className="text-xs font-black uppercase tracking-widest text-green-700">
+                Publicados en Instagram — {publishedPosts.length}/{posts.length}
+              </span>
+            </div>
+            <div className="flex-1 h-px bg-green-200" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left opacity-80">
+            {publishedPosts.map(post => <PostCard {...cardProps(post)} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
