@@ -170,51 +170,52 @@ async function callWebhookWithRetry(
   }
 }
 
-// ─── Notificaciones email vía Make.com ───────────────────────────────────────
-const NOTIFY_EMAIL = 'pau.blanch@interactivos.net';
+// ─── Notificaciones email vía EmailJS ────────────────────────────────────────
+const EMAILJS_SERVICE_ID  = 'service_9hv3bd4';
+const EMAILJS_TEMPLATE_ID = 'template_laumpek';
+const EMAILJS_PUBLIC_KEY  = 'PnA_k4lRMrrGR5XJP';
+const NOTIFY_EMAIL        = 'pau.blanch@interactivos.net';
 
-async function notifyApproval(post: Post, clientName: string) {
-  if (NOTIFY_WEBHOOK_URL.includes('PENDING_SETUP')) return;
+async function sendEmailNotification(templateParams: Record<string, string>) {
+  if (EMAILJS_TEMPLATE_ID === 'PENDING_TEMPLATE') return;
   try {
-    await fetch(NOTIFY_WEBHOOK_URL, {
+    await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'approval',
-        notify_email: NOTIFY_EMAIL,
-        client_id: post.client_id,
-        client_name: clientName,
-        post_number: post.post_number,
-        platform: post.platform,
-        copy_preview: post.copy.slice(0, 120) + (post.copy.length > 120 ? '...' : ''),
-        headline_visual: post.headline_visual,
-        portal_url: `${window.location.origin}/p/${post.client_id}`,
-        approved_at: new Date().toISOString(),
+        service_id:      EMAILJS_SERVICE_ID,
+        template_id:     EMAILJS_TEMPLATE_ID,
+        user_id:         EMAILJS_PUBLIC_KEY,
+        template_params: templateParams,
       }),
     });
   } catch { /* silencioso */ }
 }
 
+async function notifyApproval(post: Post, clientName: string) {
+  await sendEmailNotification({
+    to_email:     NOTIFY_EMAIL,
+    type:         'Aprobado ✅',
+    client_name:  clientName,
+    post_number:  String(post.post_number),
+    platform:     post.platform,
+    copy_preview: post.copy.slice(0, 120) + (post.copy.length > 120 ? '...' : ''),
+    portal_url:   `${window.location.origin}/p/${post.client_id}`,
+    feedback:     '',
+  });
+}
+
 async function notifyChangesRequested(post: Post, clientName: string, feedback: string) {
-  if (NOTIFY_WEBHOOK_URL.includes('PENDING_SETUP')) return;
-  try {
-    await fetch(NOTIFY_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'changes_requested',
-        notify_email: NOTIFY_EMAIL,
-        client_id: post.client_id,
-        client_name: clientName,
-        post_number: post.post_number,
-        platform: post.platform,
-        feedback,
-        copy_preview: post.copy.slice(0, 120) + (post.copy.length > 120 ? '...' : ''),
-        portal_url: `${window.location.origin}/p/${post.client_id}`,
-        requested_at: new Date().toISOString(),
-      }),
-    });
-  } catch { /* silencioso */ }
+  await sendEmailNotification({
+    to_email:     NOTIFY_EMAIL,
+    type:         'Cambios solicitados ⚠️',
+    client_name:  clientName,
+    post_number:  String(post.post_number),
+    platform:     post.platform,
+    copy_preview: post.copy.slice(0, 120) + (post.copy.length > 120 ? '...' : ''),
+    portal_url:   `${window.location.origin}/p/${post.client_id}`,
+    feedback:     feedback,
+  });
 }
 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
