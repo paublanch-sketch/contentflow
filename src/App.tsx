@@ -40,6 +40,8 @@ export type Client = {
 // ─── Fuente de verdad de clientes (generado por generate_clients_json.py) ─────
 const CLIENTS: Client[] = clientsData as Client[];
 
+const LS_KEY = 'cf_last_client';
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function App() {
   const [clientId, setClientId]     = useState<string>('');
@@ -52,6 +54,7 @@ export default function App() {
   );
   const [search, setSearch]         = useState('');
   const [showDrop, setShowDrop]     = useState(false);
+  const [creatingPost, setCreatingPost] = useState(false);
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click fuera
@@ -77,6 +80,8 @@ export default function App() {
     const c = CLIENTS.find(cl => cl.id === id);
     setSearch(c?.name ?? '');
     setShowDrop(false);
+    // ── Persistir selección en localStorage ──
+    try { localStorage.setItem(LS_KEY, id); } catch {}
   };
 
   // ── Detectar ruta /p/:slug para portal de aprobación del cliente ──
@@ -102,8 +107,17 @@ export default function App() {
     setIsAdmin(true);
     setIsClientPortal(false);
     if (CLIENTS.length > 0) {
-      setClientId(CLIENTS[0].id);
-      setSearch(CLIENTS[0].name);
+      // ── Restaurar último cliente visitado (persistencia F5) ──
+      let initialId = CLIENTS[0].id;
+      try {
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved && CLIENTS.find(c => c.id === saved)) {
+          initialId = saved;
+        }
+      } catch {}
+      const initialClient = CLIENTS.find(c => c.id === initialId)!;
+      setClientId(initialClient.id);
+      setSearch(initialClient.name);
     }
   }, []);
 
@@ -137,13 +151,51 @@ export default function App() {
       prev.map(p => p.id === postId ? { ...p, ...updates } : p)
     );
 
-    const allowed = ['status', 'feedback', 'image_url', 'webhook_sent_at', 'copy', 'hashtags'] as const;
+    const allowed = ['status', 'feedback', 'image_url', 'webhook_sent_at', 'copy', 'hashtags', 'headline_visual', 'visual_prompt'] as const;
     const dbUpdates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in updates) dbUpdates[key] = (updates as any)[key];
     }
     if (Object.keys(dbUpdates).length > 0) {
       await supabase.from('posts').update(dbUpdates).eq('id', postId);
+    }
+  };
+
+  // ── Crear post vacío ──
+  const handleCreatePost = async () => {
+    if (!clientId || creatingPost) return;
+    setCreatingPost(true);
+    try {
+      const nextNum = posts.length > 0
+        ? Math.max(...posts.map(p => p.post_number)) + 1
+        : 1;
+      const newPost: Post = {
+        id: `${clientId}-${Date.now()}`,
+        client_id: clientId,
+        post_number: nextNum,
+        platform: CLIENTS.find(c => c.id === clientId)?.platform ?? 'IG',
+        headline_visual: '',
+        visual_prompt: '',
+        copy: '',
+        hashtags: [],
+        status: 'review',
+        feedback: '',
+        image_url: '',
+        webhook_sent_at: null,
+      };
+      const { data, error } = await supabase
+        .from('posts')
+        .insert(newPost)
+        .select()
+        .single();
+
+      if (!error && data) {
+        setPosts(prev => [...prev, data as Post]);
+        // Scroll al final para ver el nuevo post
+        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+      }
+    } finally {
+      setCreatingPost(false);
     }
   };
 
@@ -227,7 +279,7 @@ export default function App() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {posts.length > 0 && (
               <div className="flex gap-3 text-[10px] font-bold uppercase tracking-widest">
                 <span className="text-green-400">{scheduledCount}/12 publicados</span>
@@ -236,6 +288,18 @@ export default function App() {
                 )}
               </div>
             )}
+
+            {/* ── Botón Crear post ── */}
+            {isAdmin && clientId && (
+              <button
+                onClick={handleCreatePost}
+                disabled={creatingPost}
+                className="text-[10px] font-bold bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+              >
+                {creatingPost ? '...' : '＋ Crear post'}
+              </button>
+            )}
+
             {activeClient && (
               <a
                 href={`https://contentflow-liard-nine.vercel.app/p/${activeClient.id}`}
@@ -323,7 +387,7 @@ export default function App() {
                 Sin posts generados
               </p>
               <p className="text-xs text-gray-300 mt-2">
-                Pídele a Claude que trabaje este cliente para generar los 12 posts de la J2
+                Pulsa "＋ Crear post" para añadir uno o pídele a Claude que genere los 12 posts
               </p>
             </div>
           </div>
