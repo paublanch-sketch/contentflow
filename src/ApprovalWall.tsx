@@ -1,8 +1,8 @@
 // ARCHIVO: src/ApprovalWall.tsx
 import {
   CheckCircle, MessageSquare, Image as ImageIcon,
-  Link as LinkIcon, Loader2, AlertCircle, Sparkles, Send,
-  ChevronLeft, ChevronRight, Trash2, PlusCircle, Instagram
+  Link as LinkIcon, Loader2, AlertCircle, Sparkles,
+  ChevronLeft, ChevronRight, Trash2, PlusCircle, Instagram, Linkedin, Facebook
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabase';
@@ -24,12 +24,6 @@ function serializeImageUrls(urls: string[]): string {
   if (clean.length === 1) return clean[0];
   return JSON.stringify(clean);
 }
-
-// ─── Webhooks Make.com ────────────────────────────────────────────────────────
-const METRICOOL_WEBHOOK_URL  = 'https://hook.eu1.make.com/owpgy88g47ibpstoqt8ktmsg9pek9cs9';
-const NOTIFY_WEBHOOK_URL     = 'https://hook.eu1.make.com/qlmec519xrgc86oslwykvgsblxfxqr4l';
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1500;
 
 // ─── Servidor local de publicación (publisher_server.py) ─────────────────────
 const PUBLISHER_URL = 'http://localhost:8765';
@@ -85,42 +79,41 @@ function ConfirmDeleteModal({ postNumber, onConfirm, onCancel }: {
 }
 
 // ─── Modal confirmación publicar Instagram ────────────────────────────────────
-function ConfirmPublishModal({ postNumber, username, onConfirm, onCancel }: {
+const PLATFORM_CFG: Record<string, { label: string; icon: React.ReactNode; border: string; btnCls: string }> = {
+  IG: { label: 'Instagram', icon: <Instagram size={22} className="text-white" />, border: 'border-pink-200',  btnCls: 'bg-gradient-to-r from-pink-500 to-purple-600' },
+  LI: { label: 'LinkedIn',  icon: <Linkedin  size={22} className="text-white" />, border: 'border-blue-200',  btnCls: 'bg-gradient-to-r from-blue-600 to-blue-800'   },
+  FB: { label: 'Facebook',  icon: <Facebook  size={22} className="text-white" />, border: 'border-indigo-200',btnCls: 'bg-gradient-to-r from-blue-700 to-indigo-800'  },
+};
+
+function ConfirmPublishModal({ postNumber, platform, onConfirm, onCancel }: {
   postNumber: number;
-  username: string;
+  platform: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const cfg = PLATFORM_CFG[platform] ?? PLATFORM_CFG['IG'];
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
+      <div className={`bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 ${cfg.border}`}>
         <div className="flex flex-col items-center text-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-            <Instagram size={22} className="text-white" />
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${cfg.btnCls}`}>
+            {cfg.icon}
           </div>
           <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
             ¿Publicar el Post #{postNumber}?
           </h3>
           <p className="text-sm text-gray-500 leading-relaxed">
-            Se abrirá Chrome, iniciará sesión en Instagram
-            {username ? <><strong className="text-gray-700"> @{username}</strong></> : ''} y
-            publicará el post automáticamente.
+            Se abrirá Chrome, hará login en <strong className="text-gray-700">{cfg.label}</strong> y publicará el post automáticamente.
           </p>
           <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 w-full">
             ⚠️ Asegúrate de que <code className="font-mono">publisher_server.py</code> está corriendo en tu Mac.
           </p>
           <div className="flex gap-3 w-full mt-1">
-            <button
-              onClick={onCancel}
-              className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors"
-            >
+            <button onClick={onCancel} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors">
               Cancelar
             </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
-            >
-              <Instagram size={12} /> Publicar
+            <button onClick={onConfirm} className={`flex-1 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 ${cfg.btnCls}`}>
+              Publicar
             </button>
           </div>
         </div>
@@ -211,6 +204,36 @@ function PublishStatusModal({ status, message, jobId, onClose }: {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Botón publicar dinámico por plataforma ──────────────────────────────────
+function PublishButton({ platform, onClick }: { platform: string; onClick: () => void }) {
+  const cfg: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
+    IG: {
+      label: 'Publicar en Instagram',
+      icon:  <Instagram size={14} />,
+      cls:   'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90',
+    },
+    LI: {
+      label: 'Publicar en LinkedIn',
+      icon:  <Linkedin size={14} />,
+      cls:   'bg-gradient-to-r from-blue-600 to-blue-800 hover:opacity-90',
+    },
+    FB: {
+      label: 'Publicar en Facebook',
+      icon:  <Facebook size={14} />,
+      cls:   'bg-gradient-to-r from-blue-700 to-indigo-800 hover:opacity-90',
+    },
+  };
+  const c = cfg[platform] ?? cfg['IG'];
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-tighter transition-opacity shadow-md flex items-center justify-center gap-2 ${c.cls}`}
+    >
+      {c.icon} {c.label}
+    </button>
   );
 }
 
@@ -315,34 +338,6 @@ function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   return { uploadingId, handleFile, handleUrl };
 }
 
-// ─── Lógica de webhook con retry ──────────────────────────────────────────────
-async function callWebhookWithRetry(
-  payload: object,
-  attempt = 1
-): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await fetch(METRICOOL_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) return { ok: true };
-
-    if (attempt < MAX_RETRIES) {
-      await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
-      return callWebhookWithRetry(payload, attempt + 1);
-    }
-
-    return { ok: false, error: `HTTP ${res.status} tras ${MAX_RETRIES} intentos` };
-  } catch (err: any) {
-    if (attempt < MAX_RETRIES) {
-      await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
-      return callWebhookWithRetry(payload, attempt + 1);
-    }
-    return { ok: false, error: err?.message ?? 'Error de red' };
-  }
-}
 
 // ─── Notificaciones email vía EmailJS ────────────────────────────────────────
 const EMAILJS_SERVICE_ID  = 'service_9hv3bd4';
@@ -406,7 +401,6 @@ function PostCard({
   handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
 }) {
-  const [scheduling, setScheduling]       = useState(false);
   const [toast, setToast]                 = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
   const [editingCopy, setEditingCopy]     = useState(false);
   const [copyDraft, setCopyDraft]         = useState(post.copy);
@@ -519,37 +513,6 @@ function PostCard({
   // Limpiar polling al desmontar
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  // ── Publicar a Metricool ──
-  const handlePublish = async () => {
-    setScheduling(true);
-    await onUpdatePost(post.id, { status: 'scheduling' });
-
-    const payload = {
-      idempotency_key: post.id,          // evita duplicados en Make/Zapier
-      client_id: clientId,
-      post_number: post.post_number,
-      platform: post.platform,
-      copy: post.copy,
-      hashtags: post.hashtags.join(' '),
-      image_url: post.image_url || '',
-      headline_visual: post.headline_visual,
-      sent_at: new Date().toISOString(),
-    };
-
-    const result = await callWebhookWithRetry(payload);
-
-    if (result.ok) {
-      const now = new Date().toISOString();
-      await onUpdatePost(post.id, { status: 'scheduled', webhook_sent_at: now });
-      showToast('¡Enviado a Metricool correctamente!', 'ok');
-    } else {
-      // Revertir a approved si falla
-      await onUpdatePost(post.id, { status: 'approved' });
-      showToast(`Error al publicar: ${result.error}`, 'err');
-    }
-
-    setScheduling(false);
-  };
 
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all overflow-hidden shadow-sm flex flex-col ${
@@ -572,11 +535,11 @@ function PostCard({
         />
       )}
 
-      {/* Modal confirmación publicar Instagram */}
+      {/* Modal confirmación publicar */}
       {showPublishConfirm && (
         <ConfirmPublishModal
           postNumber={post.post_number}
-          username={''}
+          platform={post.platform}
           onConfirm={handlePublishIG}
           onCancel={() => setShowPublishConfirm(false)}
         />
@@ -602,7 +565,17 @@ function PostCard({
           {isChanges     && <span className="text-red-600">⚠ Cambios solicitados</span>}
           {isChangesDone && <span className="text-green-600">✅ Cambios hechos</span>}
           {isApproved    && <span className="text-amber-600">✓ Aprobado</span>}
-          {isScheduled   && <span className="text-green-600">🚀 Publicado en Metricool</span>}
+          {isScheduled && (
+            <span className="text-green-600 flex items-center gap-1">
+              {post.platform === 'IG' ? <Instagram size={11} /> : post.platform === 'LI' ? <Linkedin size={11} /> : <Facebook size={11} />}
+              Publicado
+              {post.webhook_sent_at && (
+                <span className="text-gray-400 font-normal normal-case tracking-normal">
+                  · {new Date(post.webhook_sent_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </span>
+          )}
           {post.status === 'scheduling' && <span className="text-gray-400 animate-pulse">⏳ Enviando...</span>}
           {isAdmin && (
             <button
@@ -895,39 +868,30 @@ function PostCard({
       {/* Acciones */}
       <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2 mt-auto">
 
-        {/* Botones publicar — solo admin + approved */}
+        {/* Botón publicar — solo admin + approved, dinámico por plataforma */}
         {isAdmin && isApproved && (
-          <div className="flex flex-col gap-2">
-            {/* Instagram directo */}
-            {post.platform === 'IG' && (
-              <button
-                onClick={() => setShowPublishConfirm(true)}
-                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2"
-              >
-                <Instagram size={14} /> Publicar en Instagram
-              </button>
-            )}
-            {/* Metricool / webhook */}
-            <button
-              onClick={handlePublish}
-              disabled={scheduling}
-              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:from-blue-700 hover:to-blue-800 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {scheduling
-                ? <><Loader2 size={14} className="animate-spin" /> Enviando a Metricool...</>
-                : <><Send size={14} /> Enviar a Metricool</>
-              }
-            </button>
-          </div>
+          <PublishButton platform={post.platform} onClick={() => setShowPublishConfirm(true)} />
         )}
 
         {/* Scheduled — estado final, sin botones */}
         {isScheduled && (
-          <div className="text-center text-[10px] font-bold text-green-600 uppercase tracking-widest py-2">
-            ✅ Publicado en Metricool
+          <div className="flex flex-col items-center gap-1 py-3 px-4 bg-green-50 rounded-xl border border-green-200">
+            <span className="text-[11px] font-black text-green-700 uppercase tracking-widest flex items-center gap-1.5">
+              {post.platform === 'IG' ? <Instagram size={12} /> : post.platform === 'LI' ? <Linkedin size={12} /> : <Facebook size={12} />}
+              Publicado en {post.platform === 'IG' ? 'Instagram' : post.platform === 'LI' ? 'LinkedIn' : 'Facebook'}
+            </span>
             {post.webhook_sent_at && (
-              <span className="block text-gray-400 font-normal mt-0.5">
-                {new Date(post.webhook_sent_at).toLocaleString('es-ES')}
+              <span className="text-sm font-bold text-green-800">
+                {new Date(post.webhook_sent_at).toLocaleDateString('es-ES', {
+                  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+                })}
+              </span>
+            )}
+            {post.webhook_sent_at && (
+              <span className="text-[10px] text-green-600">
+                {new Date(post.webhook_sent_at).toLocaleTimeString('es-ES', {
+                  hour: '2-digit', minute: '2-digit'
+                })}h
               </span>
             )}
           </div>
@@ -1043,9 +1007,9 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onU
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 h-px bg-green-200" />
             <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border-2 border-green-300 rounded-full">
-              <Instagram size={14} className="text-green-600" />
+              <CheckCircle size={14} className="text-green-600" />
               <span className="text-xs font-black uppercase tracking-widest text-green-700">
-                Publicados en Instagram — {publishedPosts.length}/{posts.length}
+                Publicados — {publishedPosts.length}/{posts.length}
               </span>
             </div>
             <div className="flex-1 h-px bg-green-200" />
