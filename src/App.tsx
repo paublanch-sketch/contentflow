@@ -271,9 +271,10 @@ export default function App() {
                 {activeClient.name}
               </h2>
               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
-                Fase J2 — Kit Digital
-                {' · '}{activeClient.platform === 'LI' ? 'LinkedIn' : 'Instagram'}
-                {activeClient.stage ? ` · ${activeClient.stage}` : ''}
+                {isAdmin
+                  ? <>Fase J2 — Kit Digital{' · '}{activeClient.platform === 'LI' ? 'LinkedIn' : 'Instagram'}{activeClient.stage ? ` · ${activeClient.stage}` : ''}</>
+                  : 'Kit Digital'
+                }
               </p>
             </div>
             {isAdmin && activeClient.contact && activeClient.contact !== '-' && (

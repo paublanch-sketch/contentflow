@@ -170,15 +170,18 @@ async function callWebhookWithRetry(
   }
 }
 
-// ─── Notificació d'aprovació per email (via Make.com) ────────────────────────
+// ─── Notificaciones email vía Make.com ───────────────────────────────────────
+const NOTIFY_EMAIL = 'pau.blanch@interactivos.net';
+
 async function notifyApproval(post: Post, clientName: string) {
-  if (NOTIFY_WEBHOOK_URL.includes('PENDING_SETUP')) return;  // no enviar fins que estigui configurat
+  if (NOTIFY_WEBHOOK_URL.includes('PENDING_SETUP')) return;
   try {
     await fetch(NOTIFY_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'approval',
+        notify_email: NOTIFY_EMAIL,
         client_id: post.client_id,
         client_name: clientName,
         post_number: post.post_number,
@@ -189,9 +192,7 @@ async function notifyApproval(post: Post, clientName: string) {
         approved_at: new Date().toISOString(),
       }),
     });
-  } catch {
-    // silenciós — la notificació és opcional, no ha de bloquejar l'aprovació
-  }
+  } catch { /* silencioso */ }
 }
 
 async function notifyChangesRequested(post: Post, clientName: string, feedback: string) {
@@ -202,6 +203,7 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'changes_requested',
+        notify_email: NOTIFY_EMAIL,
         client_id: post.client_id,
         client_name: clientName,
         post_number: post.post_number,
@@ -212,9 +214,7 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
         requested_at: new Date().toISOString(),
       }),
     });
-  } catch {
-    // silenciós
-  }
+  } catch { /* silencioso */ }
 }
 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
@@ -482,7 +482,7 @@ function PostCard({
             <button
               onClick={async () => {
                 await onUpdatePost(post.id, { status: 'approved', feedback: '' });
-                if (!isAdmin) notifyApproval(post, clientName);
+                notifyApproval(post, clientName);
               }}
               disabled={isApproved}
               className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tighter transition-colors flex items-center justify-center gap-1.5 shadow-sm ${
@@ -519,7 +519,7 @@ function PostCard({
                     const n = prompt('Describe los nuevos cambios que necesitas:');
                     if (n) {
                       await onUpdatePost(post.id, { status: 'changes', feedback: n });
-                      if (!isAdmin) notifyChangesRequested(post, clientName, n);
+                      notifyChangesRequested(post, clientName, n);
                     }
                   }}
                   className="w-full py-2 bg-white text-gray-400 rounded-xl text-[10px] font-bold uppercase tracking-tighter hover:bg-red-50 hover:text-red-500 hover:border-red-300 border-2 border-gray-200 transition-colors shadow-sm flex items-center justify-center gap-1.5"
@@ -533,7 +533,7 @@ function PostCard({
                   const n = prompt('Describe los cambios que necesitas:');
                   if (n) {
                     await onUpdatePost(post.id, { status: 'changes', feedback: n });
-                    if (!isAdmin) notifyChangesRequested(post, clientName, n);
+                    notifyChangesRequested(post, clientName, n);
                   }
                 }}
                 className="flex-1 py-3 border-2 bg-white text-gray-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
