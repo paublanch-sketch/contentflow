@@ -454,23 +454,26 @@ function PostCard({
           {imageUrls.length > 0 && (
             <button
               onClick={async () => {
-                if (imageUrls.length === 1) {
-                  // Descargar imagen única
-                  const a = document.createElement('a');
-                  a.href = imageUrls[0];
-                  a.download = `${post.id}_1.jpg`;
-                  a.target = '_blank';
-                  a.click();
-                } else {
-                  // Descargar todas en secuencia
-                  for (let i = 0; i < imageUrls.length; i++) {
+                const downloadBlob = async (url: string, filename: string) => {
+                  try {
+                    const res = await fetch(url);
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = imageUrls[i];
-                    a.download = `${post.id}_${i+1}.jpg`;
-                    a.target = '_blank';
+                    a.href = blobUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
                     a.click();
-                    await new Promise(r => setTimeout(r, 400));
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                  } catch {
+                    // fallback: abrir en nueva pestaña
+                    window.open(url, '_blank');
                   }
+                };
+                for (let i = 0; i < imageUrls.length; i++) {
+                  await downloadBlob(imageUrls[i], `${post.id}_${i + 1}.jpg`);
+                  if (i < imageUrls.length - 1) await new Promise(r => setTimeout(r, 500));
                 }
               }}
               className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 text-gray-600 hover:text-purple-700 transition-colors"
