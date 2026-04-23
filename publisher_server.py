@@ -266,25 +266,94 @@ async def _publish_instagram(page, post, creds, tmp_paths, caption, upd, job):
     from playwright.async_api import TimeoutError as PWTimeout
 
     upd('running', 'Abriendo Instagram...')
-    await page.goto('https://www.instagram.com/', wait_until='domcontentloaded')
-    await page.wait_for_timeout(2000)
+    await page.goto('https://www.instagram.com/accounts/login/', wait_until='networkidle')
+    await page.wait_for_timeout(3000)
 
-    # Cookies
-    for sel in ['button:has-text("Permitir todas")', 'button:has-text("Allow all")']:
+    # Cookies / banner de consentimiento
+    for sel in [
+        'button:has-text("Permitir todas las cookies")',
+        'button:has-text("Allow all cookies")',
+        'button:has-text("Permitir todas")',
+        'button:has-text("Allow all")',
+        'button:has-text("Accept")',
+        'button:has-text("Aceptar")',
+    ]:
         try:
             btn = page.locator(sel).first
-            if await btn.is_visible(timeout=2500): await btn.click(); await page.wait_for_timeout(800); break
+            if await btn.is_visible(timeout=2000):
+                await btn.click()
+                await page.wait_for_timeout(1000)
+                break
         except PWTimeout: pass
 
-    # Login
+    # Esperar formulario — Instagram usa distintos selectores según versión
+    upd('running', 'Esperando formulario de login...')
+    USERNAME_SELS = [
+        'input[name="username"]',
+        'input[autocomplete="username"]',
+        'input[aria-label*="username" i]',
+        'input[aria-label*="usuario" i]',
+        'input[aria-label*="teléfono" i]',
+        'input[aria-label*="Phone" i]',
+        'input[type="text"]',
+    ]
+    username_sel = None
+    for sel in USERNAME_SELS:
+        try:
+            await page.wait_for_selector(sel, timeout=4000)
+            username_sel = sel
+            break
+        except PWTimeout:
+            continue
+
+    if not username_sel:
+        # Log de la URL actual para diagnóstico
+        upd('error', f'No se encontró el campo de usuario. URL actual: {page.url}')
+        return
+
+    PASSWORD_SELS = [
+        'input[name="password"]',
+        'input[autocomplete="current-password"]',
+        'input[type="password"]',
+    ]
+    password_sel = None
+    for sel in PASSWORD_SELS:
+        try:
+            await page.wait_for_selector(sel, timeout=3000)
+            password_sel = sel
+            break
+        except PWTimeout:
+            continue
+
+    if not password_sel:
+        upd('error', 'No se encontró el campo de contraseña'); return
+
+    # Rellenar y enviar
     try:
-        await page.fill('input[name="username"]', creds['username'], timeout=8000)
-        await page.fill('input[name="password"]', creds['password'])
-        await page.click('button[type="submit"]')
-        upd('running', 'Credenciales enviadas...')
-        await page.wait_for_timeout(4500)
-    except PWTimeout:
-        upd('error', 'No se encontró el formulario de login'); return
+        await page.click(username_sel)
+        await page.wait_for_timeout(400)
+        await page.type(username_sel, creds['username'], delay=50)
+        await page.wait_for_timeout(400)
+        await page.click(password_sel)
+        await page.wait_for_timeout(400)
+        await page.type(password_sel, creds['password'], delay=50)
+        await page.wait_for_timeout(400)
+        # Intentar submit
+        submitted = False
+        for btn_sel in ['button[type="submit"]', 'button:has-text("Entrar")', 'button:has-text("Log in")', 'button:has-text("Iniciar sesión")']:
+            try:
+                btn = page.locator(btn_sel).first
+                if await btn.is_visible(timeout=2000):
+                    await btn.click()
+                    submitted = True
+                    break
+            except PWTimeout: pass
+        if not submitted:
+            await page.keyboard.press('Enter')
+        upd('running', 'Credenciales enviadas, esperando respuesta...')
+        await page.wait_for_timeout(5000)
+    except Exception as e:
+        upd('error', f'Error rellenando formulario: {e}'); return
 
     # Credenciales incorrectas
     for sel in ['#slfErrorAlert', 'p[data-testid="login-error-message"]', 'div[role="alert"]']:
