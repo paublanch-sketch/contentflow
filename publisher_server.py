@@ -191,6 +191,32 @@ def continue_job(job_id):
     return jsonify({'ok': True})
 
 
+@app.route('/metricool-blogs', methods=['GET'])
+def metricool_blogs():
+    """Devuelve la lista de blogs/perfiles conectados a la cuenta Metricool."""
+    import urllib.request as urlreq
+    import urllib.error
+    token = request.headers.get('X-Mc-Auth', '')
+    req = urlreq.Request(
+        'https://app.metricool.com/api/v2.0/blogs',
+        headers={
+            'Accept': 'application/json',
+            'X-Mc-Auth': token,
+        },
+        method='GET',
+    )
+    try:
+        with urlreq.urlopen(req, timeout=15) as resp:
+            body = resp.read().decode('utf-8')
+            return app.response_class(response=body, status=resp.status, mimetype='application/json')
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        print(f"[METRICOOL-BLOGS] ← ERROR {e.code}: {body[:200]}")
+        return app.response_class(response=body, status=e.code, mimetype='application/json')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/metricool', methods=['POST'])
 def metricool_proxy():
     """Proxy para la API de Metricool (evita CORS desde el navegador)."""
@@ -209,6 +235,7 @@ def metricool_proxy():
         data=body_bytes,
         headers={
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
             'X-Mc-Auth': token,
         },
         method='POST',

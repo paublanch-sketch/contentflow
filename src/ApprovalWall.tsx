@@ -31,7 +31,7 @@ const PUBLISHER_URL = 'http://localhost:8765';
 // ─── Metricool API ────────────────────────────────────────────────────────────
 const MC_API      = 'https://app.metricool.com/api/v2.0';
 const MC_TOKEN    = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
-const MC_USER_ID  = 4750478;
+const MC_USER_ID  = 1440018;
 const MC_PLATFORM: Record<string, string> = { IG: 'instagram', LI: 'linkedin', FB: 'facebook' };
 
 type McClientCreds = { blogId: string };
@@ -57,6 +57,8 @@ export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Modal Metricool — solo Blog ID + fecha (token y userId son fijos) ────────
+type McBlog = { id: number; name: string; type: string };
+
 function MetricoolModal({
   clientId, clientName, postNumber, onConfirm, onCancel,
 }: {
@@ -68,9 +70,33 @@ function MetricoolModal({
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setHours(9, 0, 0, 0);
   const [schedDate, setSchedDate] = useState(tomorrow.toISOString().slice(0, 16));
+  const [blogs, setBlogs]         = useState<McBlog[] | null>(null);
+  const [loadingBlogs, setLoadingBlogs] = useState(false);
+  const [blogsError, setBlogsError]     = useState('');
+
+  const fetchBlogs = async () => {
+    setLoadingBlogs(true); setBlogsError(''); setBlogs(null);
+    try {
+      const res = await fetch(`${PUBLISHER_URL}/metricool-blogs`, {
+        headers: { 'X-Mc-Auth': MC_TOKEN },
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setBlogs(data);
+      } else if (data?.data && Array.isArray(data.data)) {
+        setBlogs(data.data);
+      } else {
+        setBlogsError('Formato inesperado: ' + JSON.stringify(data).slice(0, 100));
+      }
+    } catch (e) {
+      setBlogsError('Error conectando con el servidor local. ¿Está publisher_server.py corriendo?');
+    } finally {
+      setLoadingBlogs(false);
+    }
+  };
 
   const handleConfirm = (publishNow = false) => {
-    if (!blogId) return alert('Introduce el Blog ID del cliente (en la URL de Metricool: ?blogId=XXXXX).');
+    if (!blogId) return alert('Introduce el Blog ID del cliente.');
     saveMcBlogId(clientId, blogId);
     const date = publishNow ? new Date(Date.now() + 60000).toISOString().slice(0, 16) : schedDate;
     onConfirm({ blogId }, date);
@@ -78,29 +104,66 @@ function MetricoolModal({
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-purple-200">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full border-2 border-purple-200">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-2xl">📊</span>
             <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Metricool — Post #{postNumber}</h3>
           </div>
+
+          {/* Blog ID */}
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blog ID — {clientName}</span>
-            <input type="text" value={blogId} onChange={e => setBlogId(e.target.value)}
-              placeholder="?blogId=XXXXXXX en la URL de Metricool"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+            <div className="flex gap-2">
+              <input type="text" value={blogId} onChange={e => setBlogId(e.target.value)}
+                placeholder="Introduce o busca abajo ↓"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+              <button
+                onClick={fetchBlogs}
+                disabled={loadingBlogs}
+                className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-xs font-black transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {loadingBlogs ? '⏳' : '🔍 Buscar'}
+              </button>
+            </div>
             <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>
           </label>
+
+          {/* Lista de blogs */}
+          {blogsError && (
+            <p className="text-[10px] text-red-500 bg-red-50 rounded-lg px-3 py-2">{blogsError}</p>
+          )}
+          {blogs && blogs.length > 0 && (
+            <div className="border border-purple-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+              <p className="text-[9px] font-bold text-gray-400 uppercase px-3 py-1.5 bg-gray-50 border-b border-gray-100">
+                Selecciona el blog del cliente:
+              </p>
+              {blogs.map(b => (
+                <button
+                  key={b.id}
+                  onClick={() => setBlogId(String(b.id))}
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-purple-50 transition-colors border-b border-gray-50 last:border-0 ${String(b.id) === blogId ? 'bg-purple-50 font-black text-purple-700' : 'text-gray-700'}`}
+                >
+                  <span>{b.name || b.type || 'Sin nombre'}</span>
+                  <span className="text-[10px] text-gray-400 font-mono ml-2">{b.id}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {blogs && blogs.length === 0 && (
+            <p className="text-[10px] text-gray-400 text-center py-2">No se encontraron blogs en esta cuenta.</p>
+          )}
+
+          {/* Fecha */}
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Fecha y hora</span>
             <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
-          {/* Botón Publicar ahora */}
-          <button
-            onClick={() => handleConfirm(true)}
-            className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors"
-          >
+
+          {/* Publicar ahora */}
+          <button onClick={() => handleConfirm(true)}
+            className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
             ⚡ Publicar ahora
           </button>
           <div className="flex gap-3">
