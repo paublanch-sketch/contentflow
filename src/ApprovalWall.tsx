@@ -664,7 +664,9 @@ function PostCard({
         providers:       [{ network }],
       };
       if (imageUrls.length > 0) {
-        body.media = imageUrls.map(url => ({ url }));
+        // Metricool espera array de objetos con url (sin parámetros de caché)
+        const cleanUrls = imageUrls.map(u => u.split('?')[0]);
+        body.media = cleanUrls.map(url => ({ url, type: 'IMAGE' }));
       }
 
       // Llamamos a la Vercel Serverless Function (sin CORS, sin servidor local)

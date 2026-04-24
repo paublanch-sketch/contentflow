@@ -27,6 +27,7 @@ module.exports = async function handler(req, res) {
       publicationDate: { dateTime, timezone: 'Europe/Madrid' },
     };
     console.log('[metricool-post] body enviado:', JSON.stringify(body));
+    console.log('[metricool-post] media field:', JSON.stringify(body.media));
     const mcRes = await fetch(`https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`, {
       method: 'POST',
       headers: {
