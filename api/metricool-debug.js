@@ -1,0 +1,26 @@
+const MC_TOKEN   = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
+const MC_USER_ID = 1440018;
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const blogId = req.query.blogId || '6159097';
+
+  try {
+    // GET posts programados de Metricool para ver el formato de media
+    const mcRes = await fetch(
+      `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}&size=5`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X-Mc-Auth': MC_TOKEN,
+        },
+      }
+    );
+    const text = await mcRes.text();
+    res.status(mcRes.status).setHeader('Content-Type', 'application/json').send(text);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+};

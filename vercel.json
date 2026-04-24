@@ -1,11 +1,13 @@
 {
   "functions": {
     "api/metricool-blogs.js": { "memory": 128, "maxDuration": 10 },
-    "api/metricool-post.js":  { "memory": 128, "maxDuration": 10 }
+    "api/metricool-post.js":  { "memory": 128, "maxDuration": 10 },
+    "api/metricool-debug.js": { "memory": 128, "maxDuration": 10 }
   },
   "routes": [
     { "src": "/api/metricool-blogs", "dest": "/api/metricool-blogs.js" },
     { "src": "/api/metricool-post",  "dest": "/api/metricool-post.js"  },
+    { "src": "/api/metricool-debug", "dest": "/api/metricool-debug.js" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
