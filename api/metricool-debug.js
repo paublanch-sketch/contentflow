@@ -57,26 +57,23 @@ module.exports = async function handler(req, res) {
     const base = { text: 'TEST img field', publicationDate: { dateTime: dt2, timezone: 'Europe/Madrid' }, providers: [{ network: 'INSTAGRAM' }] };
 
     // Probar distintos nombres de campo dentro de instagramData
-    // Descubrir campos válidos del objeto dentro de media[]
-    // enviando un campo inválido para que el error liste los conocidos
-    const mediaFieldTests = [
-      { _unknownXyz: true },            // trigger error con lista de campos
-      { url: imgUrl },                   // formato actual
-      { url: imgUrl, type: 'IMAGE' },   // con type
-      { fileUrl: imgUrl },              // alternativa fileUrl
-      { remoteUrl: imgUrl },            // alternativa remoteUrl
-      { contentUrl: imgUrl },           // alternativa contentUrl
-      { src: imgUrl },                  // alternativa src
+    // TEST CLAVE: saveExternalMediaFiles: true + diferentes formatos de url
+    const saveTests = [
+      { label: 'url + saveExternal true',       body: { ...base, saveExternalMediaFiles: true, media: [{ url: imgUrl }] } },
+      { label: 'url+type + saveExternal true',  body: { ...base, saveExternalMediaFiles: true, media: [{ url: imgUrl, type: 'IMAGE' }] } },
+      { label: 'string + saveExternal true',    body: { ...base, saveExternalMediaFiles: true, media: [imgUrl] } },
+      { label: 'supabase url + saveExternal',   body: { ...base, saveExternalMediaFiles: true, media: [{ url: req.query.supaUrl || imgUrl }] } },
     ];
     const fieldResults = [];
-    for (const mediaObj of mediaFieldTests) {
+    for (const t of saveTests) {
       const r = await fetch(
         `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN },
-          body: JSON.stringify({ ...base, media: [mediaObj] }) }
+          body: JSON.stringify(t.body) }
       );
       const txt = await r.text();
-      fieldResults.push({ mediaObj, status: r.status, ok: r.status === 201, full: txt });
+      const parsed = JSON.parse(txt);
+      fieldResults.push({ label: t.label, status: r.status, saveExternalMediaFiles: parsed?.data?.saveExternalMediaFiles, mediaInResponse: parsed?.data?.media, full: txt.slice(0, 400) });
     }
     return res.status(200).json({ fieldResults });
 
