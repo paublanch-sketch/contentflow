@@ -1,5 +1,5 @@
 const MC_TOKEN   = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
-const MC_USER_ID = 4750478;
+const MC_USER_ID = 1440018;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   try {
     const body = { userId: MC_USER_ID, ...req.body };
-    const mcRes = await fetch('https://app.metricool.com/api/v2.0/posts', {
+    const mcRes = await fetch('https://app.metricool.com/api/v2/scheduler/posts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

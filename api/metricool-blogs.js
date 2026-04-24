@@ -1,13 +1,14 @@
 const MC_TOKEN   = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
-const MC_USER_ID = 4750478;
+const MC_USER_ID = 1440018;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
   try {
-    const mcRes = await fetch(`https://app.metricool.com/api/v2.0/blogs?userId=${MC_USER_ID}`, {
-      headers: { 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN },
-    });
+    const mcRes = await fetch(
+      `https://app.metricool.com/api/admin/simpleProfiles?userId=${MC_USER_ID}`,
+      { headers: { 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN } }
+    );
     const text = await mcRes.text();
     res.status(mcRes.status).setHeader('Content-Type', 'application/json').send(text);
   } catch (err) {

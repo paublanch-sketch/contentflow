@@ -31,7 +31,7 @@ const PUBLISHER_URL = 'http://localhost:8765';
 // ─── Metricool API ────────────────────────────────────────────────────────────
 const MC_API      = 'https://app.metricool.com/api/v2.0';
 const MC_TOKEN    = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
-const MC_USER_ID  = 4750478;
+const MC_USER_ID  = 1440018;
 const MC_PLATFORM: Record<string, string> = { IG: 'instagram', LI: 'linkedin', FB: 'facebook' };
 
 type McClientCreds = { blogId: string };

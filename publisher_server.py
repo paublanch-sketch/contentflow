@@ -231,7 +231,7 @@ def metricool_proxy():
     print(f"  Body:  {json.dumps(data, ensure_ascii=False)[:300]}")
 
     req = urlreq.Request(
-        'https://app.metricool.com/api/v2.0/posts',
+        'https://app.metricool.com/api/v2/scheduler/posts',
         data=body_bytes,
         headers={
             'Content-Type': 'application/json',
