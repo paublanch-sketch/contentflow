@@ -191,6 +191,38 @@ def continue_job(job_id):
     return jsonify({'ok': True})
 
 
+@app.route('/metricool', methods=['POST'])
+def metricool_proxy():
+    """Proxy para la API de Metricool (evita CORS desde el navegador)."""
+    import urllib.request as urlreq
+    data = request.get_json(force=True) or {}
+    token = data.pop('_token', '')
+    body_bytes = json.dumps(data).encode('utf-8')
+    req = urlreq.Request(
+        'https://app.metricool.com/api/v2.0/posts',
+        data=body_bytes,
+        headers={
+            'Content-Type': 'application/json',
+            'X-Mc-Auth': token,
+        },
+        method='POST',
+    )
+    try:
+        with urlreq.urlopen(req, timeout=15) as resp:
+            resp_body = resp.read().decode('utf-8')
+            return app.response_class(
+                response=resp_body,
+                status=resp.status,
+                mimetype='application/json',
+            )
+    except Exception as e:
+        code = getattr(e, 'code', 500)
+        body = getattr(e, 'read', lambda: str(e).encode())()
+        if isinstance(body, bytes):
+            body = body.decode('utf-8', errors='replace')
+        return app.response_class(response=body, status=code, mimetype='application/json')
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Runner
 # ─────────────────────────────────────────────────────────────────────────────

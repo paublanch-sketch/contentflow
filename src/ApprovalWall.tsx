@@ -569,6 +569,7 @@ function PostCard({
       const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
       const imageUrls = parseImageUrls(post.image_url);
       const body: Record<string, unknown> = {
+        _token:          userToken,          // el proxy lo extrae y lo manda como header
         userId:          Number(userId),
         blogId:          Number(blogId),
         text:            caption,
@@ -579,13 +580,11 @@ function PostCard({
         body.media = imageUrls.map(url => ({ url }));
       }
 
-      const res = await fetch(`${MC_API}/posts`, {
+      // Llamamos al proxy local (publisher_server.py) para evitar el bloqueo CORS
+      const res = await fetch(`${PUBLISHER_URL}/metricool`, {
         method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Mc-Auth':    userToken,
-        },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
       });
 
       if (res.ok) {
