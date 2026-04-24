@@ -654,7 +654,8 @@ function PostCard({
         showToast('✅ Programado en Metricool', 'ok');
       } else {
         const err = await res.text();
-        showToast(`Error Metricool: ${err.slice(0, 80)}`, 'err');
+        console.error('Metricool error completo:', err);
+        showToast(`Error Metricool: ${err.slice(0, 200)}`, 'err');
       }
     } catch (e: unknown) {
       showToast(`Error de red: ${String(e).slice(0, 60)}`, 'err');
