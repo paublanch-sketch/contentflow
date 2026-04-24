@@ -8,18 +8,17 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   try {
     const incoming = req.body;
-    // Metricool requiere publicationDate como objeto { dateTime, timezone }
+    // userId va como query param, NO en el body
     const rawDate = incoming.publicationDate;
     const dt = rawDate ? new Date(rawDate) : new Date(Date.now() + 60000);
-    // Formato local sin Z: "2026-04-25T10:00:00"
     const dateTime = dt.toISOString().slice(0, 19);
+    const { userId: _removed, ...rest } = incoming;
     const body = {
-      userId: MC_USER_ID,
-      ...incoming,
+      ...rest,
       publicationDate: { dateTime, timezone: 'Europe/Madrid' },
     };
     console.log('[metricool-post] body enviado:', JSON.stringify(body));
-    const mcRes = await fetch('https://app.metricool.com/api/v2/scheduler/posts', {
+    const mcRes = await fetch(`https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
