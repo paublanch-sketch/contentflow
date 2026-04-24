@@ -66,7 +66,7 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({ ...base, instagramData: { [field]: [{ url: imgUrl }] } }) }
       );
       const txt = await r.text();
-      fieldResults.push({ field, status: r.status, ok: r.status === 201, snippet: txt.slice(0, 200) });
+      fieldResults.push({ field, status: r.status, ok: r.status === 201, snippet: txt.slice(0, 800) });
     }
     return res.status(200).json({ fieldResults });
 
