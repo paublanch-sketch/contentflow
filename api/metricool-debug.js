@@ -48,6 +48,25 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ status: r.status, body: await r.text() });
     }
 
+    if (mode === 'autopublish') {
+      // Testear qué combinación activa autoPublish en Metricool
+      const dt = new Date(Date.now() + 8 * 60000).toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');
+      const base = { text: 'TEST autoPublish', publicationDate: { dateTime: dt, timezone: 'Europe/Madrid' }, providers: [{ network: 'INSTAGRAM' }], media: [imgUrl], saveExternalMediaFiles: true };
+      const tests = [
+        { label: 'instagramData.autoPublish only',  body: { ...base, instagramData: { autoPublish: true } } },
+        { label: 'root autoPublish only',           body: { ...base, autoPublish: true } },
+        { label: 'both root + instagramData',       body: { ...base, autoPublish: true, instagramData: { autoPublish: true } } },
+      ];
+      const results = [];
+      for (const t of tests) {
+        const r = await fetch(`https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN }, body: JSON.stringify(t.body) });
+        const json = JSON.parse(await r.text());
+        results.push({ label: t.label, status: r.status, autoPublish: json?.data?.autoPublish, instagramAutoPublish: json?.data?.instagramData?.autoPublish, postId: json?.data?.id });
+      }
+      return res.status(200).json(results);
+    }
+
     // Modo test: crear post con imagen pública para ver qué formato acepta
     const now = new Date(Date.now() + 5 * 60000);
     const dateTime = now.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');

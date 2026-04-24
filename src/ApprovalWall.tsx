@@ -696,6 +696,8 @@ function PostCard({
         body.saveExternalMediaFiles = true;
       }
       // Auto-publicar directamente (no quedar en "Pendiente")
+      // Se envía a nivel raíz Y dentro de instagramData para cubrir ambos formatos de la API
+      body.autoPublish = true;
       if (network === 'INSTAGRAM') {
         body.instagramData = { autoPublish: true };
       } else if (network === 'LINKEDIN') {
