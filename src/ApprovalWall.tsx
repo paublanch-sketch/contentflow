@@ -87,7 +87,7 @@ function MetricoolModal({
         setBlogsError('Formato inesperado: ' + JSON.stringify(data).slice(0, 100));
       }
     } catch (e) {
-      setBlogsError('Error conectando con el servidor local. ¿Está publisher_server.py corriendo?');
+      setBlogsError(`Error al conectar: ${String(e).slice(0, 100)}`);
     } finally {
       setLoadingBlogs(false);
     }
