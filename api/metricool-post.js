@@ -3,7 +3,7 @@
 const MC_TOKEN   = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
 const MC_USER_ID = 1440018;
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -28,4 +28,4 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }
-};
+}
