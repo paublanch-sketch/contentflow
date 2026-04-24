@@ -632,7 +632,7 @@ function PostCard({
       const body: Record<string, unknown> = {
         blogId:          Number(blogId),
         text:            caption,
-        providers:       [MC_PLATFORM[post.platform] ?? 'INSTAGRAM'],
+        providers:       [{ provider: MC_PLATFORM[post.platform] ?? 'INSTAGRAM', status: 'SCHEDULED' }],
         publicationDate: new Date(schedDate).toISOString(),
       };
       if (imageUrls.length > 0) {
