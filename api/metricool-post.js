@@ -10,8 +10,17 @@ module.exports = async function handler(req, res) {
     const incoming = req.body;
     // userId va como query param, NO en el body
     const rawDate = incoming.publicationDate;
-    const dt = rawDate ? new Date(rawDate) : new Date(Date.now() + 60000);
-    const dateTime = dt.toISOString().slice(0, 19);
+    // rawDate ya viene en hora local de Madrid (enviada por el frontend).
+    // NO convertir a UTC con toISOString() — Metricool la interpreta como hora local.
+    let dateTime;
+    if (rawDate) {
+      // Normalizar: asegurar segundos "YYYY-MM-DDTHH:MM:SS"
+      dateTime = rawDate.length === 16 ? rawDate + ':00' : rawDate.slice(0, 19);
+    } else {
+      // Fallback: ahora + 5 min en hora de Madrid
+      const now = new Date(Date.now() + 5 * 60000);
+      dateTime = now.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');
+    }
     const { userId: _u, blogId, ...rest } = incoming;
     const body = {
       ...rest,

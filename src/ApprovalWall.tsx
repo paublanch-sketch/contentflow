@@ -96,7 +96,14 @@ function MetricoolModal({
   const handleConfirm = (publishNow = false) => {
     if (!blogId) return alert('Introduce el Blog ID del cliente.');
     saveMcBlogId(clientId, blogId);
-    const date = publishNow ? new Date(Date.now() + 60000).toISOString().slice(0, 16) : schedDate;
+    let date: string;
+    if (publishNow) {
+      // +3 min buffer en hora local de Madrid (el servidor la tratará como hora local)
+      const now = new Date(Date.now() + 3 * 60000);
+      date = now.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T').slice(0, 16);
+    } else {
+      date = schedDate; // datetime-local ya da hora local del navegador (Madrid)
+    }
     onConfirm({ blogId }, date);
   };
 
