@@ -32,7 +32,7 @@ const PUBLISHER_URL = 'http://localhost:8765';
 const MC_API      = 'https://app.metricool.com/api/v2.0';
 const MC_TOKEN    = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
 const MC_USER_ID  = 1440018;
-const MC_PLATFORM: Record<string, string> = { IG: 'instagram', LI: 'linkedin', FB: 'facebook' };
+const MC_PLATFORM: Record<string, string> = { IG: 'INSTAGRAM', LI: 'LINKEDIN', FB: 'FACEBOOK' };
 
 type McClientCreds = { blogId: string };
 
@@ -632,7 +632,7 @@ function PostCard({
       const body: Record<string, unknown> = {
         blogId:          Number(blogId),
         text:            caption,
-        networks:        [MC_PLATFORM[post.platform] ?? 'instagram'],
+        providers:       [MC_PLATFORM[post.platform] ?? 'INSTAGRAM'],
         publicationDate: new Date(schedDate).toISOString(),
       };
       if (imageUrls.length > 0) {
