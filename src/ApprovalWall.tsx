@@ -688,9 +688,8 @@ function PostCard({
         blogId:          Number(blogId),
         text:            caption,
         publicationDate: schedDate,
-        // autoPublish a nivel raíz + dentro del provider
         autoPublish:     true,
-        providers:       [{ network, autoPublish: true }],
+        providers:       [{ network }],
       };
       // Metricool: media = array de strings (URLs directas), saveExternalMediaFiles: true
       if (imageUrls.length > 0) {
