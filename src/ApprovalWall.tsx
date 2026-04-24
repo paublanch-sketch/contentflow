@@ -636,10 +636,12 @@ function PostCard({
       const userId     = MC_USER_ID;
       const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
       const imageUrls = parseImageUrls(post.image_url);
+      const network = MC_PLATFORM[post.platform] ?? 'INSTAGRAM';
       const body: Record<string, unknown> = {
         blogId:          Number(blogId),
         text:            caption,
-        publicationDate: new Date(schedDate).toISOString(),
+        publicationDate: schedDate, // ya viene en hora local de Madrid desde handleConfirm
+        providers:       [{ network }],
       };
       if (imageUrls.length > 0) {
         body.media = imageUrls.map(url => ({ url }));
