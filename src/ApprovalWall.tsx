@@ -663,10 +663,14 @@ function PostCard({
         publicationDate: schedDate, // ya viene en hora local de Madrid desde handleConfirm
         providers:       [{ network }],
       };
-      if (imageUrls.length > 0) {
-        // Metricool espera array de objetos con url (sin parámetros de caché)
-        const cleanUrls = imageUrls.map(u => u.split('?')[0]);
-        body.media = cleanUrls.map(url => ({ url, type: 'IMAGE' }));
+      // Las imágenes van dentro del campo específico de cada red social
+      const cleanUrls = imageUrls.map(u => u.split('?')[0]);
+      if (network === 'INSTAGRAM' && cleanUrls.length > 0) {
+        body.instagramData = { images: cleanUrls.map(url => ({ url })) };
+      } else if (network === 'LINKEDIN' && cleanUrls.length > 0) {
+        body.linkedinData = { images: cleanUrls.map(url => ({ url })) };
+      } else if (network === 'FACEBOOK' && cleanUrls.length > 0) {
+        body.facebookData = { images: cleanUrls.map(url => ({ url })) };
       }
 
       // Llamamos a la Vercel Serverless Function (sin CORS, sin servidor local)
