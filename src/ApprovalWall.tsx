@@ -57,7 +57,7 @@ export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Modal Metricool — solo Blog ID + fecha (token y userId son fijos) ────────
-type McBlog = { id: number; name: string; type: string };
+type McBlog = { id: number; label: string; instagram: string | null };
 
 function MetricoolModal({
   clientId, clientName, postNumber, onConfirm, onCancel,
@@ -142,7 +142,7 @@ function MetricoolModal({
                   onClick={() => setBlogId(String(b.id))}
                   className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-purple-50 transition-colors border-b border-gray-50 last:border-0 ${String(b.id) === blogId ? 'bg-purple-50 font-black text-purple-700' : 'text-gray-700'}`}
                 >
-                  <span>{b.name || b.type || 'Sin nombre'}</span>
+                  <span>{b.label || 'Sin nombre'}{b.instagram ? <span className="text-gray-400 ml-1">@{b.instagram}</span> : null}</span>
                   <span className="text-[10px] text-gray-400 font-mono ml-2">{b.id}</span>
                 </button>
               ))}
