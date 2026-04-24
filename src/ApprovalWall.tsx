@@ -67,6 +67,7 @@ function MetricoolModal({
   onCancel: () => void;
 }) {
   const [blogId, setBlogId] = useState(getMcBlogId(clientId));
+  const [selectedBlog, setSelectedBlog] = useState<McBlog | null>(null);
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setHours(9, 0, 0, 0);
   const [schedDate, setSchedDate] = useState(tomorrow.toISOString().slice(0, 16));
@@ -120,9 +121,9 @@ function MetricoolModal({
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Blog ID — {clientName}</span>
             <div className="flex gap-2">
-              <input type="text" value={blogId} onChange={e => setBlogId(e.target.value)}
+              <input type="text" value={blogId} onChange={e => { setBlogId(e.target.value); setSelectedBlog(null); }}
                 placeholder="Introduce o busca abajo ↓"
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300" />
               <button
                 onClick={fetchBlogs}
                 disabled={loadingBlogs}
@@ -131,6 +132,12 @@ function MetricoolModal({
                 {loadingBlogs ? '⏳' : '🔍 Buscar'}
               </button>
             </div>
+            {selectedBlog && (
+              <span className="text-[10px] text-purple-700 font-bold bg-purple-50 border border-purple-200 rounded-lg px-2 py-1 flex items-center gap-1">
+                ✅ {selectedBlog.label}{selectedBlog.instagram ? <span className="text-pink-500"> · @{selectedBlog.instagram}</span> : null}
+                <span className="text-gray-400 font-mono ml-1">#{selectedBlog.id}</span>
+              </span>
+            )}
             <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>
           </label>
 
@@ -146,7 +153,7 @@ function MetricoolModal({
               {blogs.map(b => (
                 <button
                   key={b.id}
-                  onClick={() => setBlogId(String(b.id))}
+                  onClick={() => { setBlogId(String(b.id)); setSelectedBlog(b); }}
                   className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-purple-50 transition-colors border-b border-gray-50 last:border-0 ${String(b.id) === blogId ? 'bg-purple-50 font-black text-purple-700' : 'text-gray-700'}`}
                 >
                   <span>{b.label || 'Sin nombre'}{b.instagram ? <span className="text-gray-400 ml-1">@{b.instagram}</span> : null}</span>
@@ -163,7 +170,7 @@ function MetricoolModal({
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Fecha y hora</span>
             <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
 
           {/* Preview imágenes que se enviarán */}
@@ -1158,7 +1165,7 @@ function PostCard({
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    const newTags = tagsDraft.split(/\s+/).map(t => t.replace(/^#/, '')).filter(Boolean);
+                    const newTags = tagsDraft.split(/\s+/).map(t => t.replace(/^#+/, '')).filter(Boolean);
                     await onUpdatePost(post.id, { hashtags: newTags });
                     setEditingTags(false);
                     showToast('Hashtags guardados', 'ok');
@@ -1183,7 +1190,7 @@ function PostCard({
               }
               {isAdmin && !isScheduled && (
                 <button
-                  onClick={() => { setTagsDraft(post.hashtags?.join(' ') ?? ''); setEditingTags(true); }}
+                  onClick={() => { setTagsDraft(post.hashtags?.map(h => `#${h.replace(/^#+/, '')}`).join(' ') ?? ''); setEditingTags(true); }}
                   className="opacity-0 group-hover/tags:opacity-100 transition-opacity ml-1 bg-white border border-gray-200 text-gray-400 hover:text-[#2d6a4f] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm"
                 >✏️ Editar</button>
               )}
@@ -1198,7 +1205,7 @@ function PostCard({
         {/* Botones publicar — solo admin + approved */}
         {isAdmin && isApproved && (
           <div className="flex flex-col gap-2">
-            {/* Botón Metricool (principal) */}
+            {/* Botón Metricool */}
             <button
               onClick={() => setShowMcModal(true)}
               disabled={mcSending}
@@ -1207,8 +1214,6 @@ function PostCard({
               {mcSending ? <Loader2 size={14} className="animate-spin" /> : '📊'}
               {mcSending ? 'Enviando a Metricool...' : 'Programar en Metricool'}
             </button>
-            {/* Botón publicar directo (fallback) */}
-            <PublishButton platform={post.platform} onClick={() => setShowPublishConfirm(true)} />
           </div>
         )}
 
