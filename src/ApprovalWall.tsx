@@ -393,6 +393,62 @@ function PublishButton({ platform, onClick }: { platform: string; onClick: () =>
   );
 }
 
+// ─── Lightbox ─────────────────────────────────────────────────────────────────
+function Lightbox({ urls, startIdx, onClose }: { urls: string[]; startIdx: number; onClose: () => void }) {
+  const [idx, setIdx] = useState(startIdx);
+
+  // Cerrar con Escape, navegar con flechas
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(urls.length - 1, i + 1));
+      if (e.key === 'ArrowLeft')  setIdx(i => Math.max(0, i - 1));
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [urls.length, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* Imagen */}
+      <img
+        src={urls[idx]}
+        alt={`Imagen ${idx + 1}`}
+        className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      />
+
+      {/* Botón cerrar */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-black transition-colors"
+      >✕</button>
+
+      {/* Flechas */}
+      {urls.length > 1 && (
+        <>
+          <button
+            onClick={e => { e.stopPropagation(); setIdx(i => Math.max(0, i - 1)); }}
+            disabled={idx === 0}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 text-white rounded-full w-12 h-12 flex items-center justify-center text-2xl disabled:opacity-20 transition-colors"
+          ><ChevronLeft size={24} /></button>
+          <button
+            onClick={e => { e.stopPropagation(); setIdx(i => Math.min(urls.length - 1, i + 1)); }}
+            disabled={idx === urls.length - 1}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 text-white rounded-full w-12 h-12 flex items-center justify-center text-2xl disabled:opacity-20 transition-colors"
+          ><ChevronRight size={24} /></button>
+          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs font-bold px-3 py-1 rounded-full">
+            {idx + 1} / {urls.length}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Toast interno ────────────────────────────────────────────────────────────
 function Toast({ msg, type }: { msg: string; type: 'ok' | 'err' }) {
   return (
@@ -564,6 +620,7 @@ function PostCard({
   // ── Metricool Publisher ──
   const [showMcModal, setShowMcModal]     = useState(false);
   const [mcSending, setMcSending]         = useState(false);
+  const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
 
   const handleSendToMetricool = async (blogId: string, schedDate: string) => {
     setShowMcModal(false);
@@ -739,6 +796,15 @@ function PostCard({
         />
       )}
 
+      {/* Lightbox */}
+      {lightboxIdx !== null && imageUrls.length > 0 && (
+        <Lightbox
+          urls={imageUrls}
+          startIdx={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+        />
+      )}
+
       {/* Modal Metricool */}
       {showMcModal && (
         <MetricoolModal
@@ -809,7 +875,16 @@ function PostCard({
           {uploadingId === post.id
             ? <Loader2 className="animate-spin text-[#2d6a4f]" />
             : currentImage
-              ? <img key={currentImage} src={currentImage} className="w-full h-full object-cover" alt="Post" />
+              ? (
+                <img
+                  key={currentImage}
+                  src={currentImage}
+                  className="w-full h-full object-cover cursor-zoom-in"
+                  alt="Post"
+                  onClick={() => setLightboxIdx(safeIdx)}
+                  title="Click para ver en grande"
+                />
+              )
               : (
                 <div className="text-center p-4 text-gray-300">
                   <ImageIcon size={40} className="mx-auto mb-2" />
