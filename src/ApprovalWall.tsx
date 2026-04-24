@@ -29,19 +29,13 @@ function serializeImageUrls(urls: string[]): string {
 const PUBLISHER_URL = 'http://localhost:8765';
 
 // ─── Metricool API ────────────────────────────────────────────────────────────
-const MC_API = 'https://app.metricool.com/api/v2.0';
-const MC_PLATFORM: Record<string, string> = { IG: 'INSTAGRAM', LI: 'LINKEDIN', FB: 'FACEBOOK' };
+const MC_API      = 'https://app.metricool.com/api/v2.0';
+const MC_TOKEN    = 'GCZMPVRNJMKUTWNOFCKRHZGJILQQFULCFHSGEAGWAEUTQGQXAIUYEHOAYNWFIXUX';
+const MC_USER_ID  = 6159097;
+const MC_PLATFORM: Record<string, string> = { IG: 'instagram', LI: 'linkedin', FB: 'facebook' };
 
-// Helpers localStorage — token+userId globales (tuyos), blogId por cliente
-type McClientCreds = { userToken: string; userId: string; blogId: string };
+type McClientCreds = { blogId: string };
 
-function getMcGlobal(): { userToken: string; userId: string } {
-  try { return JSON.parse(localStorage.getItem('mc_global') ?? '{}'); }
-  catch { return { userToken: '', userId: '' }; }
-}
-function saveMcGlobal(cfg: { userToken: string; userId: string }) {
-  localStorage.setItem('mc_global', JSON.stringify(cfg));
-}
 function getMcBlogId(clientId: string): string {
   try {
     const all = JSON.parse(localStorage.getItem('mc_blogs') ?? '{}');
@@ -56,46 +50,13 @@ function saveMcBlogId(clientId: string, blogId: string) {
   } catch {}
 }
 
-// ─── Modal ajustes globales Metricool (token + userId de Pau, no cambian) ─────
+// ─── Export vacío para no romper el import en App.tsx ────────────────────────
 export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
-  const g = getMcGlobal();
-  const [userToken, setUserToken] = useState(g.userToken ?? '');
-  const [userId,    setUserId]    = useState(g.userId ?? '');
-  return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-purple-200">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📊</span>
-            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Ajustes Metricool</h3>
-          </div>
-          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            Tu token y userId son siempre los mismos. Solo el <strong>Blog ID</strong> cambia por cliente.
-          </p>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Token API (tuyo)</span>
-            <input type="password" value={userToken} onChange={e => setUserToken(e.target.value)}
-              placeholder="user-settings/api → copiar token"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">User ID (tuyo · ej: 1440018)</span>
-            <input type="text" value={userId} onChange={e => setUserId(e.target.value)}
-              placeholder="userId en la URL de Metricool"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
-          </label>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">Cancelar</button>
-            <button onClick={() => { saveMcGlobal({ userToken, userId }); onClose(); }}
-              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90">Guardar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  useEffect(() => { onClose(); }, []);
+  return null;
 }
 
-// ─── Modal Metricool por post — solo Blog ID (cambia por cliente) + fecha ─────
+// ─── Modal Metricool — solo Blog ID + fecha (token y userId son fijos) ────────
 function MetricoolModal({
   clientId, clientName, postNumber, onConfirm, onCancel,
 }: {
@@ -103,19 +64,16 @@ function MetricoolModal({
   onConfirm: (creds: McClientCreds, date: string) => void;
   onCancel: () => void;
 }) {
-  const global = getMcGlobal();
-  const hasGlobal = !!(global.userToken && global.userId);
   const [blogId, setBlogId] = useState(getMcBlogId(clientId));
-
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setHours(9, 0, 0, 0);
   const [schedDate, setSchedDate] = useState(tomorrow.toISOString().slice(0, 16));
 
-  const handleConfirm = () => {
-    if (!hasGlobal) return alert('Configura primero tu Token y User ID en el botón 📊 Metricool de la barra superior.');
-    if (!blogId) return alert('Introduce el Blog ID de este cliente (URL de Metricool → ?blogId=XXXXX).');
+  const handleConfirm = (publishNow = false) => {
+    if (!blogId) return alert('Introduce el Blog ID del cliente (en la URL de Metricool: ?blogId=XXXXX).');
     saveMcBlogId(clientId, blogId);
-    onConfirm({ ...global, blogId }, schedDate);
+    const date = publishNow ? new Date(Date.now() + 60000).toISOString().slice(0, 16) : schedDate;
+    onConfirm({ blogId }, date);
   };
 
   return (
@@ -126,15 +84,10 @@ function MetricoolModal({
             <span className="text-2xl">📊</span>
             <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Metricool — Post #{postNumber}</h3>
           </div>
-          {!hasGlobal && (
-            <p className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              ⚠️ Configura tu Token y User ID en el botón 📊 Metricool de la barra superior.
-            </p>
-          )}
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blog ID — {clientName}</span>
             <input type="text" value={blogId} onChange={e => setBlogId(e.target.value)}
-              placeholder="?blogId=XXXXXXX en URL de Metricool"
+              placeholder="?blogId=XXXXXXX en la URL de Metricool"
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
             <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>
           </label>
@@ -143,10 +96,17 @@ function MetricoolModal({
             <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
-          <div className="flex gap-3 mt-1">
+          {/* Botón Publicar ahora */}
+          <button
+            onClick={() => handleConfirm(true)}
+            className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors"
+          >
+            ⚡ Publicar ahora
+          </button>
+          <div className="flex gap-3">
             <button onClick={onCancel} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">Cancelar</button>
-            <button onClick={handleConfirm} className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90 flex items-center justify-center gap-1.5">
-              📊 Programar
+            <button onClick={() => handleConfirm(false)} className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90 flex items-center justify-center gap-1.5">
+              📅 Programar
             </button>
           </div>
         </div>
@@ -603,14 +563,16 @@ function PostCard({
   const handleSendToMetricool = async (creds: McClientCreds, schedDate: string) => {
     setShowMcModal(false); setMcSending(true);
     try {
-      const { userToken, userId, blogId } = creds;
+      const { blogId } = creds;
+      const userToken  = MC_TOKEN;
+      const userId     = MC_USER_ID;
       const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
       const imageUrls = parseImageUrls(post.image_url);
       const body: Record<string, unknown> = {
         userId:          Number(userId),
         blogId:          Number(blogId),
         text:            caption,
-        networks:        [MC_PLATFORM[post.platform] ?? 'INSTAGRAM'],
+        networks:        [MC_PLATFORM[post.platform] ?? 'instagram'],
         publicationDate: new Date(schedDate).toISOString(),
       };
       if (imageUrls.length > 0) {
