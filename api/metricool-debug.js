@@ -52,6 +52,24 @@ module.exports = async function handler(req, res) {
     const now = new Date(Date.now() + 5 * 60000);
     const dateTime = now.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');
 
+    const now2 = new Date(Date.now() + 10 * 60000);
+    const dt2 = now2.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');
+    const base = { text: 'TEST img field', publicationDate: { dateTime: dt2, timezone: 'Europe/Madrid' }, providers: [{ network: 'INSTAGRAM' }] };
+
+    // Probar distintos nombres de campo dentro de instagramData
+    const fieldTests = ['imageUrls', 'imageUrl', 'media', 'mediaUrls', 'urls', 'photoUrls', 'attachments'];
+    const fieldResults = [];
+    for (const field of fieldTests) {
+      const r = await fetch(
+        `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN },
+          body: JSON.stringify({ ...base, instagramData: { [field]: [{ url: imgUrl }] } }) }
+      );
+      const txt = await r.text();
+      fieldResults.push({ field, status: r.status, ok: r.status === 201, snippet: txt.slice(0, 200) });
+    }
+    return res.status(200).json({ fieldResults });
+
     const post = async (label, body) => {
       const r = await fetch(
         `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
