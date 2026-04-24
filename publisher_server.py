@@ -195,9 +195,15 @@ def continue_job(job_id):
 def metricool_proxy():
     """Proxy para la API de Metricool (evita CORS desde el navegador)."""
     import urllib.request as urlreq
+    import urllib.error
     data = request.get_json(force=True) or {}
     token = data.pop('_token', '')
     body_bytes = json.dumps(data).encode('utf-8')
+
+    print(f"\n[METRICOOL] → Enviando a API:")
+    print(f"  Token: {token[:8]}...{token[-4:]}")
+    print(f"  Body:  {json.dumps(data, ensure_ascii=False)[:300]}")
+
     req = urlreq.Request(
         'https://app.metricool.com/api/v2.0/posts',
         data=body_bytes,
@@ -210,17 +216,19 @@ def metricool_proxy():
     try:
         with urlreq.urlopen(req, timeout=15) as resp:
             resp_body = resp.read().decode('utf-8')
+            print(f"[METRICOOL] ← Respuesta {resp.status}: {resp_body[:200]}")
             return app.response_class(
                 response=resp_body,
                 status=resp.status,
                 mimetype='application/json',
             )
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        print(f"[METRICOOL] ← ERROR {e.code}: {body[:400]}")
+        return app.response_class(response=body, status=e.code, mimetype='application/json')
     except Exception as e:
-        code = getattr(e, 'code', 500)
-        body = getattr(e, 'read', lambda: str(e).encode())()
-        if isinstance(body, bytes):
-            body = body.decode('utf-8', errors='replace')
-        return app.response_class(response=body, status=code, mimetype='application/json')
+        print(f"[METRICOOL] ← EXCEPCIÓN: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
