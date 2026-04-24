@@ -117,53 +117,73 @@ function MetricoolModal({
             <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Metricool — Post #{postNumber}</h3>
           </div>
 
-          {/* Blog ID */}
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Blog ID — {clientName}</span>
-            <div className="flex gap-2">
-              <input type="text" value={blogId} onChange={e => { setBlogId(e.target.value); setSelectedBlog(null); }}
-                placeholder="Introduce o busca abajo ↓"
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300" />
-              <button
-                onClick={fetchBlogs}
-                disabled={loadingBlogs}
-                className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-xs font-black transition-colors disabled:opacity-50 whitespace-nowrap"
-              >
-                {loadingBlogs ? '⏳' : '🔍 Buscar'}
-              </button>
-            </div>
-            {selectedBlog && (
-              <span className="text-[10px] text-purple-700 font-bold bg-purple-50 border border-purple-200 rounded-lg px-2 py-1 flex items-center gap-1">
-                ✅ {selectedBlog.label}{selectedBlog.instagram ? <span className="text-pink-500"> · @{selectedBlog.instagram}</span> : null}
-                <span className="text-gray-400 font-mono ml-1">#{selectedBlog.id}</span>
-              </span>
-            )}
-            <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>
-          </label>
+          {/* Página Cliente */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Página Cliente</span>
 
-          {/* Lista de blogs */}
+            {/* Si hay blog seleccionado: mostrar tarjeta bonita */}
+            {selectedBlog ? (
+              <div className="flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl px-3 py-2.5 gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-lg shrink-0">📄</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-black text-gray-900 truncate">{selectedBlog.label || clientName}</span>
+                    {selectedBlog.instagram
+                      ? <span className="text-[10px] font-bold text-pink-500">@{selectedBlog.instagram}</span>
+                      : null}
+                    <span className="text-[9px] text-gray-400 font-mono">ID {selectedBlog.id}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setSelectedBlog(null); setBlogId(''); setBlogs(null); }}
+                  className="shrink-0 text-[10px] text-gray-400 hover:text-red-500 border border-gray-200 bg-white rounded-lg px-2 py-1 transition-colors"
+                >✕ Cambiar</button>
+              </div>
+            ) : (
+              /* Sin selección: input manual + botón buscar */
+              <div className="flex gap-2">
+                <input type="text" value={blogId} onChange={e => { setBlogId(e.target.value); setSelectedBlog(null); }}
+                  placeholder="Busca abajo ↓ o introduce ID"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                <button
+                  onClick={fetchBlogs}
+                  disabled={loadingBlogs}
+                  className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-xs font-black transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {loadingBlogs ? '⏳' : '🔍 Buscar'}
+                </button>
+              </div>
+            )}
+            {!selectedBlog && <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>}
+          </div>
+
+          {/* Lista de páginas */}
           {blogsError && (
             <p className="text-[10px] text-red-500 bg-red-50 rounded-lg px-3 py-2">{blogsError}</p>
           )}
-          {blogs && blogs.length > 0 && (
-            <div className="border border-purple-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+          {!selectedBlog && blogs && blogs.length > 0 && (
+            <div className="border border-purple-100 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
               <p className="text-[9px] font-bold text-gray-400 uppercase px-3 py-1.5 bg-gray-50 border-b border-gray-100">
-                Selecciona el blog del cliente:
+                Selecciona la página del cliente:
               </p>
               {blogs.map(b => (
                 <button
                   key={b.id}
                   onClick={() => { setBlogId(String(b.id)); setSelectedBlog(b); }}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-purple-50 transition-colors border-b border-gray-50 last:border-0 ${String(b.id) === blogId ? 'bg-purple-50 font-black text-purple-700' : 'text-gray-700'}`}
+                  className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 hover:bg-purple-50 transition-colors border-b border-gray-50 last:border-0 ${String(b.id) === blogId ? 'bg-purple-50' : ''}`}
                 >
-                  <span>{b.label || 'Sin nombre'}{b.instagram ? <span className="text-gray-400 ml-1">@{b.instagram}</span> : null}</span>
-                  <span className="text-[10px] text-gray-400 font-mono ml-2">{b.id}</span>
+                  <span className="text-base shrink-0">📄</span>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className={`text-xs font-bold truncate ${String(b.id) === blogId ? 'text-purple-700' : 'text-gray-800'}`}>{b.label || 'Sin nombre'}</span>
+                    {b.instagram && <span className="text-[10px] text-pink-500 font-bold">@{b.instagram}</span>}
+                  </div>
+                  <span className="text-[9px] text-gray-400 font-mono shrink-0">{b.id}</span>
                 </button>
               ))}
             </div>
           )}
-          {blogs && blogs.length === 0 && (
-            <p className="text-[10px] text-gray-400 text-center py-2">No se encontraron blogs en esta cuenta.</p>
+          {!selectedBlog && blogs && blogs.length === 0 && (
+            <p className="text-[10px] text-gray-400 text-center py-2">No se encontraron páginas en esta cuenta.</p>
           )}
 
           {/* Fecha */}
@@ -674,6 +694,14 @@ function PostCard({
       if (imageUrls.length > 0) {
         body.media = imageUrls.map(u => u.split('?')[0]);
         body.saveExternalMediaFiles = true;
+      }
+      // Auto-publicar directamente (no quedar en "Pendiente")
+      if (network === 'INSTAGRAM') {
+        body.instagramData = { autoPublish: true };
+      } else if (network === 'LINKEDIN') {
+        body.linkedInData = { autoPublish: true };
+      } else if (network === 'FACEBOOK') {
+        body.facebookData = { autoPublish: true };
       }
 
       // Llamamos a la Vercel Serverless Function (sin CORS, sin servidor local)
