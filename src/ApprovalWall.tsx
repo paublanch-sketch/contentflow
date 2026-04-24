@@ -118,7 +118,7 @@ function MetricoolModal({
 
           {/* Blog ID */}
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blog ID — {clientName}</span>
+            <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Blog ID — {clientName}</span>
             <div className="flex gap-2">
               <input type="text" value={blogId} onChange={e => setBlogId(e.target.value)}
                 placeholder="Introduce o busca abajo ↓"
@@ -161,7 +161,7 @@ function MetricoolModal({
 
           {/* Fecha */}
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Fecha y hora</span>
+            <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Fecha y hora</span>
             <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
@@ -169,7 +169,7 @@ function MetricoolModal({
           {/* Preview imágenes que se enviarán */}
           {imageUrls.length > 0 ? (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">
                 📎 {imageUrls.length} imagen{imageUrls.length > 1 ? 'es' : ''} que se enviarán:
               </span>
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -654,7 +654,7 @@ function PostCard({
       const { blogId } = creds;
       const userToken  = MC_TOKEN;
       const userId     = MC_USER_ID;
-      const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
+      const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h.replace(/^#+/, '')}`).join(' ');
       const imageUrls = parseImageUrls(post.image_url);
       const network = MC_PLATFORM[post.platform] ?? 'INSTAGRAM';
       const body: Record<string, unknown> = {
@@ -663,14 +663,10 @@ function PostCard({
         publicationDate: schedDate, // ya viene en hora local de Madrid desde handleConfirm
         providers:       [{ network }],
       };
-      // Las imágenes van dentro del campo específico de cada red social
-      const cleanUrls = imageUrls.map(u => u.split('?')[0]);
-      if (network === 'INSTAGRAM' && cleanUrls.length > 0) {
-        body.instagramData = { images: cleanUrls.map(url => ({ url })) };
-      } else if (network === 'LINKEDIN' && cleanUrls.length > 0) {
-        body.linkedinData = { images: cleanUrls.map(url => ({ url })) };
-      } else if (network === 'FACEBOOK' && cleanUrls.length > 0) {
-        body.facebookData = { images: cleanUrls.map(url => ({ url })) };
+      // Metricool: media = array de strings (URLs directas), saveExternalMediaFiles: true
+      if (imageUrls.length > 0) {
+        body.media = imageUrls.map(u => u.split('?')[0]);
+        body.saveExternalMediaFiles = true;
       }
 
       // Llamamos a la Vercel Serverless Function (sin CORS, sin servidor local)
@@ -705,7 +701,7 @@ function PostCard({
   const [publishMessage, setPublishMessage]         = useState('');
   const pollRef                                     = useRef<ReturnType<typeof setInterval> | null>(null);
   const [editingTags, setEditingTags]     = useState(false);
-  const [tagsDraft, setTagsDraft]         = useState(post.hashtags?.join(' ') ?? '');
+  const [tagsDraft, setTagsDraft]         = useState(post.hashtags?.map(h => `#${h.replace(/^#+/, '')}`).join(' ') ?? '');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
@@ -1049,7 +1045,7 @@ function PostCard({
 
           <button
             onClick={() => {
-              const tags = post.hashtags?.map(h => `#${h}`).join(' ') ?? '';
+              const tags = post.hashtags?.map(h => `#${h.replace(/^#+/, '')}`).join(' ') ?? '';
               navigator.clipboard.writeText(tags);
               const btn = document.activeElement as HTMLButtonElement;
               const orig = btn.textContent;
@@ -1152,7 +1148,7 @@ function PostCard({
         <div className="pt-4 border-t border-gray-50">
           {isAdmin && editingTags ? (
             <div className="flex flex-col gap-2">
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Hashtags (sin # separados por espacios)</p>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Hashtags (con # separados por espacios)</p>
               <input
                 className="w-full text-[11px] border border-[#52b788] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#52b788]/40"
                 value={tagsDraft}
@@ -1170,7 +1166,7 @@ function PostCard({
                   className="flex-1 py-1.5 bg-[#2d6a4f] text-white rounded-lg text-[11px] font-black uppercase hover:bg-[#1b4332]"
                 >Guardar</button>
                 <button
-                  onClick={() => { setTagsDraft(post.hashtags?.join(' ') ?? ''); setEditingTags(false); }}
+                  onClick={() => { setTagsDraft(post.hashtags?.map(h => `#${h.replace(/^#+/, '')}`).join(' ') ?? ''); setEditingTags(false); }}
                   className="flex-1 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-[11px] font-black uppercase hover:bg-gray-50"
                 >Cancelar</button>
               </div>
