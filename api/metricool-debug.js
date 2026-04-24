@@ -11,7 +11,6 @@ module.exports = async function handler(req, res) {
 
   try {
     if (mode === 'get') {
-      // Listar posts (todos los estados)
       const mcRes = await fetch(
         `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}&size=10`,
         { headers: { 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN } }
@@ -19,28 +18,71 @@ module.exports = async function handler(req, res) {
       return res.status(mcRes.status).setHeader('Content-Type', 'application/json').send(await mcRes.text());
     }
 
+    if (mode === 'docs') {
+      // Intentar obtener swagger/openapi docs de Metricool
+      const urls = [
+        'https://app.metricool.com/v2/api-docs',
+        'https://app.metricool.com/api/v2/api-docs',
+        'https://app.metricool.com/api-docs',
+        'https://app.metricool.com/swagger/v2/api-docs',
+      ];
+      const results = [];
+      for (const url of urls) {
+        try {
+          const r = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN } });
+          const text = await r.text();
+          results.push({ url, status: r.status, snippet: text.slice(0, 500) });
+        } catch(e) { results.push({ url, error: String(e) }); }
+      }
+      return res.status(200).json(results);
+    }
+
+    if (mode === 'schema') {
+      // Intentar obtener el schema del ScheduledPost enviando un body inválido
+      // para que el error nos revele los campos disponibles
+      const r = await fetch(
+        `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN },
+          body: JSON.stringify({ _unknownField_xyz: true }) }
+      );
+      return res.status(200).json({ status: r.status, body: await r.text() });
+    }
+
     // Modo test: crear post con imagen pública para ver qué formato acepta
     const now = new Date(Date.now() + 5 * 60000);
     const dateTime = now.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');
 
-    // Probar formato 1: objeto con url
-    const body1 = {
-      text: 'TEST imagen - formato objeto {url}',
-      publicationDate: { dateTime, timezone: 'Europe/Madrid' },
-      providers: [{ network: 'INSTAGRAM' }],
-      media: [{ url: imgUrl }],
+    const post = async (label, body) => {
+      const r = await fetch(
+        `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN }, body: JSON.stringify(body) }
+      );
+      return { label, status: r.status, response: JSON.parse(await r.text()) };
     };
 
-    const r1 = await fetch(
-      `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN }, body: JSON.stringify(body1) }
-    );
-    const t1 = await r1.text();
+    // Probar 3 formatos distintos para media
+    const results = await Promise.all([
+      post('instagramData.images array', {
+        text: 'TEST instagramData.images',
+        publicationDate: { dateTime, timezone: 'Europe/Madrid' },
+        providers: [{ network: 'INSTAGRAM' }],
+        instagramData: { images: [{ url: imgUrl }] },
+      }),
+      post('instagramData.imageUrls', {
+        text: 'TEST instagramData.imageUrls',
+        publicationDate: { dateTime, timezone: 'Europe/Madrid' },
+        providers: [{ network: 'INSTAGRAM' }],
+        instagramData: { imageUrls: [imgUrl] },
+      }),
+      post('media string array', {
+        text: 'TEST media string array',
+        publicationDate: { dateTime, timezone: 'Europe/Madrid' },
+        providers: [{ network: 'INSTAGRAM' }],
+        media: [imgUrl],
+      }),
+    ]);
 
-    res.status(200).json({
-      sentBody: body1,
-      response: { status: r1.status, body: JSON.parse(t1) },
-    });
+    res.status(200).json({ imgUrl, results });
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }
