@@ -1,7 +1,5 @@
 {
-  "routes": [
-    { "src": "/api/metricool-blogs", "dest": "/api/metricool-blogs.js" },
-    { "src": "/api/metricool-post",  "dest": "/api/metricool-post.js"  },
-    { "src": "/(.*)",                "dest": "/index.html"              }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
