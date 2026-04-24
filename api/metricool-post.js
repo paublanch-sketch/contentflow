@@ -12,13 +12,13 @@ module.exports = async function handler(req, res) {
     const rawDate = incoming.publicationDate;
     const dt = rawDate ? new Date(rawDate) : new Date(Date.now() + 60000);
     const dateTime = dt.toISOString().slice(0, 19);
-    const { userId: _removed, ...rest } = incoming;
+    const { userId: _u, blogId, ...rest } = incoming;
     const body = {
       ...rest,
       publicationDate: { dateTime, timezone: 'Europe/Madrid' },
     };
     console.log('[metricool-post] body enviado:', JSON.stringify(body));
-    const mcRes = await fetch(`https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}`, {
+    const mcRes = await fetch(`https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
