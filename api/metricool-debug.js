@@ -57,16 +57,26 @@ module.exports = async function handler(req, res) {
     const base = { text: 'TEST img field', publicationDate: { dateTime: dt2, timezone: 'Europe/Madrid' }, providers: [{ network: 'INSTAGRAM' }] };
 
     // Probar distintos nombres de campo dentro de instagramData
-    const fieldTests = ['imageUrls', 'imageUrl', 'media', 'mediaUrls', 'urls', 'photoUrls', 'attachments'];
+    // Descubrir campos válidos del objeto dentro de media[]
+    // enviando un campo inválido para que el error liste los conocidos
+    const mediaFieldTests = [
+      { _unknownXyz: true },            // trigger error con lista de campos
+      { url: imgUrl },                   // formato actual
+      { url: imgUrl, type: 'IMAGE' },   // con type
+      { fileUrl: imgUrl },              // alternativa fileUrl
+      { remoteUrl: imgUrl },            // alternativa remoteUrl
+      { contentUrl: imgUrl },           // alternativa contentUrl
+      { src: imgUrl },                  // alternativa src
+    ];
     const fieldResults = [];
-    for (const field of fieldTests) {
+    for (const mediaObj of mediaFieldTests) {
       const r = await fetch(
         `https://app.metricool.com/api/v2/scheduler/posts?userId=${MC_USER_ID}&blogId=${blogId}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Mc-Auth': MC_TOKEN },
-          body: JSON.stringify({ ...base, instagramData: { [field]: [{ url: imgUrl }] } }) }
+          body: JSON.stringify({ ...base, media: [mediaObj] }) }
       );
       const txt = await r.text();
-      fieldResults.push({ field, status: r.status, ok: r.status === 201, full: txt });
+      fieldResults.push({ mediaObj, status: r.status, ok: r.status === 201, full: txt });
     }
     return res.status(200).json({ fieldResults });
 
