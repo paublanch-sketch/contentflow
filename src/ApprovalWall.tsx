@@ -50,6 +50,97 @@ function saveMcBlogId(clientId: string, blogId: string) {
   } catch {}
 }
 
+// ─── DateTimePicker bonito ────────────────────────────────────────────────────
+function DateTimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parsed   = value ? new Date(value + ':00') : new Date();
+  const [viewY, setViewY] = useState(parsed.getFullYear());
+  const [viewM, setViewM] = useState(parsed.getMonth()); // 0-11
+  const selDate  = value ? value.slice(0, 10) : '';
+  const selTime  = value ? value.slice(11, 16) : '09:00';
+
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DAYS   = ['L','M','X','J','V','S','D'];
+
+  // Primer día del mes (0=dom…6=sab) convertido a lunes=0
+  const firstDay = () => { const d = new Date(viewY, viewM, 1).getDay(); return d === 0 ? 6 : d - 1; };
+  const daysInMonth = () => new Date(viewY, viewM + 1, 0).getDate();
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const selectDay = (day: number) => {
+    const dd = String(day).padStart(2, '0');
+    const mm = String(viewM + 1).padStart(2, '0');
+    onChange(`${viewY}-${mm}-${dd}T${selTime}`);
+  };
+
+  const onTimeChange = (t: string) => {
+    if (selDate) onChange(`${selDate}T${t}`);
+  };
+
+  const prevMonth = () => { if (viewM === 0) { setViewM(11); setViewY(y => y - 1); } else setViewM(m => m - 1); };
+  const nextMonth = () => { if (viewM === 11) { setViewM(0); setViewY(y => y + 1); } else setViewM(m => m + 1); };
+
+  const cells: (number | null)[] = [...Array(firstDay()).fill(null), ...Array.from({length: daysInMonth()}, (_, i) => i + 1)];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Cabecera mes */}
+      <div className="flex items-center justify-between px-1">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-purple-100 text-purple-700 font-black text-sm transition-colors">‹</button>
+        <span className="text-xs font-black text-gray-800 uppercase tracking-wide">{MONTHS[viewM]} {viewY}</span>
+        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-purple-100 text-purple-700 font-black text-sm transition-colors">›</button>
+      </div>
+      {/* Días de la semana */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {DAYS.map(d => (
+          <div key={d} className="text-center text-[9px] font-black text-gray-400 uppercase py-1">{d}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />;
+          const mm   = String(viewM + 1).padStart(2, '0');
+          const dd   = String(day).padStart(2, '0');
+          const dStr = `${viewY}-${mm}-${dd}`;
+          const isPast    = dStr < todayStr;
+          const isToday   = dStr === todayStr;
+          const isSelected = dStr === selDate;
+          return (
+            <button
+              key={i}
+              onClick={() => !isPast && selectDay(day)}
+              disabled={isPast}
+              className={`
+                aspect-square rounded-lg text-[11px] font-bold transition-all flex items-center justify-center
+                ${isSelected  ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-md scale-105' :
+                  isToday     ? 'bg-purple-100 text-purple-700 font-black border border-purple-300' :
+                  isPast      ? 'text-gray-300 cursor-not-allowed' :
+                                'text-gray-700 hover:bg-purple-50 hover:text-purple-700'}
+              `}
+            >{day}</button>
+          );
+        })}
+      </div>
+      {/* Selector de hora */}
+      <div className="flex items-center gap-2 mt-1 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
+        <span className="text-base">🕐</span>
+        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Hora</span>
+        <input
+          type="time"
+          value={selTime}
+          onChange={e => onTimeChange(e.target.value)}
+          className="flex-1 text-right text-sm font-black text-gray-900 bg-transparent border-none outline-none"
+        />
+      </div>
+      {/* Resumen selección */}
+      {selDate && (
+        <div className="text-center text-[10px] font-bold text-purple-700 bg-purple-50 rounded-lg py-1.5 border border-purple-100">
+          📅 {new Date(selDate + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} · {selTime}h
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Export vacío para no romper el import en App.tsx ────────────────────────
 export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
   useEffect(() => { onClose(); }, []);
@@ -70,7 +161,8 @@ function MetricoolModal({
   const [selectedBlog, setSelectedBlog] = useState<McBlog | null>(null);
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setHours(9, 0, 0, 0);
-  const [schedDate, setSchedDate] = useState(tomorrow.toISOString().slice(0, 16));
+  const tomorrowMadrid = tomorrow.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T').slice(0, 16);
+  const [schedDate, setSchedDate] = useState(tomorrowMadrid);
   const [blogs, setBlogs]         = useState<McBlog[] | null>(null);
   const [loadingBlogs, setLoadingBlogs] = useState(false);
   const [blogsError, setBlogsError]     = useState('');
@@ -187,11 +279,13 @@ function MetricoolModal({
           )}
 
           {/* Fecha */}
-          <label className="flex flex-col gap-1">
+          {/* Calendario */}
+          <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Fecha y hora</span>
-            <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300" />
-          </label>
+            <div className="border border-purple-100 rounded-xl p-3 bg-white">
+              <DateTimePicker value={schedDate} onChange={setSchedDate} />
+            </div>
+          </div>
 
           {/* Preview imágenes que se enviarán */}
           {imageUrls.length > 0 ? (
