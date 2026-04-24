@@ -60,9 +60,9 @@ export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
 type McBlog = { id: number; label: string; instagram: string | null };
 
 function MetricoolModal({
-  clientId, clientName, postNumber, onConfirm, onCancel,
+  clientId, clientName, postNumber, imageUrls, onConfirm, onCancel,
 }: {
-  clientId: string; clientName: string; postNumber: number;
+  clientId: string; clientName: string; postNumber: number; imageUrls: string[];
   onConfirm: (creds: McClientCreds, date: string) => void;
   onCancel: () => void;
 }) {
@@ -165,6 +165,26 @@ function MetricoolModal({
             <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
+
+          {/* Preview imágenes que se enviarán */}
+          {imageUrls.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                📎 {imageUrls.length} imagen{imageUrls.length > 1 ? 'es' : ''} que se enviarán:
+              </span>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {imageUrls.map((url, i) => (
+                  <img key={i} src={url} alt={`img ${i+1}`}
+                    className="h-16 w-16 object-cover rounded-lg border border-purple-200 flex-shrink-0"
+                    onError={e => { (e.target as HTMLImageElement).style.outline = '2px solid red'; }} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ⚠️ Este post no tiene imagen subida. Instagram requiere imagen para publicar en el feed.
+            </p>
+          )}
 
           {/* Publicar ahora */}
           <button onClick={() => handleConfirm(true)}
@@ -817,6 +837,7 @@ function PostCard({
           clientId={clientId}
           clientName={clientName}
           postNumber={post.post_number}
+          imageUrls={imageUrls}
           onConfirm={handleSendToMetricool}
           onCancel={() => setShowMcModal(false)}
         />
