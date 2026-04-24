@@ -99,7 +99,7 @@ function MetricoolModal({
     saveMcBlogId(clientId, blogId);
     let date: string;
     if (publishNow) {
-      // +3 min buffer en hora local de Madrid (el servidor la tratará como hora local)
+      // +3 min buffer — margen para cuentas no premium
       const now = new Date(Date.now() + 3 * 60000);
       date = now.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T').slice(0, 16);
     } else {
@@ -687,17 +687,17 @@ function PostCard({
       const body: Record<string, unknown> = {
         blogId:          Number(blogId),
         text:            caption,
-        publicationDate: schedDate, // ya viene en hora local de Madrid desde handleConfirm
-        providers:       [{ network }],
+        publicationDate: schedDate,
+        // autoPublish a nivel raíz + dentro del provider
+        autoPublish:     true,
+        providers:       [{ network, autoPublish: true }],
       };
       // Metricool: media = array de strings (URLs directas), saveExternalMediaFiles: true
       if (imageUrls.length > 0) {
         body.media = imageUrls.map(u => u.split('?')[0]);
         body.saveExternalMediaFiles = true;
       }
-      // Auto-publicar directamente (no quedar en "Pendiente")
-      // Se envía a nivel raíz Y dentro de instagramData para cubrir ambos formatos de la API
-      body.autoPublish = true;
+      // autoPublish también dentro del objeto de datos de red (cubre todos los formatos de la API)
       if (network === 'INSTAGRAM') {
         body.instagramData = { autoPublish: true };
       } else if (network === 'LINKEDIN') {
