@@ -176,9 +176,12 @@ export default function App() {
     if (!clientId || creatingPost) return;
     setCreatingPost(true);
     try {
-      const nextNum = posts.length > 0
-        ? Math.max(...posts.map(p => p.post_number)) + 1
-        : 1;
+      // Buscar el primer hueco libre (si se borró el #3, el nuevo ocupa el #3)
+      let nextNum = 1;
+      if (posts.length > 0) {
+        const usedNums = new Set(posts.map(p => p.post_number));
+        while (usedNums.has(nextNum)) nextNum++;
+      }
       const newPost: Post = {
         id: `${clientId}-${Date.now()}`,
         client_id: clientId,
