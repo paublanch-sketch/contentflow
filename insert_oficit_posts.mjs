@@ -14,7 +14,7 @@ const posts = [
     post_number: 1,
     platform: 'IG',
     headline_visual: '🎞️ SLIDER 5 slides — "Todo lo que necesita tu oficina, fabricado en España" — REQUIERE INTEGRACIÓN DE LOGO',
-    visual_prompt: 'Instagram carousel 1080x1080px. Fondo blanco limpio con franja inferior azul corporativo (#1A6BB5). Slide 1 (portada): Logo Oficit centrado en grande, debajo "Fabricantes de mobiliario de oficina" en gris oscuro, franja azul inferior con "oficit.com". Slide 2: foto de mesa Ofiplus Modern en oficina moderna, título "MESAS DE OFICINA" en azul bold, bullet "Fabricación nacional · Tablero ML 25mm · Envío 72h". Slide 3: foto silla ergonómica de malla, título "SILLAS ERGONÓMICAS" en azul bold, bullet "Ajustables · Apilables · Para todos los espacios". Slide 4: foto mostrador recepción elegante, título "RECEPCIÓN Y MOSTRADORES" en azul bold, bullet "A medida · Varios acabados · Fabricación propia". Slide 5 (CTA): fondo azul corporativo, texto blanco "¿Necesitas equipar tu oficina?" grande, debajo "957 04 89 26 · oficit.com" y logo blanco.',
+    visual_prompt: 'https://www.canva.com/d/_Z1bNB6g4QjpQNs',
     copy: `🏢 En Oficit no solo vendemos muebles — los fabricamos.
 
 Desde Cabra (Córdoba) diseñamos y producimos mobiliario de oficina de alta calidad para empresas, despachos, academias y espacios de trabajo de toda España.
@@ -42,7 +42,7 @@ Desliza y descubre todo lo que podemos hacer por tu espacio 👉
     post_number: 2,
     platform: 'IG',
     headline_visual: 'Foto de mesa Ofiplus Modern ML en oficina diáfana, acabado blanco o gris marengo, iluminación natural',
-    visual_prompt: 'Instagram post 1080x1080px. Mesa de oficina moderna Ofiplus Modern ML en primer plano, acabado en blanco o gris marengo con estructura metálica. Oficina diáfana de fondo, luz natural desde ventana, planta decorativa lateral. Estilo editorial corporativo limpio. Logo Oficit pequeño esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/k0Q0vivjSrBSv5q',
     copy: `💼 La mesa que marca la diferencia en tu puesto de trabajo.
 
 La Mesa Ofiplus Modern ML es nuestra más vendida por algo: combina diseño actual, materiales de primera y una resistencia pensada para el uso diario intensivo.
@@ -69,7 +69,7 @@ Desde 173€ (imp. no incl.) 📦 Envío 72h incluido
     post_number: 3,
     platform: 'IG',
     headline_visual: 'Silla ergonómica TNK Flex con respaldo de malla en despacho moderno, fondo neutro, luz suave lateral',
-    visual_prompt: 'Instagram post 1080x1080px. Silla de oficina ergonómica con respaldo de malla negra, reposabrazos regulables y base giratoria. Fondo de oficina moderno en tonos neutros (gris claro, blanco). Luz lateral suave. Composición centrada con la silla como protagonista. Logo Oficit pequeño esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/oqv6j-MhGuhf7Bu',
     copy: `🪑 Tu espalda te lo agradecerá.
 
 La Silla TNK FLEX está diseñada para quienes pasan muchas horas en su puesto de trabajo. Ergonomía real, no solo de catálogo.
@@ -96,7 +96,7 @@ Porque la comodidad también es productividad. ☑️
     post_number: 4,
     platform: 'IG',
     headline_visual: 'Furgoneta o caja de embalaje con logo Oficit, fondo de almacén limpio con cajas apiladas y luz cálida',
-    visual_prompt: 'Instagram post 1080x1080px. Primer plano de caja de embalaje con logotipo Oficit, o furgoneta de reparto en almacén luminoso con cajas apiladas. Fondo de almacén limpio y ordenado con luz cálida. Texto superpuesto en overlay azul: "ENTREGA EXPRESS 72H". Logo Oficit esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/fk6vm6PMmQVMwY1',
     copy: `⏱️ ¿Necesitas tu mobiliario sin esperas? Tenemos la solución.
 
 Nuestro servicio EXPRESS te garantiza salida de almacén en 72 horas hábiles. Porque cuando tu empresa arranca o renueva su espacio, no puede permitirse esperar semanas.
@@ -121,7 +121,7 @@ Más de 943 clientes satisfechos avalan nuestra logística. 🌟
     post_number: 5,
     platform: 'IG',
     headline_visual: 'Mesa bench de 6 puestos con separadores en oficina abierta moderna, vista frontal o ligeramente lateral, luz natural',
-    visual_prompt: 'Instagram post 1080x1080px. Mesa bench de 6 puestos con panel separador central en oficina moderna y diáfana. Varios ordenadores y elementos de trabajo sobre las mesas. Luz natural desde ventanales. Perspectiva ligeramente elevada o frontal. Tonos neutros: blanco, gris, madera clara. Logo Oficit pequeño esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/1zZiqdFHytnTAfq',
     copy: `👥 Más puestos, el mismo orden. Más colaboración, el mismo rendimiento.
 
 La Mesa BENCH MODERN de 6 puestos está pensada para equipos que comparten espacio sin sacrificar concentración ni estética.
@@ -149,7 +149,7 @@ Ideal para startups, coworkings y oficinas en crecimiento. 🚀
     post_number: 6,
     platform: 'IG',
     headline_visual: 'Aula de formación con mesas y sillas apilables ordenadas en filas, ambiente de academia o sala de cursos, luz blanca',
-    visual_prompt: 'Instagram post 1080x1080px. Sala de formación o aula con mesas de formación desmontables y sillas con pala apiladas, ordenadas en filas. Fondo con pizarra o proyector. Luz blanca de techo. Ambiente limpio y profesional de academia o centro de formación. Logo Oficit pequeño esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/gekgvCbtkizB8_l',
     copy: `📚 El espacio también enseña. Equípalo como merece.
 
 En Oficit somos especialistas en mobiliario para centros de formación, academias, aulas corporativas y salas de cursos.
@@ -176,7 +176,7 @@ Desde academias privadas hasta departamentos de RRHH. 🏫
     post_number: 7,
     platform: 'IG',
     headline_visual: 'Mostrador de recepción elegante en blanco con iluminación LED bajo el tablero, recepción de empresa moderna',
-    visual_prompt: 'Instagram post 1080x1080px. Mostrador de recepción de empresa moderno en acabado blanco o nogal. Diseño angular o recto con sobre mostrador integrado. Recepción amplia con suelo de mármol o cerámica, fondo neutro. Iluminación cálida de techo. Aspecto corporativo y elegante. Logo Oficit esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/tfNuzQSyBYDOkJ2',
     copy: `🛋️ La recepción es el primer apretón de manos de tu empresa.
 
 Un mostrador bien diseñado comunica profesionalidad antes de que nadie hable. En Oficit lo fabricamos a tu medida.
@@ -203,7 +203,7 @@ Desde el mostrador BASIC compacto hasta proyectos de recepción completos con zo
     post_number: 8,
     platform: 'IG',
     headline_visual: 'Bosque certificado FSC con luz solar entre árboles + infografía con logos FSC y PEFC superpuestos, fondo verde y madera',
-    visual_prompt: 'Instagram post 1080x1080px. Split creativo: mitad izquierda, foto de bosque sostenible con luz entre árboles (verde natural). Mitad derecha, tablero de madera con logos FSC y PEFC en blanco. Overlay de texto: "Fabricamos con conciencia". Logo Oficit esquina inferior derecha. Tonos verde bosque y madera clara.',
+    visual_prompt: 'https://www.canva.com/d/lGxsL1lq-xcRSdt',
     copy: `🌱 La sostenibilidad también se fabrica.
 
 En Oficit utilizamos maderas con certificaciones FSC y PEFC, procedentes de bosques gestionados de forma responsable.
@@ -230,7 +230,7 @@ No es solo una etiqueta. Es un compromiso con el entorno y con la calidad de lo 
     post_number: 9,
     platform: 'IG',
     headline_visual: 'Armario de oficina metálico gris con puertas cerradas en despacho ordenado, zona de almacenamiento corporativo',
-    visual_prompt: 'Instagram post 1080x1080px. Armario de oficina moderno ML en acabado gris marengo o blanco, puertas cerradas, integrado en despacho ordenado. Papeles y carpetas visibles en estanterías abiertas al lado. Fondo neutro, luz cálida. Aspecto limpio y corporativo. Logo Oficit esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/G-aW0zuDN3YW6sR',
     copy: `🗃️ Una oficina ordenada es una oficina productiva.
 
 El Armario ML de Oficit está diseñado para mantener todo en su sitio sin renunciar al estilo.
@@ -258,7 +258,7 @@ Porque el orden en el espacio de trabajo no es opcional — es eficiencia. ☑�
     post_number: 10,
     platform: 'IG',
     headline_visual: 'Foto real de proyecto de montaje integral: sala de trabajo equipada completamente con mesas bench, sillas y almacenaje Oficit',
-    visual_prompt: 'Instagram post 1080x1080px. Foto de oficina completa equipada por Oficit: puestos operativos con mesas bench, sillas ergonómicas, sistemas de almacenamiento. Visión amplia de la sala, aspecto impecable después del montaje. Luz natural. Texto superpuesto sutil: "Proyecto completado ✓". Logo Oficit esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/48MEP0Zvhte1khv',
     copy: `🚧 Proyecto finalizado. Oficina lista para trabajar.
 
 Una semana más, entregamos un espacio de trabajo completo: desde la planificación hasta el último tornillo.
@@ -289,7 +289,7 @@ En Oficit adaptamos cada proyecto a las necesidades reales del espacio.
     post_number: 11,
     platform: 'IG',
     headline_visual: 'Sofá de 2 plazas CAVIRA en sala de espera corporativa elegante, tono azul marino o gris, planta y mesa auxiliar de fondo',
-    visual_prompt: 'Instagram post 1080x1080px. Sofá de 2 plazas de diseño moderno en sala de espera corporativa. Tapizado en azul marino o gris antracita. Mesa auxiliar de madera y planta verde al lado. Suelo de madera o mármol claro. Cuadro corporativo en pared de fondo. Luz cálida. Estilo premium y profesional. Logo Oficit esquina inferior derecha.',
+    visual_prompt: 'https://www.canva.com/d/nzlgBQ3FEuJaGbz',
     copy: `🛋️ La sala de espera también comunica quién eres.
 
 El sofá CAVIRA de 2 plazas aporta elegancia, comodidad y una imagen profesional que tus clientes y visitantes notarán desde el primer momento.
@@ -317,7 +317,7 @@ Porque hacer agradable la espera también es cuidar a tus visitantes. ❤️
     post_number: 12,
     platform: 'IG',
     headline_visual: 'Collage de 4 fotos: mesa, silla, mostrador y proyecto montado — cuadrícula 2x2 sobre fondo blanco con logo Oficit centrado — REQUIERE INTEGRACIÓN DE LOGO',
-    visual_prompt: 'Instagram post 1080x1080px. Diseño de cuadrícula 2x2 con 4 fotos de producto Oficit: mesa Ofiplus Modern (arriba izquierda), silla ergonómica (arriba derecha), mostrador de recepción (abajo izquierda), foto de proyecto montado (abajo derecha). Fondo blanco con logo Oficit grande en el centro superpuesto en blanco translúcido. Esquina inferior: "oficit.com · 957 04 89 26".',
+    visual_prompt: 'https://www.canva.com/d/fNLXCOO-Tz4epIP',
     copy: `🏢 Todo lo que necesita tu oficina. Fabricado en España. Enviado en 72h.
 
 En Oficit llevamos años ayudando a empresas, despachos, academias y negocios a crear espacios de trabajo donde las personas rindan y se sientan bien.

@@ -28,6 +28,162 @@ function serializeImageUrls(urls: string[]): string {
 // ─── Servidor local de publicación (publisher_server.py) ─────────────────────
 const PUBLISHER_URL = 'http://localhost:8765';
 
+// ─── Metricool API ────────────────────────────────────────────────────────────
+const MC_API = 'https://app.metricool.com/api/v2.0';
+const MC_PLATFORM: Record<string, string> = { IG: 'INSTAGRAM', LI: 'LINKEDIN', FB: 'FACEBOOK' };
+
+// Helpers localStorage para credenciales Metricool
+function getMcConfig(): { userToken: string; userId: string; blogIds: Record<string, string> } {
+  try {
+    return JSON.parse(localStorage.getItem('mc_config') ?? '{}');
+  } catch { return { userToken: '', userId: '', blogIds: {} }; }
+}
+function saveMcConfig(cfg: { userToken: string; userId: string; blogIds: Record<string, string> }) {
+  localStorage.setItem('mc_config', JSON.stringify(cfg));
+}
+
+// ─── Modal ajustes globales Metricool (User Token + User ID) ─────────────────
+export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
+  const saved = getMcConfig();
+  const [userToken, setUserToken] = useState(saved.userToken ?? '');
+  const [userId,    setUserId]    = useState(saved.userId ?? '');
+
+  const handleSave = () => {
+    const cfg = getMcConfig();
+    saveMcConfig({ ...cfg, userToken, userId });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-purple-200">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📊</span>
+            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
+              Ajustes Metricool
+            </h3>
+          </div>
+          <p className="text-[11px] text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Estas credenciales son de <strong>tu cuenta</strong> Metricool y nunca cambian.
+            Se guardan solo en este navegador.
+          </p>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">User Token (X-Mc-Auth)</span>
+            <input
+              type="password"
+              value={userToken}
+              onChange={e => setUserToken(e.target.value)}
+              placeholder="Ajustes → API → copiar token"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">User ID</span>
+            <input
+              type="text"
+              value={userId}
+              onChange={e => setUserId(e.target.value)}
+              placeholder="Número de usuario de tu cuenta"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
+          </label>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button onClick={handleSave} className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90">
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal Metricool por post — solo Blog ID + fecha ──────────────────────────
+function MetricoolModal({
+  clientId,
+  postNumber,
+  onConfirm,
+  onCancel,
+}: {
+  clientId: string;
+  postNumber: number;
+  onConfirm: (blogId: string, date: string) => void;
+  onCancel: () => void;
+}) {
+  const cfg = getMcConfig();
+  const hasGlobalCreds = !!(cfg.userToken && cfg.userId);
+  const [blogId, setBlogId] = useState(cfg.blogIds?.[clientId] ?? '');
+
+  const tomorrow = new Date(Date.now() + 86400000);
+  tomorrow.setHours(9, 0, 0, 0);
+  const fmt = (d: Date) => d.toISOString().slice(0, 16);
+  const [schedDate, setSchedDate] = useState(fmt(tomorrow));
+
+  const handleConfirm = () => {
+    if (!hasGlobalCreds) return alert('Configura primero el User Token y User ID en Ajustes Metricool (icono 📊 en la barra superior).');
+    if (!blogId) return alert('Introduce el Blog ID del cliente (lo encuentras en la URL de Metricool al seleccionar la marca).');
+    const c = getMcConfig();
+    saveMcConfig({ ...c, blogIds: { ...(c.blogIds ?? {}), [clientId]: blogId } });
+    onConfirm(blogId, schedDate);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-purple-200">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-2xl">📊</span>
+            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
+              Programar en Metricool — Post #{postNumber}
+            </h3>
+          </div>
+
+          {!hasGlobalCreds && (
+            <p className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              ⚠️ Configura primero el User Token y User ID en el icono 📊 de la barra superior.
+            </p>
+          )}
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blog ID del cliente</span>
+            <input
+              type="text"
+              value={blogId}
+              onChange={e => setBlogId(e.target.value)}
+              placeholder="Número en la URL de Metricool al seleccionar la marca"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
+            <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Fecha y hora de publicación</span>
+            <input
+              type="datetime-local"
+              value={schedDate}
+              onChange={e => setSchedDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
+          </label>
+
+          <div className="flex gap-3 mt-1">
+            <button onClick={onCancel} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button onClick={handleConfirm} className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90 flex items-center justify-center gap-1.5">
+              📊 Programar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Props = {
   posts: Post[];
@@ -405,6 +561,54 @@ function PostCard({
   const [editingCopy, setEditingCopy]     = useState(false);
   const [copyDraft, setCopyDraft]         = useState(post.copy);
 
+  // ── Metricool Publisher ──
+  const [showMcModal, setShowMcModal]     = useState(false);
+  const [mcSending, setMcSending]         = useState(false);
+
+  const handleSendToMetricool = async (blogId: string, schedDate: string) => {
+    setShowMcModal(false);
+    setMcSending(true);
+    try {
+      const { userToken, userId } = getMcConfig();
+      const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
+      const imageUrls = parseImageUrls(post.image_url);
+      const body: Record<string, unknown> = {
+        userId:          Number(userId),
+        blogId:          Number(blogId),
+        text:            caption,
+        networks:        [MC_PLATFORM[post.platform] ?? 'INSTAGRAM'],
+        publicationDate: new Date(schedDate).toISOString(),
+      };
+      if (imageUrls.length > 0) {
+        body.media = imageUrls.map(url => ({ url }));
+      }
+
+      const res = await fetch(`${MC_API}/posts`, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Mc-Auth':    userToken,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        await onUpdatePost(post.id, {
+          status:          'scheduled',
+          webhook_sent_at: new Date(schedDate).toISOString(),
+        });
+        showToast('✅ Programado en Metricool', 'ok');
+      } else {
+        const err = await res.text();
+        showToast(`Error Metricool: ${err.slice(0, 80)}`, 'err');
+      }
+    } catch (e: unknown) {
+      showToast(`Error de red: ${String(e).slice(0, 60)}`, 'err');
+    } finally {
+      setMcSending(false);
+    }
+  };
+
   // ── Instagram Publisher ──
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [publishJobId, setPublishJobId]             = useState<string | null>(null);
@@ -532,6 +736,16 @@ function PostCard({
             await onDeletePost(post.id);
           }}
           onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
+
+      {/* Modal Metricool */}
+      {showMcModal && (
+        <MetricoolModal
+          clientId={clientId}
+          postNumber={post.post_number}
+          onConfirm={handleSendToMetricool}
+          onCancel={() => setShowMcModal(false)}
         />
       )}
 
@@ -868,9 +1082,21 @@ function PostCard({
       {/* Acciones */}
       <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2 mt-auto">
 
-        {/* Botón publicar — solo admin + approved, dinámico por plataforma */}
+        {/* Botones publicar — solo admin + approved */}
         {isAdmin && isApproved && (
-          <PublishButton platform={post.platform} onClick={() => setShowPublishConfirm(true)} />
+          <div className="flex flex-col gap-2">
+            {/* Botón Metricool (principal) */}
+            <button
+              onClick={() => setShowMcModal(true)}
+              disabled={mcSending}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {mcSending ? <Loader2 size={14} className="animate-spin" /> : '📊'}
+              {mcSending ? 'Enviando a Metricool...' : 'Programar en Metricool'}
+            </button>
+            {/* Botón publicar directo (fallback) */}
+            <PublishButton platform={post.platform} onClick={() => setShowPublishConfirm(true)} />
+          </div>
         )}
 
         {/* Scheduled — estado final, sin botones */}

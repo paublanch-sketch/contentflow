@@ -1,6 +1,6 @@
 // ARCHIVO: src/App.tsx
 import { useState, useEffect, useRef } from 'react';
-import ApprovalWall from './ApprovalWall';
+import ApprovalWall, { MetricoolSettingsModal } from './ApprovalWall';
 import AdminLogin from './AdminLogin';
 import { supabase } from './lib/supabase';
 import clientsData from './clients.json';
@@ -55,6 +55,7 @@ export default function App() {
   const [search, setSearch]         = useState('');
   const [showDrop, setShowDrop]     = useState(false);
   const [creatingPost, setCreatingPost] = useState(false);
+  const [showMcSettings, setShowMcSettings] = useState(false);
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click fuera
@@ -210,6 +211,9 @@ export default function App() {
   const approvedCount  = posts.filter(p => p.status === 'approved').length;
 
   // ── Guard: si es panel admin y no hay auth → mostrar login ──
+  if (showMcSettings) {
+    return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
+  }
   if (!isClientPortal && !adminAuth) {
     return <AdminLogin onLogin={() => setAdminAuth(true)} />;
   }
@@ -316,6 +320,14 @@ export default function App() {
                 🔗 Enlace cliente
               </a>
             )}
+            {/* Botón ajustes Metricool */}
+            <button
+              onClick={() => setShowMcSettings(true)}
+              title="Ajustes Metricool"
+              className="text-[10px] font-bold text-purple-400 border border-purple-800 px-2 py-0.5 rounded hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
+            >
+              📊 Metricool
+            </button>
             <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">
               Interactivos
             </span>

@@ -11,6 +11,7 @@ const CLIENT_ID = 'jose-luis-burriel-jarque';
 const posts = [
   {
     post_number: 1,
+    id: `jose-luis-burriel-jarque-1`,
     platform: 'LI',
     headline_visual: 'Un buen entrenamiento empieza con un buen entrenador',
     visual_prompt: 'Fondo azul marino oscuro. Texto blanco en grande: "Un buen entrenamiento empieza con un buen entrenador." Foto de entrenador con cliente en sesión individual. Logo WIN Fitness Club esquina inferior. Estilo profesional y cercano.',
@@ -28,6 +29,7 @@ Cada cliente tiene un objetivo diferente, y nuestro trabajo es ayudarle a alcanz
   },
   {
     post_number: 2,
+    id: `jose-luis-burriel-jarque-2`,
     platform: 'LI',
     headline_visual: 'A partir de los 30, el entrenamiento de fuerza no es opcional',
     visual_prompt: 'Diseño oscuro profesional. Número grande "30" en blanco con texto: "A partir de aquí, el músculo empieza a disminuir." Subtítulo: "El entrenamiento de fuerza es tu mejor inversión." Estética científica y motivadora. WIN Fitness Club.',
@@ -50,6 +52,7 @@ Entrenar fuerza no es solo una cuestión estética. Es una inversión en calidad
   },
   {
     post_number: 3,
+    id: `jose-luis-burriel-jarque-3`,
     platform: 'LI',
     headline_visual: 'La mayoría de gimnasios venden acceso. Nosotros vendemos acompañamiento.',
     visual_prompt: 'Diseño minimalista oscuro. Dos columnas: izquierda "La mayoría" en gris, derecha "Nosotros" en blanco brillante. Contraste visual fuerte. Frase central: "Acceso vs Acompañamiento." Marca WIN Fitness Club. LinkedIn profesional.',
@@ -69,6 +72,7 @@ Si estás en Barcelona y buscas un enfoque realmente profesional, estaremos enca
   },
   {
     post_number: 4,
+    id: `jose-luis-burriel-jarque-4`,
     platform: 'LI',
     headline_visual: '20 minutos de EMS = lo que otros tardan 2 horas en conseguir',
     visual_prompt: 'Fondo negro con destellos de luz azul eléctrica. Texto impactante blanco: "20 minutos. 90% de tu musculatura activada." Subtítulo: "Electroestimulación muscular en WIN Fitness Club." Estilo tecnológico y de alto rendimiento.',
@@ -91,6 +95,7 @@ En WIN Fitness Club combinamos la tecnología EMS con la supervisión de nuestro
   },
   {
     post_number: 5,
+    id: `jose-luis-burriel-jarque-5`,
     platform: 'LI',
     headline_visual: 'Rehabilitarse bien es la mitad del camino hacia el rendimiento',
     visual_prompt: 'Diseño cálido y profesional sobre fondo azul oscuro. Icono de cuerpo humano con movimiento. Texto: "De la recuperación al rendimiento." Subtítulo: "Protocolo de rehabilitación funcional integrado." WIN Fitness Club Barcelona.',
@@ -113,6 +118,7 @@ Volver bien, no volver rápido. Ese es nuestro principio. 🔄
   },
   {
     post_number: 6,
+    id: `jose-luis-burriel-jarque-6`,
     platform: 'LI',
     headline_visual: 'No necesitas máquinas complejas. Necesitas método.',
     visual_prompt: 'Foto de sala boutique con TRX, kettlebells y bandas elásticas. Overlay oscuro con texto blanco: "TRX · Kettlebells · Peso libre · Bandas." Subtítulo: "El entrenamiento funcional del Método WIN." Estilo limpio y profesional.',
@@ -137,6 +143,7 @@ No necesitas la máquina más cara. Necesitas el método correcto. 💡
   },
   {
     post_number: 7,
+    id: `jose-luis-burriel-jarque-7`,
     platform: 'LI',
     headline_visual: 'Tu primera sesión en WIN Fitness Club es gratuita',
     visual_prompt: 'Diseño limpio, fondo azul marino con franja blanca inferior. Texto grande: "Empieza sin compromiso." Subtítulo: "Sesión de evaluación gratuita · Plan personalizado." CTA claro. Logo WIN Fitness Club Barcelona.',
@@ -161,6 +168,7 @@ Si estás en Barcelona, en Sant Gervasi o en Les Corts, nuestras puertas están 
   },
   {
     post_number: 8,
+    id: `jose-luis-burriel-jarque-8`,
     platform: 'LI',
     headline_visual: '5 señales de que necesitas un entrenador personal',
     visual_prompt: 'Infografía en fondo azul marino. Lista numerada del 1 al 5 en blanco, cada item en una línea. Título en grande: "¿Reconoces alguna de estas señales?" Diseño limpio y claro. Marca WIN Fitness Club esquina inferior.',
@@ -186,6 +194,7 @@ En WIN Fitness Club llevamos años ayudando a personas a superar exactamente est
   },
   {
     post_number: 9,
+    id: `jose-luis-burriel-jarque-9`,
     platform: 'LI',
     headline_visual: 'Dos centros en Barcelona. Un mismo método.',
     visual_prompt: 'Mapa estilizado de Barcelona con dos puntos destacados en azul claro. Fondo oscuro. Texto: "Sant Gervasi · Les Corts" en grande. Subtítulo: "El Método WIN cerca de ti." Logo WIN Fitness Club. Diseño corporativo y local.',
@@ -211,6 +220,7 @@ Dos ubicaciones. Una forma de entender el entrenamiento.
   },
   {
     post_number: 10,
+    id: `jose-luis-burriel-jarque-10`,
     platform: 'LI',
     headline_visual: 'Entrenar bien es una ciencia',
     visual_prompt: 'Fondo azul oscuro con elementos visuales sutiles de datos (líneas, gráficos). Texto blanco grande: "Entrenar bien es una ciencia." Subtítulo: "Metodología basada en evidencia · Ciencias del Deporte." Estilo profesional y científico. WIN Fitness Club.',
@@ -233,6 +243,7 @@ No entrenamos por inercia. Entrenamos con conocimiento. 🔬
   },
   {
     post_number: 11,
+    id: `jose-luis-burriel-jarque-11`,
     platform: 'LI',
     headline_visual: 'Los tres pilares del Método WIN: Fuerza, Movilidad, Salud',
     visual_prompt: 'Tres columnas verticales sobre fondo oscuro. Columna 1: icono de peso + "FUERZA". Columna 2: icono de movimiento + "MOVILIDAD". Columna 3: icono de corazón + "SALUD". Colores: azul, verde menta, blanco. Título: "El Método WIN." Diseño premium.',
@@ -257,6 +268,7 @@ Estos tres pilares guían cada sesión y cada decisión dentro del #MetodoWIN.
   },
   {
     post_number: 12,
+    id: `jose-luis-burriel-jarque-12`,
     platform: 'LI',
     headline_visual: 'Esto es WIN Fitness Club en números',
     visual_prompt: 'Infografía de datos sobre fondo azul marino. Números grandes en blanco: "2 centros" / "5 personas máx." / "20 min EMS" / "+5 años exp." Título: "El Método WIN en cifras." Diseño impactante y corporativo. Logo WIN Fitness Club.',
@@ -287,6 +299,7 @@ async function insertPosts() {
 
   for (const post of posts) {
     const payload = {
+      id: post.id,
       client_id: CLIENT_ID,
       post_number: post.post_number,
       platform: post.platform,
@@ -303,7 +316,7 @@ async function insertPosts() {
         apikey: SUPABASE_KEY,
         Authorization: `Bearer ${SUPABASE_KEY}`,
         'Content-Type': 'application/json',
-        Prefer: 'return=representation',
+        Prefer: 'resolution=merge-duplicates,return=representation',
       },
       body: JSON.stringify(payload),
     });
