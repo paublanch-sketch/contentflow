@@ -32,69 +32,62 @@ const PUBLISHER_URL = 'http://localhost:8765';
 const MC_API = 'https://app.metricool.com/api/v2.0';
 const MC_PLATFORM: Record<string, string> = { IG: 'INSTAGRAM', LI: 'LINKEDIN', FB: 'FACEBOOK' };
 
-// Helpers localStorage para credenciales Metricool
-function getMcConfig(): { userToken: string; userId: string; blogIds: Record<string, string> } {
+// Helpers localStorage — token+userId globales (tuyos), blogId por cliente
+type McClientCreds = { userToken: string; userId: string; blogId: string };
+
+function getMcGlobal(): { userToken: string; userId: string } {
+  try { return JSON.parse(localStorage.getItem('mc_global') ?? '{}'); }
+  catch { return { userToken: '', userId: '' }; }
+}
+function saveMcGlobal(cfg: { userToken: string; userId: string }) {
+  localStorage.setItem('mc_global', JSON.stringify(cfg));
+}
+function getMcBlogId(clientId: string): string {
   try {
-    return JSON.parse(localStorage.getItem('mc_config') ?? '{}');
-  } catch { return { userToken: '', userId: '', blogIds: {} }; }
+    const all = JSON.parse(localStorage.getItem('mc_blogs') ?? '{}');
+    return all[clientId] ?? '';
+  } catch { return ''; }
 }
-function saveMcConfig(cfg: { userToken: string; userId: string; blogIds: Record<string, string> }) {
-  localStorage.setItem('mc_config', JSON.stringify(cfg));
+function saveMcBlogId(clientId: string, blogId: string) {
+  try {
+    const all = JSON.parse(localStorage.getItem('mc_blogs') ?? '{}');
+    all[clientId] = blogId;
+    localStorage.setItem('mc_blogs', JSON.stringify(all));
+  } catch {}
 }
 
-// ─── Modal ajustes globales Metricool (User Token + User ID) ─────────────────
+// ─── Modal ajustes globales Metricool (token + userId de Pau, no cambian) ─────
 export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
-  const saved = getMcConfig();
-  const [userToken, setUserToken] = useState(saved.userToken ?? '');
-  const [userId,    setUserId]    = useState(saved.userId ?? '');
-
-  const handleSave = () => {
-    const cfg = getMcConfig();
-    saveMcConfig({ ...cfg, userToken, userId });
-    onClose();
-  };
-
+  const g = getMcGlobal();
+  const [userToken, setUserToken] = useState(g.userToken ?? '');
+  const [userId,    setUserId]    = useState(g.userId ?? '');
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-purple-200">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📊</span>
-            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
-              Ajustes Metricool
-            </h3>
+            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Ajustes Metricool</h3>
           </div>
-          <p className="text-[11px] text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            Estas credenciales son de <strong>tu cuenta</strong> Metricool y nunca cambian.
-            Se guardan solo en este navegador.
+          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Tu token y userId son siempre los mismos. Solo el <strong>Blog ID</strong> cambia por cliente.
           </p>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">User Token (X-Mc-Auth)</span>
-            <input
-              type="password"
-              value={userToken}
-              onChange={e => setUserToken(e.target.value)}
-              placeholder="Ajustes → API → copiar token"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
-            />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Token API (tuyo)</span>
+            <input type="password" value={userToken} onChange={e => setUserToken(e.target.value)}
+              placeholder="user-settings/api → copiar token"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">User ID</span>
-            <input
-              type="text"
-              value={userId}
-              onChange={e => setUserId(e.target.value)}
-              placeholder="Número de usuario de tu cuenta"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
-            />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">User ID (tuyo · ej: 1440018)</span>
+            <input type="text" value={userId} onChange={e => setUserId(e.target.value)}
+              placeholder="userId en la URL de Metricool"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">
-              Cancelar
-            </button>
-            <button onClick={handleSave} className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90">
-              Guardar
-            </button>
+            <button onClick={onClose} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">Cancelar</button>
+            <button onClick={() => { saveMcGlobal({ userToken, userId }); onClose(); }}
+              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90">Guardar</button>
           </div>
         </div>
       </div>
@@ -102,33 +95,27 @@ export function MetricoolSettingsModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Modal Metricool por post — solo Blog ID + fecha ──────────────────────────
+// ─── Modal Metricool por post — solo Blog ID (cambia por cliente) + fecha ─────
 function MetricoolModal({
-  clientId,
-  postNumber,
-  onConfirm,
-  onCancel,
+  clientId, clientName, postNumber, onConfirm, onCancel,
 }: {
-  clientId: string;
-  postNumber: number;
-  onConfirm: (blogId: string, date: string) => void;
+  clientId: string; clientName: string; postNumber: number;
+  onConfirm: (creds: McClientCreds, date: string) => void;
   onCancel: () => void;
 }) {
-  const cfg = getMcConfig();
-  const hasGlobalCreds = !!(cfg.userToken && cfg.userId);
-  const [blogId, setBlogId] = useState(cfg.blogIds?.[clientId] ?? '');
+  const global = getMcGlobal();
+  const hasGlobal = !!(global.userToken && global.userId);
+  const [blogId, setBlogId] = useState(getMcBlogId(clientId));
 
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setHours(9, 0, 0, 0);
-  const fmt = (d: Date) => d.toISOString().slice(0, 16);
-  const [schedDate, setSchedDate] = useState(fmt(tomorrow));
+  const [schedDate, setSchedDate] = useState(tomorrow.toISOString().slice(0, 16));
 
   const handleConfirm = () => {
-    if (!hasGlobalCreds) return alert('Configura primero el User Token y User ID en Ajustes Metricool (icono 📊 en la barra superior).');
-    if (!blogId) return alert('Introduce el Blog ID del cliente (lo encuentras en la URL de Metricool al seleccionar la marca).');
-    const c = getMcConfig();
-    saveMcConfig({ ...c, blogIds: { ...(c.blogIds ?? {}), [clientId]: blogId } });
-    onConfirm(blogId, schedDate);
+    if (!hasGlobal) return alert('Configura primero tu Token y User ID en el botón 📊 Metricool de la barra superior.');
+    if (!blogId) return alert('Introduce el Blog ID de este cliente (URL de Metricool → ?blogId=XXXXX).');
+    saveMcBlogId(clientId, blogId);
+    onConfirm({ ...global, blogId }, schedDate);
   };
 
   return (
@@ -137,43 +124,27 @@ function MetricoolModal({
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-2xl">📊</span>
-            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
-              Programar en Metricool — Post #{postNumber}
-            </h3>
+            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Metricool — Post #{postNumber}</h3>
           </div>
-
-          {!hasGlobalCreds && (
+          {!hasGlobal && (
             <p className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              ⚠️ Configura primero el User Token y User ID en el icono 📊 de la barra superior.
+              ⚠️ Configura tu Token y User ID en el botón 📊 Metricool de la barra superior.
             </p>
           )}
-
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blog ID del cliente</span>
-            <input
-              type="text"
-              value={blogId}
-              onChange={e => setBlogId(e.target.value)}
-              placeholder="Número en la URL de Metricool al seleccionar la marca"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
-            />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blog ID — {clientName}</span>
+            <input type="text" value={blogId} onChange={e => setBlogId(e.target.value)}
+              placeholder="?blogId=XXXXXXX en URL de Metricool"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
             <span className="text-[10px] text-gray-400">Se guarda por cliente automáticamente.</span>
           </label>
-
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Fecha y hora de publicación</span>
-            <input
-              type="datetime-local"
-              value={schedDate}
-              onChange={e => setSchedDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
-            />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Fecha y hora</span>
+            <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
           </label>
-
           <div className="flex gap-3 mt-1">
-            <button onClick={onCancel} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">
-              Cancelar
-            </button>
+            <button onClick={onCancel} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">Cancelar</button>
             <button onClick={handleConfirm} className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90 flex items-center justify-center gap-1.5">
               📊 Programar
             </button>
@@ -192,6 +163,9 @@ type Props = {
   isAdmin: boolean;
   onUpdatePost: (postId: string, updates: Partial<Post>) => Promise<void>;
   onDeletePost: (postId: string) => Promise<void>;
+  shareMode?: boolean;
+  selectedPosts?: Set<number>;
+  onToggleSelect?: (n: number) => void;
 };
 
 // ─── Modal de confirmación de borrado ─────────────────────────────────────────
@@ -601,7 +575,8 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
-  post, clientId, clientName, isAdmin, onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl
+  post, clientId, clientName, isAdmin, onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
+  shareMode, isSelected, onToggleSelect,
 }: {
   post: Post;
   clientId: string;
@@ -612,6 +587,9 @@ function PostCard({
   uploadingId: string | null;
   handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
+  shareMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [toast, setToast]                 = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
   const [editingCopy, setEditingCopy]     = useState(false);
@@ -622,11 +600,10 @@ function PostCard({
   const [mcSending, setMcSending]         = useState(false);
   const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
 
-  const handleSendToMetricool = async (blogId: string, schedDate: string) => {
-    setShowMcModal(false);
-    setMcSending(true);
+  const handleSendToMetricool = async (creds: McClientCreds, schedDate: string) => {
+    setShowMcModal(false); setMcSending(true);
     try {
-      const { userToken, userId } = getMcConfig();
+      const { userToken, userId, blogId } = creds;
       const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
       const imageUrls = parseImageUrls(post.image_url);
       const body: Record<string, unknown> = {
@@ -809,6 +786,7 @@ function PostCard({
       {showMcModal && (
         <MetricoolModal
           clientId={clientId}
+          clientName={clientName}
           postNumber={post.post_number}
           onConfirm={handleSendToMetricool}
           onCancel={() => setShowMcModal(false)}
@@ -839,8 +817,16 @@ function PostCard({
       )}
 
       {/* Cabecera de estado */}
-      <div className="p-4 border-b border-gray-50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
-        <span>{post.platform} · #{post.post_number}</span>
+      <div className={`p-4 border-b border-gray-50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400 ${shareMode ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+        onClick={shareMode ? onToggleSelect : undefined}>
+        <div className="flex items-center gap-2">
+          {shareMode && (
+            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-[#52b788] border-[#52b788]' : 'border-gray-300'}`}>
+              {isSelected && <span className="text-white text-[10px] font-black leading-none">✓</span>}
+            </div>
+          )}
+          <span>{post.platform} · #{post.post_number}</span>
+        </div>
         <div className="flex items-center gap-2">
           {isChanges     && <span className="text-red-600">⚠ Cambios solicitados</span>}
           {isChangesDone && <span className="text-green-600">✅ Cambios hechos</span>}
@@ -1274,11 +1260,21 @@ function PostCard({
 }
 
 // ─── Grid principal ───────────────────────────────────────────────────────────
-export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onUpdatePost, onDeletePost }: Props) {
+export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
   const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
 
-  const activePosts    = posts.filter(p => p.status !== 'scheduled');
-  const publishedPosts = posts.filter(p => p.status === 'scheduled');
+  // Portal cliente: filtrar por ?show=1,3,5 si existe
+  const visiblePosts = (() => {
+    if (isAdmin) return posts;
+    const params = new URLSearchParams(window.location.search);
+    const show = params.get('show');
+    if (!show) return posts;
+    const nums = new Set(show.split(',').map(Number).filter(Boolean));
+    return posts.filter(p => nums.has(p.post_number));
+  })();
+
+  const activePosts    = visiblePosts.filter(p => p.status !== 'scheduled');
+  const publishedPosts = visiblePosts.filter(p => p.status === 'scheduled');
 
   const cardProps = (post: Post) => ({
     key: post.id,
@@ -1291,6 +1287,9 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onU
     uploadingId,
     handleFile,
     handleUrl,
+    shareMode,
+    isSelected: selectedPosts?.has(post.post_number) ?? false,
+    onToggleSelect: () => onToggleSelect?.(post.post_number),
   });
 
   return (

@@ -56,6 +56,9 @@ export default function App() {
   const [showDrop, setShowDrop]     = useState(false);
   const [creatingPost, setCreatingPost] = useState(false);
   const [showMcSettings, setShowMcSettings] = useState(false);
+  const [shareMode, setShareMode]       = useState(false);
+  const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
+  const [copiedLink, setCopiedLink]     = useState(false);
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click fuera
@@ -310,15 +313,41 @@ export default function App() {
               </button>
             )}
 
-            {activeClient && (
-              <a
-                href={`https://contentflow-liard-nine.vercel.app/p/${activeClient.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
+            {activeClient && !shareMode && (
+              <button
+                onClick={() => { setShareMode(true); setSelectedPosts(new Set()); }}
                 className="text-[10px] font-bold text-[#52b788] border border-[#52b788] px-2 py-0.5 rounded hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest hidden md:block"
               >
-                🔗 Enlace cliente
-              </a>
+                🔗 Enviar al cliente
+              </button>
+            )}
+
+            {/* ── Modo selección: generar enlace con posts elegidos ── */}
+            {shareMode && activeClient && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">
+                  {selectedPosts.size === 0 ? 'Selecciona posts' : `${selectedPosts.size} seleccionados`}
+                </span>
+                <button
+                  onClick={() => {
+                    const base = `https://contentflow-liard-nine.vercel.app/p/${activeClient.id}`;
+                    const url = selectedPosts.size > 0
+                      ? `${base}?show=${[...selectedPosts].sort((a,b)=>a-b).join(',')}`
+                      : base;
+                    navigator.clipboard.writeText(url);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2500);
+                  }}
+                  disabled={selectedPosts.size === 0}
+                  className="text-[10px] font-bold bg-[#52b788] text-black px-2 py-0.5 rounded hover:bg-[#40916c] disabled:opacity-40 uppercase tracking-widest"
+                >
+                  {copiedLink ? '✅ Copiado' : '📋 Copiar link'}
+                </button>
+                <button
+                  onClick={() => { setShareMode(false); setSelectedPosts(new Set()); }}
+                  className="text-[10px] font-bold text-gray-400 border border-gray-700 px-2 py-0.5 rounded hover:bg-gray-800 uppercase tracking-widest"
+                >✕ Cancelar</button>
+              </div>
             )}
             {/* Botón ajustes Metricool */}
             <button
@@ -417,6 +446,13 @@ export default function App() {
             isAdmin={isAdmin}
             onUpdatePost={handleUpdatePost}
             onDeletePost={handleDeletePost}
+            shareMode={shareMode}
+            selectedPosts={selectedPosts}
+            onToggleSelect={(n) => setSelectedPosts(prev => {
+              const s = new Set(prev);
+              s.has(n) ? s.delete(n) : s.add(n);
+              return s;
+            })}
           />
         )}
       </div>
