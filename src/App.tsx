@@ -344,6 +344,20 @@ export default function App() {
                   {copiedLink ? '✅ Copiado' : '📋 Copiar link'}
                 </button>
                 <button
+                  onClick={() => {
+                    const allNums = posts.map(p => p.post_number);
+                    const allSelected = allNums.every(n => selectedPosts.has(n));
+                    if (allSelected) {
+                      setSelectedPosts(new Set());
+                    } else {
+                      setSelectedPosts(new Set(allNums));
+                    }
+                  }}
+                  className="text-[10px] font-bold text-gray-300 border border-gray-600 px-2 py-0.5 rounded hover:bg-gray-800 uppercase tracking-widest"
+                >
+                  {posts.every(p => selectedPosts.has(p.post_number)) ? '☐ Deseleccionar todos' : '☑ Seleccionar todos'}
+                </button>
+                <button
                   onClick={() => { setShareMode(false); setSelectedPosts(new Set()); }}
                   className="text-[10px] font-bold text-gray-400 border border-gray-700 px-2 py-0.5 rounded hover:bg-gray-800 uppercase tracking-widest"
                 >✕ Cancelar</button>
