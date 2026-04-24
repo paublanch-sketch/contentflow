@@ -1,5 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/metricool-blogs", "dest": "/api/metricool-blogs.js" },
+    { "src": "/api/metricool-post",  "dest": "/api/metricool-post.js"  },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
