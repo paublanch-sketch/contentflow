@@ -77,9 +77,7 @@ function MetricoolModal({
   const fetchBlogs = async () => {
     setLoadingBlogs(true); setBlogsError(''); setBlogs(null);
     try {
-      const res = await fetch(`${PUBLISHER_URL}/metricool-blogs`, {
-        headers: { 'X-Mc-Auth': MC_TOKEN },
-      });
+      const res = await fetch('/api/metricool-blogs');
       const data = await res.json();
       if (Array.isArray(data)) {
         setBlogs(data);
@@ -632,8 +630,6 @@ function PostCard({
       const caption = post.copy + '\n\n' + (post.hashtags ?? []).map(h => `#${h}`).join(' ');
       const imageUrls = parseImageUrls(post.image_url);
       const body: Record<string, unknown> = {
-        _token:          userToken,          // el proxy lo extrae y lo manda como header
-        userId:          Number(userId),
         blogId:          Number(blogId),
         text:            caption,
         networks:        [MC_PLATFORM[post.platform] ?? 'instagram'],
@@ -643,8 +639,8 @@ function PostCard({
         body.media = imageUrls.map(url => ({ url }));
       }
 
-      // Llamamos al proxy local (publisher_server.py) para evitar el bloqueo CORS
-      const res = await fetch(`${PUBLISHER_URL}/metricool`, {
+      // Llamamos a la Vercel Serverless Function (sin CORS, sin servidor local)
+      const res = await fetch('/api/metricool-post', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(body),
