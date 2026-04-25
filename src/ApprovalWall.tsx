@@ -84,57 +84,46 @@ function DateTimePicker({ value, onChange }: { value: string; onChange: (v: stri
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {/* Cabecera mes */}
-      <div className="flex items-center justify-between px-1">
-        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-purple-100 text-purple-700 font-black text-sm transition-colors">‹</button>
-        <span className="text-xs font-black text-gray-800 uppercase tracking-wide">{MONTHS[viewM]} {viewY}</span>
-        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-purple-100 text-purple-700 font-black text-sm transition-colors">›</button>
+      <div className="flex items-center justify-between px-0.5">
+        <button onClick={prevMonth} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-purple-100 text-purple-700 font-black transition-colors">‹</button>
+        <span className="text-[10px] font-black text-gray-800 uppercase tracking-wide">{MONTHS[viewM]} {viewY}</span>
+        <button onClick={nextMonth} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-purple-100 text-purple-700 font-black transition-colors">›</button>
       </div>
-      {/* Días de la semana */}
-      <div className="grid grid-cols-7 gap-0.5">
+      {/* Días */}
+      <div className="grid grid-cols-7 gap-px">
         {DAYS.map(d => (
-          <div key={d} className="text-center text-[9px] font-black text-gray-400 uppercase py-1">{d}</div>
+          <div key={d} className="text-center text-[8px] font-black text-gray-400 uppercase py-0.5">{d}</div>
         ))}
         {cells.map((day, i) => {
           if (!day) return <div key={i} />;
-          const mm   = String(viewM + 1).padStart(2, '0');
-          const dd   = String(day).padStart(2, '0');
+          const mm  = String(viewM + 1).padStart(2, '0');
+          const dd  = String(day).padStart(2, '0');
           const dStr = `${viewY}-${mm}-${dd}`;
-          const isPast    = dStr < todayStr;
-          const isToday   = dStr === todayStr;
+          const isPast     = dStr < todayStr;
+          const isToday    = dStr === todayStr;
           const isSelected = dStr === selDate;
           return (
-            <button
-              key={i}
-              onClick={() => !isPast && selectDay(day)}
-              disabled={isPast}
-              className={`
-                aspect-square rounded-lg text-[11px] font-bold transition-all flex items-center justify-center
-                ${isSelected  ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-md scale-105' :
-                  isToday     ? 'bg-purple-100 text-purple-700 font-black border border-purple-300' :
-                  isPast      ? 'text-gray-300 cursor-not-allowed' :
-                                'text-gray-700 hover:bg-purple-50 hover:text-purple-700'}
-              `}
+            <button key={i} onClick={() => !isPast && selectDay(day)} disabled={isPast}
+              className={`aspect-square rounded text-[10px] font-bold transition-all flex items-center justify-center
+                ${isSelected ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-sm' :
+                  isToday    ? 'bg-purple-100 text-purple-700 font-black border border-purple-300' :
+                  isPast     ? 'text-gray-200 cursor-not-allowed' :
+                               'text-gray-600 hover:bg-purple-50 hover:text-purple-700'}`}
             >{day}</button>
           );
         })}
       </div>
-      {/* Selector de hora */}
-      <div className="flex items-center gap-2 mt-1 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
-        <span className="text-base">🕐</span>
-        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Hora</span>
-        <input
-          type="time"
-          value={selTime}
-          onChange={e => onTimeChange(e.target.value)}
-          className="flex-1 text-right text-sm font-black text-gray-900 bg-transparent border-none outline-none"
-        />
+      {/* Hora + resumen en una línea */}
+      <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5 border border-gray-100">
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">🕐 Hora</span>
+        <input type="time" value={selTime} onChange={e => onTimeChange(e.target.value)}
+          className="flex-1 text-right text-xs font-black text-gray-900 bg-transparent border-none outline-none" />
       </div>
-      {/* Resumen selección */}
       {selDate && (
-        <div className="text-center text-[10px] font-bold text-purple-700 bg-purple-50 rounded-lg py-1.5 border border-purple-100">
-          📅 {new Date(selDate + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} · {selTime}h
+        <div className="text-center text-[9px] font-bold text-purple-700 bg-purple-50 rounded py-1 border border-purple-100">
+          📅 {new Date(selDate + 'T12:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} · {selTime}h
         </div>
       )}
     </div>
@@ -202,8 +191,8 @@ function MetricoolModal({
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full border-2 border-purple-200">
-        <div className="flex flex-col gap-3">
+      <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-sm w-full border-2 border-purple-200 max-h-[90vh] overflow-y-auto">
+        <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-2xl">📊</span>
             <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Metricool — Post #{postNumber}</h3>
@@ -1337,6 +1326,31 @@ function PostCard({
               {mcSending ? <Loader2 size={14} className="animate-spin" /> : '📊'}
               {mcSending ? 'Enviando a Metricool...' : 'Programar en Metricool'}
             </button>
+          </div>
+        )}
+
+        {/* Selector de estado manual — solo admin */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest shrink-0">Estado:</span>
+            <select
+              value={post.status}
+              onChange={async e => {
+                const newStatus = e.target.value;
+                await onUpdatePost(post.id, {
+                  status: newStatus,
+                  ...(newStatus !== 'scheduled' ? { webhook_sent_at: null } : {}),
+                  ...(newStatus === 'approved' ? { feedback: '' } : {}),
+                });
+              }}
+              className="flex-1 text-[10px] font-bold text-gray-700 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
+            >
+              <option value="review">🔵 En revisión</option>
+              <option value="approved">✅ Aprobado</option>
+              <option value="changes">⚠️ Cambios solicitados</option>
+              <option value="changes_done">🟢 Cambios hechos</option>
+              <option value="scheduled">📅 Publicado</option>
+            </select>
           </div>
         )}
 
