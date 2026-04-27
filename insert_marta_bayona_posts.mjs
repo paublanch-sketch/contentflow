@@ -11,157 +11,131 @@ const posts = [
   {
     post_number: 1,
     platform: 'IG',
-    headline_visual: 'Designing spaces as a whole',
-    visual_prompt: 'Post ancla del feed, presentación de marca',
-    copy: `We design spaces as a whole. Architecture, interior design and furniture come together to create environments that are functional, balanced and meaningful. Every project starts with listening to the space, its context and its real use.
+    headline_visual: 'Dissenyem espais com un conjunt',
+    visual_prompt: 'Post ancla del feed — layout editorial split-frame, dos marcs cream amb fotos interiors, fons crema clar',
+    copy: `Dissenyem espais com un conjunt. Arquitectura, interiorisme i mobiliari s'uneixen per crear entorns funcionals, equilibrats i amb sentit. Cada projecte comença escoltant l'espai, el seu context i el seu ús real.
 
-— Dissenyem els espais com un conjunt. Arquitectura, interiorisme i mobiliari s'uneixen per crear entorns funcionals, equilibrats i amb sentit. Cada projecte comença escoltant l'espai, el seu context i el seu ús real.
-
-↳ Design, observed`,
+↳ Disseny, observat`,
     hashtags: ['architecturestudio','interiordesignconcept','designprocess','architecturalspaces','designwithpurpose'],
   },
   {
     post_number: 2,
     platform: 'IG',
-    headline_visual: 'Project as a whole',
-    visual_prompt: 'Plano general + detalles',
-    copy: `A space designed as a whole. Architecture, interior design and furniture work together to create balance, functionality and identity. Every decision responds to the space and the way it will be used.
+    headline_visual: 'Un espai pensat com un tot',
+    visual_prompt: 'Plano general + detalls, fons crema, tipografia elegant',
+    copy: `Un espai pensat com un tot. Arquitectura, interiorisme i mobiliari treballen junts per crear equilibri, funcionalitat i identitat. Cada decisió respon a l'espai i al seu ús real.
 
-— Un espai pensat com un tot. Arquitectura, interiorisme i mobiliari treballen junts per crear equilibri, funcionalitat i identitat. Cada decisió respon a l'espai i al seu ús real.
-
-↳ Save for reference`,
+↳ Guarda-ho per referència`,
     hashtags: ['architectureproject','interiordesignstudio','customspaces','spatialdesign','designinspiration'],
   },
   {
     post_number: 3,
     platform: 'IG',
-    headline_visual: 'Light and materials',
-    visual_prompt: 'Coherencia cromática y ritmo visual',
-    copy: `Industrial character, natural light and honest materials. We design calm and timeless spaces, where light and materiality define the atmosphere without unnecessary elements.
+    headline_visual: 'Llum i materials',
+    visual_prompt: 'Coherència cromàtica i ritme visual, llum natural, materials honestos',
+    copy: `Caràcter industrial, llum natural i materials honestos. Dissenyem espais serens i atemporals, on la llum i la materialitat defineixen l'atmosfera sense elements superflus.
 
-— Caràcter industrial, llum natural i materials honestos. Dissenyem espais serens i atemporals, on la llum i la materialitat defineixen l'atmosfera sense elements superflus.
-
-↳ A detail to keep in mind`,
+↳ Un detall a tenir en compte`,
     hashtags: ['industrialdesign','naturallightdesign','materiality','architecturaldetails','interiorarchitecture'],
   },
   {
     post_number: 4,
     platform: 'IG',
-    headline_visual: 'Process over result',
-    visual_prompt: 'Introducir storytelling y proceso',
-    copy: `Design doesn't start with the final image. It begins with ideas, tests, materials and many decisions along the way. This process defines the final result.
+    headline_visual: 'El procés sobre el resultat',
+    visual_prompt: 'Carousel 3 pàgines — storytelling i procés de disseny, fons crema clar',
+    copy: `El disseny no comença amb la imatge final. Comença amb idees, proves, materials i moltes decisions. Aquest procés defineix el resultat final.
 
-— El disseny no comença amb la imatge final. Comença amb idees, proves, materials i moltes decisions. Aquest procés defineix el resultat final.
-
-↳ Read it slowly`,
+↳ Llegeix-ho amb calma`,
     hashtags: ['designprocess','architecturestudio','behindthescenesdesign','creativeprocess','designthinking'],
   },
   {
     post_number: 5,
     platform: 'IG',
-    headline_visual: 'Furniture as architecture',
-    visual_prompt: 'Enfoque B2B sin venta directa',
-    copy: `Furniture is not an accessory. It is part of the architecture and the way a space works. We integrate furniture thinking about real use and professional needs.
+    headline_visual: 'El mobiliari com a arquitectura',
+    visual_prompt: 'Enfocament B2B sense venda directa, mobiliari integrat a l\'espai',
+    copy: `El mobiliari no és un complement. Forma part de l'arquitectura i del funcionament de l'espai. L'integrem pensant en l'ús real i les necessitats professionals.
 
-— El mobiliari no és un complement. Forma part de l'arquitectura i del funcionament de l'espai. L'integrem pensant en l'ús real i les necessitats professionals.
-
-↳ Seen with intention`,
+↳ Vist amb intenció`,
     hashtags: ['contractfurniture','architecturalfurniture','professionalspaces','interiordesignsolutions','designintegration'],
   },
   {
     post_number: 6,
     platform: 'IG',
-    headline_visual: 'Concept to space',
-    visual_prompt: 'Post pensado para guardados',
-    copy: `From concept to space. Each project evolves step by step, aligning aesthetics, function and context to create coherent and lasting spaces.
+    headline_visual: 'Del concepte a l\'espai',
+    visual_prompt: 'Post pensat per guardats, evolució del projecte pas a pas, fons clar',
+    copy: `Del concepte a l'espai. Cada projecte evoluciona pas a pas, alineant estètica, funció i context per crear espais coherents i duradors.
 
-— Del concepte a l'espai. Cada projecte evoluciona pas a pas, alineant estètica, funció i context per crear espais coherents i duradors.
-
-↳ Worth revisiting`,
+↳ Val la pena tornar-hi`,
     hashtags: ['architectureconcept','interiordesignproject','spatialconcept','designworkflow','architectureinspiration'],
   },
   {
     post_number: 7,
     platform: 'IG',
-    headline_visual: 'Minimal detail',
-    visual_prompt: 'Imagen limpia, sin texto',
-    copy: `Material, light and balance. Sometimes the strength of a space lies in what is reduced, not in what is added.
+    headline_visual: 'El detall mínim',
+    visual_prompt: 'Imatge neta sense text, material i llum en primer pla',
+    copy: `Material, llum i equilibri. De vegades la força d'un espai està en allò que es redueix, no en el que s'afegeix.
 
-— Material, llum i equilibri. De vegades la força d'un espai està en allò que es redueix, no en el que s'afegeix.
-
-↳ A detail to keep in mind`,
+↳ Un detall a tenir en compte`,
     hashtags: ['materialdesign','lightandspace','architecturalbalance','interiordetails','designcriteria'],
   },
   {
     post_number: 8,
     platform: 'IG',
-    headline_visual: 'Invisible decisions',
-    visual_prompt: 'Educativo sutil',
-    copy: `Some decisions are not immediately visible. Materials, proportions and technical solutions define how a space is experienced over time.
+    headline_visual: 'Decisions invisibles',
+    visual_prompt: 'Carousel 3 pàgines — educatiu subtil, decisions tècniques que defineixen l\'espai',
+    copy: `Algunes decisions no són visibles a primera vista. Materials, proporcions i solucions tècniques defineixen com es viu un espai amb el temps.
 
-— Algunes decisions no són visibles a primera vista. Materials, proporcions i solucions tècniques defineixen com es viu un espai amb el temps.
-
-↳ Read it slowly`,
+↳ Llegeix-ho amb calma`,
     hashtags: ['designstrategy','architecturaldecisions','interiordesignprocess','spatialexperience','designmethod'],
   },
   {
     post_number: 9,
     platform: 'IG',
-    headline_visual: 'Studio life',
-    visual_prompt: 'Humanizar la marca',
-    copy: `Our studio is also a workspace. A place where ideas are tested, materials are reviewed and projects take shape.
+    headline_visual: 'Vida d\'estudi',
+    visual_prompt: 'Humanitzar la marca, estudi de treball, materials i maquetes',
+    copy: `L'estudi també és un espai de treball. Un lloc on es proven idees, es revisen materials i els projectes prenen forma.
 
-— L'estudi també és un espai de treball. Un lloc on es proven idees, es revisen materials i els projectes prenen forma.
-
-↳ Design, observed`,
+↳ Disseny, observat`,
     hashtags: ['architecturestudio','designworkspace','creativeenvironment','studioarchitecture','designculture'],
   },
   {
     post_number: 10,
     platform: 'IG',
-    headline_visual: 'Space walkthrough',
-    visual_prompt: 'Único reel del mes',
-    copy: `Walking through the space. Light, textures and proportions define the experience.
+    headline_visual: 'Recorregut de l\'espai',
+    visual_prompt: 'Únic reel del mes — llum, textures i proporcions en moviment',
+    copy: `Recorrent l'espai. La llum, les textures i les proporcions defineixen l'experiència.
 
-— Recorrent l'espai. La llum, les textures i les proporcions defineixen l'experiència.
-
-↳ Seen with intention`,
+↳ Vist amb intenció`,
     hashtags: ['architecturalwalkthrough','spatialdesign','interiorvideo','architectureexperience','designspaces'],
   },
   {
     post_number: 11,
     platform: 'IG',
-    headline_visual: 'Furniture use',
-    visual_prompt: 'Uso real',
-    copy: `Designed to be used, not just seen. Professional furniture must respond to context, durability and daily use.
+    headline_visual: 'L\'ús del mobiliari',
+    visual_prompt: 'Ús real, mobiliari professional en context diari',
+    copy: `Dissenyat per ser utilitzat, no només observat. El mobiliari professional ha de respondre al context, la durabilitat i l'ús diari.
 
-— Dissenyat per ser utilitzat, no només observat. El mobiliari professional ha de respondre al context, la durabilitat i l'ús diari.
-
-↳ Worth revisiting`,
+↳ Val la pena tornar-hi`,
     hashtags: ['professionaldesign','contractinteriors','functionaldesign','architecturalfurniture','designsolutions'],
   },
   {
     post_number: 12,
     platform: 'IG',
-    headline_visual: 'Material choice',
-    visual_prompt: 'Fomentar comentarios',
-    copy: `Why this material works here. Each choice responds to the space, its function and the atmosphere we want to create.
+    headline_visual: 'L\'elecció del material',
+    visual_prompt: 'Fomentar comentaris, detall de material i la seva justificació de disseny',
+    copy: `Per què aquest material funciona aquí. Cada elecció respon a l'espai, la seva funció i l'atmosfera que volem crear.
 
-— Per què aquest material funciona aquí. Cada elecció respon a l'espai, la seva funció i l'atmosfera que volem crear.
-
-↳ A detail to keep in mind`,
+↳ Un detall a tenir en compte`,
     hashtags: ['materialselection','designcriteria','architecturalchoices','interiordesignthinking','projectdetails'],
   },
   {
     post_number: 13,
     platform: 'IG',
-    headline_visual: 'B2B positioning',
-    visual_prompt: 'Cierre del mes',
-    copy: `We collaborate with architects and designers. Providing technical support, furniture solutions and a shared vision throughout the project.
+    headline_visual: 'Col·laborem amb arquitectes',
+    visual_prompt: 'Tancament del mes — posicionament B2B, col·laboració professional',
+    copy: `Col·laborem amb arquitectes i dissenyadors. Oferim suport tècnic, solucions de mobiliari i una visió compartida durant tot el projecte.
 
-— Col·laborem amb arquitectes i dissenyadors. Oferim suport tècnic, solucions de mobiliari i una visió compartida durant tot el projecte.
-
-↳ Design, observed`,
+↳ Disseny, observat`,
     hashtags: ['architecturecollaboration','designpartners','b2barchitecture','interiordesignstudio','professionalprojects'],
   },
 ];
