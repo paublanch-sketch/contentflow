@@ -5,7 +5,7 @@ const supabase = createClient(
   'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg'
 );
 
-const CLIENT_ID = 'madeiras-do-xallas';
+const CLIENT_ID = 'madeiras-do-xallas-sl';
 
 const posts = [
   {
@@ -134,12 +134,17 @@ Un servicio integral que garantiza eficiencia y calidad en cada paso.`,
 ];
 
 async function run() {
+  // Borrar posts del client_id antic (incorrecte) si n'hi ha
+  await supabase.from('posts').delete().eq('client_id', 'madeiras-do-xallas');
+  console.log('🗑️  Posts antics (madeiras-do-xallas) eliminats');
+
+  // Borrar posts del client_id correcte per evitar duplicats
   const { error: delErr } = await supabase
     .from('posts')
     .delete()
     .eq('client_id', CLIENT_ID);
   if (delErr) { console.error('Error al borrar:', delErr.message); process.exit(1); }
-  console.log('🗑️  Posts anteriores borrados');
+  console.log('🗑️  Posts anteriors (madeiras-do-xallas-sl) eliminats');
 
   for (const p of posts) {
     const { error } = await supabase.from('posts').insert({
