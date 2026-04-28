@@ -495,6 +495,135 @@ function PublishStatusModal({ status, message, jobId, onClose }: {
   );
 }
 
+// ─── Modal guardar sesión ─────────────────────────────────────────────────────
+type SaveSessionStatus = 'running' | 'needs_login' | 'success' | 'error';
+
+function SaveSessionModal({ status, message, jobId, onClose }: {
+  status: SaveSessionStatus; message: string; jobId: string; onClose: () => void;
+}) {
+  const [continuing, setContinuing] = useState(false);
+  const canClose = status === 'success' || status === 'error';
+
+  const handleConfirm = async () => {
+    setContinuing(true);
+    try { await fetch(`${PUBLISHER_URL}/continue/${jobId}`, { method: 'POST' }); } catch { }
+    setContinuing(false);
+  };
+
+  const icons: Record<SaveSessionStatus, React.ReactNode> = {
+    running:     <Loader2 size={32} className="animate-spin text-blue-500" />,
+    needs_login: <span className="text-4xl">🔑</span>,
+    success:     <CheckCircle size={32} className="text-green-500" />,
+    error:       <AlertCircle size={32} className="text-red-500" />,
+  };
+  const titles: Record<SaveSessionStatus, string> = {
+    running:     'Abriendo navegador...',
+    needs_login: 'Inicia sesión en el navegador',
+    success:     '¡Sesión guardada! ✅',
+    error:       'Error al guardar sesión',
+  };
+  const borderColors: Record<SaveSessionStatus, string> = {
+    running:     'border-blue-200',
+    needs_login: 'border-amber-300',
+    success:     'border-green-300',
+    error:       'border-red-200',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className={`bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 ${borderColors[status]}`}>
+        <div className="flex flex-col items-center text-center gap-4">
+          {icons[status]}
+          <h3 className="text-base font-black text-gray-900">{titles[status]}</h3>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{message}</p>
+          {status === 'needs_login' && (
+            <button
+              onClick={handleConfirm}
+              disabled={continuing}
+              className="w-full py-3 bg-amber-500 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-amber-600 disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {continuing ? <Loader2 size={14} className="animate-spin" /> : '✅'}
+              Ya he iniciado sesión
+            </button>
+          )}
+          {canClose && (
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors"
+            >
+              {status === 'success' ? '🎉 Cerrar' : 'Cerrar'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Botón guardar sesión (admin toolbar) ─────────────────────────────────────
+function SaveSessionButton({ clientId, platform }: { clientId: string; platform: string }) {
+  const [showModal, setShowModal] = useState(false);
+  const [jobId,     setJobId]     = useState('');
+  const [status,    setStatus]    = useState<SaveSessionStatus>('running');
+  const [message,   setMessage]   = useState('');
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const start = async () => {
+    setShowModal(true);
+    setStatus('running');
+    setMessage('Iniciando...');
+    try {
+      const health = await fetch(`${PUBLISHER_URL}/health`, { signal: AbortSignal.timeout(2500) });
+      if (!health.ok) throw new Error();
+    } catch {
+      setStatus('error');
+      setMessage('El servidor local no está activo.\nEjecuta: python publisher_server.py');
+      return;
+    }
+    const res  = await fetch(`${PUBLISHER_URL}/save-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId, platform }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setStatus('error'); setMessage(data.error || 'Error'); return; }
+    setJobId(data.job_id);
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`${PUBLISHER_URL}/status/${data.job_id}`);
+        const d = await r.json();
+        setStatus(d.status as SaveSessionStatus);
+        setMessage(d.message);
+        if (['success', 'error'].includes(d.status)) {
+          clearInterval(pollRef.current!);
+        }
+      } catch { }
+    }, 1500);
+  };
+
+  const close = () => {
+    clearInterval(pollRef.current!);
+    setShowModal(false);
+  };
+
+  const PLATFORM_LABEL: Record<string, string> = { IG: '📸 IG', LI: '💼 LI', FB: '📘 FB' };
+
+  return (
+    <>
+      <button
+        onClick={start}
+        title={`Guardar sesión de ${platform} en Supabase`}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 text-xs font-black uppercase tracking-widest hover:border-amber-400 hover:text-amber-600 transition-colors"
+      >
+        🔑 {PLATFORM_LABEL[platform] || platform}
+      </button>
+      {showModal && (
+        <SaveSessionModal status={status} message={message} jobId={jobId} onClose={close} />
+      )}
+    </>
+  );
+}
+
 // ─── Botón publicar dinámico por plataforma ──────────────────────────────────
 function PublishButton({ platform, onClick }: { platform: string; onClick: () => void }) {
   const cfg: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
@@ -1486,8 +1615,21 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onU
     onToggleSelect: () => onToggleSelect?.(post.post_number),
   });
 
+  // Plataformas únicas del cliente para el botón de sesión
+  const platforms = [...new Set(posts.map(p => p.platform).filter(Boolean))];
+
   return (
     <div className="space-y-12">
+      {/* Barra admin: guardar sesión */}
+      {isAdmin && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Sesión:</span>
+          {platforms.map(plat => (
+            <SaveSessionButton key={plat} clientId={clientId} platform={plat} />
+          ))}
+        </div>
+      )}
+
       {/* Posts activos */}
       {activePosts.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">

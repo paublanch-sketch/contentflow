@@ -50,6 +50,58 @@ except ImportError:
     print("⚠️  pip install supabase --break-system-packages")
 
 CREDENTIALS_FILE = Path(__file__).parent / "clients_credentials.json"
+SESSIONS_DIR     = Path(__file__).parent / "sessions"
+SESSIONS_DIR.mkdir(exist_ok=True)
+
+
+def session_path(client_id: str, platform: str) -> Path:
+    """Ruta del fichero de cookies guardado para este cliente y plataforma."""
+    return SESSIONS_DIR / f"{client_id}_{platform}.json"
+
+
+def save_session(client_id: str, platform: str, storage_state: dict):
+    """Guarda sesión en local Y en Supabase (funciona desde cualquier ordenador)."""
+    state_str = json.dumps(storage_state)
+    # 1. Local (backup)
+    p = session_path(client_id, platform)
+    with open(p, 'w', encoding='utf-8') as f:
+        f.write(state_str)
+    print(f"  💾 Sesión guardada local: {p.name}", flush=True)
+    # 2. Supabase (multi-ordenador)
+    if sb:
+        try:
+            sb.table('sessions').upsert({
+                'id':            f'{client_id}_{platform}',
+                'client_id':     client_id,
+                'platform':      platform,
+                'storage_state': state_str,
+                'updated_at':    datetime.now(timezone.utc).isoformat(),
+            }).execute()
+            print(f"  ☁️  Sesión guardada en Supabase: {client_id}/{platform}", flush=True)
+        except Exception as e:
+            print(f"  ⚠️  No se pudo guardar en Supabase: {e}", flush=True)
+
+
+def load_session(client_id: str, platform: str) -> dict | None:
+    """Carga sesión: primero Supabase (más reciente), luego local."""
+    # 1. Intentar desde Supabase
+    if sb:
+        try:
+            res = sb.table('sessions').select('storage_state').eq(
+                'id', f'{client_id}_{platform}'
+            ).maybe_single().execute()
+            if res and res.data and res.data.get('storage_state'):
+                print(f"  ☁️  Sesión cargada desde Supabase: {client_id}/{platform}", flush=True)
+                return json.loads(res.data['storage_state'])
+        except Exception as e:
+            print(f"  ⚠️  Error leyendo sesión de Supabase: {e}", flush=True)
+    # 2. Fallback local
+    p = session_path(client_id, platform)
+    if p.exists():
+        print(f"  💾 Sesión cargada desde local: {p.name}", flush=True)
+        with open(p, encoding='utf-8') as f:
+            return json.load(f)
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -191,6 +243,84 @@ def continue_job(job_id):
     return jsonify({'ok': True})
 
 
+@app.route('/save-session', methods=['POST'])
+def save_session_route():
+    """
+    Abre Chrome para que el usuario haga login manualmente.
+    El usuario confirma desde ContentFlow cuando está en el feed.
+    """
+    data      = request.get_json(force=True) or {}
+    client_id = data.get('client_id', '').strip()
+    platform  = data.get('platform', 'IG').upper()
+
+    if not client_id:
+        return jsonify({'error': 'client_id requerido'}), 400
+
+    job_id = uuid.uuid4().hex[:8]
+    jobs[job_id] = {
+        'status':         'pending',
+        'message':        'Iniciando...',
+        'client_id':      client_id,
+        'platform':       platform,
+        'continue_event': threading.Event(),
+    }
+    threading.Thread(target=_run_save_session_sync, args=(job_id,), daemon=True).start()
+    return jsonify({'job_id': job_id, 'status': 'pending'})
+
+
+def _run_save_session_sync(job_id: str):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(_save_session_async(job_id))
+    finally:
+        loop.close()
+
+
+async def _save_session_async(job_id: str):
+    from playwright.async_api import async_playwright
+    job       = jobs[job_id]
+    client_id = job['client_id']
+    platform  = job['platform']
+
+    def upd(status: str, msg: str):
+        job['status']  = status
+        job['message'] = msg
+        print(f"  [{job_id}][SAVE-SESSION][{platform}] {status.upper()}: {msg}", flush=True)
+
+    PLATFORM_URLS = {
+        'IG': 'https://www.instagram.com/accounts/login/',
+        'LI': 'https://www.linkedin.com/login',
+        'FB': 'https://www.facebook.com/login',
+    }
+    url = PLATFORM_URLS.get(platform, 'https://www.instagram.com/accounts/login/')
+
+    upd('running', f'Abriendo {platform} en Chrome...')
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=False)
+        ctx  = await browser.new_context(viewport={'width': 1280, 'height': 900})
+        page = await ctx.new_page()
+        await page.goto(url, wait_until='domcontentloaded')
+
+        upd('needs_login',
+            f'Inicia sesión en {platform} en la ventana de Chrome y pulsa "Ya he iniciado sesión".')
+
+        # Esperar confirmación del usuario desde ContentFlow
+        job['continue_event'].wait(timeout=300)
+
+        upd('running', 'Guardando sesión...')
+        try:
+            state = await ctx.storage_state()
+            save_session(client_id, platform, state)
+            upd('success', f'✅ Sesión de {platform} guardada para "{client_id}". Ya puedes publicar sin login.')
+        except Exception as e:
+            upd('error', f'Error guardando sesión: {e}')
+        finally:
+            await page.wait_for_timeout(1500)
+            await browser.close()
+    return jsonify({'ok': True})
+
+
 @app.route('/metricool-blogs', methods=['GET'])
 def metricool_blogs():
     """Devuelve la lista de blogs/perfiles conectados a la cuenta Metricool."""
@@ -294,7 +424,13 @@ async def _publish_async(job_id: str):
         from playwright.async_api import async_playwright
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(headless=False)
-            ctx  = await browser.new_context(viewport={'width': 1280, 'height': 900})
+            # Cargar sesión guardada si existe (evita el formulario de login)
+            saved = load_session(post['client_id'], platform)
+            ctx_kwargs = {'viewport': {'width': 1280, 'height': 900}}
+            if saved:
+                ctx_kwargs['storage_state'] = saved
+                upd('running', '🍪 Sesión guardada encontrada — saltando login...')
+            ctx  = await browser.new_context(**ctx_kwargs)
             page = await ctx.new_page()
             try:
                 if platform == 'IG':
@@ -445,6 +581,13 @@ async def _publish_instagram(page, post, creds, tmp_paths, caption, upd, job):
 
     if 'accounts/login' in page.url:
         upd('wrong_credentials', 'Login fallido. Comprueba las credenciales.'); return
+
+    # Guardar sesión para próximas publicaciones (evita repetir login)
+    try:
+        state = await page.context.storage_state()
+        save_session(post['client_id'], 'IG', state)
+    except Exception:
+        pass
 
     upd('running', 'Login ✓ — creando post...')
 
