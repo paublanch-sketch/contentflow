@@ -974,25 +974,55 @@ function PostCard({
     setCurrentIdx(Math.max(0, safeIdx - 1));
   };
 
-  // ── Publicar directo a Instagram via publisher_server.py ──
+  // ── Publicar Instagram: primero intenta API oficial (nube), luego servidor local ──
   const handlePublishIG = async () => {
     setShowPublishConfirm(false);
+    setPublishStatus('running');
+    setPublishMessage('Iniciando publicación...');
+    setPublishJobId('_api');
 
-    // 1. Comprobar que el servidor local está activo
+    // ── RUTA 1: Instagram Graph API (sin servidor local) ─────────────────────
+    const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
     try {
-      const health = await fetch(`${PUBLISHER_URL}/health`, {
-        signal: AbortSignal.timeout(2500),
+      const apiRes = await fetch(`${FUNCTIONS_URL}/publish-instagram`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+        body: JSON.stringify({ post_id: post.id }),
       });
+      const apiData = await apiRes.json();
+      if (apiRes.ok && apiData.success) {
+        setPublishStatus('success');
+        setPublishMessage('✅ Publicado en Instagram via API oficial.');
+        await onUpdatePost(post.id, { status: 'scheduled', webhook_sent_at: new Date().toISOString() });
+        return;
+      }
+      // Si el error es "no hay token" → caer al servidor local
+      if (apiData.error && apiData.error.includes('No hay cuenta de Instagram conectada')) {
+        console.log('Sin token API → intentando servidor local...');
+      } else {
+        // Error real de la API (imagen inválida, token caducado, etc.)
+        setPublishStatus('error');
+        setPublishMessage(apiData.error || 'Error publicando via API');
+        return;
+      }
+    } catch {
+      // Edge Function no disponible → intentar servidor local
+      console.log('Edge Function no responde → intentando servidor local...');
+    }
+
+    // ── RUTA 2: Servidor local publisher_server.py (fallback) ────────────────
+    try {
+      const health = await fetch(`${PUBLISHER_URL}/health`, { signal: AbortSignal.timeout(2500) });
       if (!health.ok) throw new Error('not ok');
     } catch {
-      showToast(
-        'El servidor no responde. Ejecuta: python3 publisher_server.py',
-        'err'
+      setPublishStatus('error');
+      setPublishMessage(
+        'No hay cuenta de Instagram conectada para este cliente.\n' +
+        'Conecta la cuenta en ajustes, o ejecuta publisher_server.py si prefieres el modo local.'
       );
       return;
     }
 
-    // 2. Iniciar job
     let res: Response;
     try {
       res = await fetch(`${PUBLISHER_URL}/publish`, {
@@ -1001,19 +1031,19 @@ function PostCard({
         body: JSON.stringify({ post_id: post.id }),
       });
     } catch {
-      showToast('Error de red conectando con publisher_server.py', 'err');
+      setPublishStatus('error');
+      setPublishMessage('Error de red conectando con publisher_server.py');
       return;
     }
 
     const data = await res.json();
-
     if (!res.ok) {
       if (data.error === 'wrong_credentials') {
-        setPublishJobId('_error');
         setPublishStatus('wrong_credentials');
         setPublishMessage(data.message ?? 'Credenciales no encontradas');
       } else {
-        showToast(data.error ?? 'Error al iniciar publicación', 'err');
+        setPublishStatus('error');
+        setPublishMessage(data.error ?? 'Error al iniciar publicación');
       }
       return;
     }
@@ -1022,28 +1052,21 @@ function PostCard({
     setPublishJobId(jobId);
     setPublishStatus('running');
     setPublishMessage('Iniciando...');
-
-    // 3. Polling de estado cada 1.5s
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const sr   = await fetch(`${PUBLISHER_URL}/status/${jobId}`);
-        const sd   = await sr.json() as { status: PublishJobStatus; message: string };
+        const sr = await fetch(`${PUBLISHER_URL}/status/${jobId}`);
+        const sd = await sr.json() as { status: PublishJobStatus; message: string };
         setPublishStatus(sd.status);
         setPublishMessage(sd.message);
-
         if (['success', 'error', 'wrong_credentials'].includes(sd.status)) {
           clearInterval(pollRef.current!);
           pollRef.current = null;
-          // Si publicado con éxito, actualizar UI sin esperar al reload
           if (sd.status === 'success') {
-            await onUpdatePost(post.id, {
-              status: 'scheduled',
-              webhook_sent_at: new Date().toISOString(),
-            });
+            await onUpdatePost(post.id, { status: 'scheduled', webhook_sent_at: new Date().toISOString() });
           }
         }
-      } catch { /* servidor ocupado, reintentar */ }
+      } catch { }
     }, 1500);
   };
 

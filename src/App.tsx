@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import ApprovalWall, { MetricoolSettingsModal } from './ApprovalWall';
 import AdminLogin from './AdminLogin';
+import IgCallback from './IgCallback';
+import { ConnectInstagram } from './ConnectInstagram';
 import { supabase } from './lib/supabase';
 import clientsData from './clients.json';
 
@@ -49,6 +51,7 @@ export default function App() {
   const [loading, setLoading]       = useState(false);
   const [isAdmin, setIsAdmin]       = useState(true);
   const [isClientPortal, setIsClientPortal] = useState(false);
+  const [isIgCallback, setIsIgCallback] = useState(false);
   const [adminAuth, setAdminAuth]   = useState<boolean>(
     () => sessionStorage.getItem('cf_admin_auth') === '1'
   );
@@ -92,6 +95,13 @@ export default function App() {
   // Si NO es /p/:slug → es el panel admin (requiere login)
   useEffect(() => {
     const path = window.location.pathname;
+
+    // Callback de OAuth de Instagram
+    if (path === '/ig-callback') {
+      setIsIgCallback(true);
+      return;
+    }
+
     if (path.startsWith('/p/')) {
       const slug = path.split('/')[2];
       const found = CLIENTS.find(c => c.id === slug);
@@ -217,6 +227,9 @@ export default function App() {
   const approvedCount  = posts.filter(p => p.status === 'approved').length;
 
   // ── Guard: si es panel admin y no hay auth → mostrar login ──
+  if (isIgCallback) {
+    return <IgCallback />;
+  }
   if (showMcSettings) {
     return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
   }
@@ -405,22 +418,31 @@ export default function App() {
                 }
               </p>
             </div>
-            {isAdmin && activeClient.contact && activeClient.contact !== '-' && (
-              <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0">
-                <div className="font-bold text-gray-500">{activeClient.contact}</div>
-                {activeClient.email && activeClient.email !== '-' && (
-                  <a href={`mailto:${activeClient.email}`} className="hover:text-[#2d6a4f] block">
-                    {activeClient.email}
-                  </a>
-                )}
-                {activeClient.profile_url && activeClient.profile_url !== '-' && (
-                  <a href={activeClient.profile_url} target="_blank" rel="noopener noreferrer"
-                     className="text-blue-500 hover:underline">
-                    Ver perfil →
-                  </a>
-                )}
-              </div>
-            )}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              {/* Botón conectar Instagram (solo admin + clientes IG) */}
+              {isAdmin && activeClient.platform === 'IG' && (
+                <ConnectInstagram
+                  clientId={activeClient.id}
+                  clientName={activeClient.name}
+                />
+              )}
+              {isAdmin && activeClient.contact && activeClient.contact !== '-' && (
+                <div className="text-right text-xs text-gray-400 leading-relaxed">
+                  <div className="font-bold text-gray-500">{activeClient.contact}</div>
+                  {activeClient.email && activeClient.email !== '-' && (
+                    <a href={`mailto:${activeClient.email}`} className="hover:text-[#2d6a4f] block">
+                      {activeClient.email}
+                    </a>
+                  )}
+                  {activeClient.profile_url && activeClient.profile_url !== '-' && (
+                    <a href={activeClient.profile_url} target="_blank" rel="noopener noreferrer"
+                       className="text-blue-500 hover:underline">
+                      Ver perfil →
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
