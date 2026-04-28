@@ -1447,7 +1447,7 @@ function PostCard({
               {post.hashtags?.length > 0
                 ? post.hashtags.map(h => (
                     <span key={h} className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                      #{h}
+                      #{h.replace(/^#+/, '')}
                     </span>
                   ))
                 : <span className="text-[10px] text-gray-300 italic uppercase">Sin hashtags</span>
