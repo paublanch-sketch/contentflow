@@ -5,8 +5,7 @@
     "api/metricool-debug.js":  { "memory": 128, "maxDuration": 10 },
     "api/groq-generate.js":    { "memory": 128, "maxDuration": 15 }
   },
-  "routes": [
-    { "src": "/api/metricool-blogs",  "dest": "/api/metricool-blogs.js"  },
-    { "src": "/api/metricool-post",   "dest": "/api/metricool-post.js"   },
-    { "src": "/api/metricool-debug",  "dest": "/api/metricool-debug.js"  },
-    { 
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

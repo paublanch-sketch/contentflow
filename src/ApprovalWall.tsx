@@ -855,6 +855,7 @@ function PostCard({
   const [showAIImg, setShowAIImg]         = useState(false);
   const [aiImgPrompt, setAIImgPrompt]     = useState('');
   const [aiImgLoading, setAIImgLoading]   = useState(false);
+  const [hashtagsLoading, setHashtagsLoading] = useState(false);
 
   // ── Metricool Publisher ──
   const [showMcModal, setShowMcModal]     = useState(false);
@@ -1048,6 +1049,68 @@ function PostCard({
   // Limpiar polling al desmontar
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
+  // ── Helper: Generar copy con IA ──────────────────────────────────────────────
+  const handleGenerateCopy = async (draft: string) => {
+    if (grokLoading) return;
+    setGrokLoading(true);
+    try {
+      const existingCopies = allPosts
+        .filter(p => p.id !== post.id && p.copy && p.copy.trim())
+        .map(p => `Post #${p.post_number}: ${p.copy.slice(0, 220)}`);
+      const res = await fetch('/api/groq-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId, platform: post.platform,
+          headline_visual: post.headline_visual, clientName,
+          currentCopy: draft, existingPosts: existingCopies,
+          language: 'es', mode: 'copy',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.copy) {
+        setCopyDraft(data.copy);
+        showToast('✨ Texto generado con IA', 'ok');
+      } else {
+        showToast(`❌ Error IA: ${data.error?.slice(0, 80)}`, 'err');
+      }
+    } catch (e) {
+      showToast(`❌ Error de red: ${String(e).slice(0, 60)}`, 'err');
+    } finally {
+      setGrokLoading(false);
+    }
+  };
+
+  // ── Helper: Generar hashtags con IA ─────────────────────────────────────────
+  const handleGenerateHashtags = async () => {
+    if (hashtagsLoading) return;
+    setHashtagsLoading(true);
+    try {
+      const res = await fetch('/api/groq-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId, platform: post.platform,
+          headline_visual: post.headline_visual, clientName,
+          currentCopy: post.copy || tagsDraft,
+          language: 'es', mode: 'hashtags',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.copy) {
+        const words = data.copy.split(/\s+/).map((t: string) => t.replace(/^#+/, '')).filter(Boolean);
+        setTagsDraft(words.map((t: string) => `#${t}`).join(' '));
+        if (!editingTags) setEditingTags(true);
+        showToast('✨ Hashtags generados con IA', 'ok');
+      } else {
+        showToast(`❌ Error IA: ${data.error?.slice(0, 80)}`, 'err');
+      }
+    } catch (e) {
+      showToast(`❌ Error de red: ${String(e).slice(0, 60)}`, 'err');
+    } finally {
+      setHashtagsLoading(false);
+    }
+  };
 
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all overflow-hidden shadow-sm flex flex-col ${
@@ -1186,8 +1249,8 @@ function PostCard({
             </span>
           )}
           {post.status === 'scheduling' && <span className="text-gray-400 animate-pulse">⏳ Enviando...</span>}
-          {/* Borrar: admin siempre, cliente solo sus posts */}
-          {(isAdmin || canClientEdit) && (
+          {/* Borrar: solo admin */}
+          {isAdmin && (
             <button
               onClick={() => setShowDeleteModal(true)}
               className="ml-1 text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded hover:bg-red-50"
@@ -1243,8 +1306,8 @@ function PostCard({
             </>
           )}
 
-          {/* Botón eliminar imagen actual — admin siempre, cliente en sus posts */}
-          {(isAdmin || canClientEdit) && currentImage && !isScheduled && (
+          {/* Botón eliminar imagen actual — solo admin */}
+          {isAdmin && currentImage && !isScheduled && (
             <button
               onClick={e => { e.stopPropagation(); handleDeleteImage(); }}
               className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 z-30 shadow-md"
@@ -1255,26 +1318,35 @@ function PostCard({
           {/* Overlay para subir/añadir imagen — admin siempre, cliente solo en sus posts */}
           {(isAdmin || canClientEdit) && !isScheduled && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-              {/* Reemplazar imagen actual */}
+              {/* Subir / Reemplazar imagen */}
               <label className="pointer-events-auto cursor-pointer bg-white text-gray-800 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg">
                 <input type="file" className="hidden" accept="image/*"
                   onChange={e => handleFile(post.id, e, imageUrls, 'replace', safeIdx)} />
-                <ImageIcon size={11} /> Reemplazar
+                <ImageIcon size={11} /> {currentImage ? 'Reemplazar' : 'Subir imagen'}
               </label>
               {isAdmin && (
                 <button
                   onClick={() => handleUrl(post.id, imageUrls, 'replace', safeIdx)}
                   className="pointer-events-auto bg-white text-gray-700 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-gray-100 w-36 justify-center shadow-lg border"
                 >
-                  <LinkIcon size={11} /> Reemplazar URL
+                  <LinkIcon size={11} /> {currentImage ? 'Reemplazar URL' : 'URL imagen'}
                 </button>
               )}
               {/* Añadir nueva(s) slide(s) — multiple permite seleccionar varias a la vez */}
-              <label className="pointer-events-auto cursor-pointer bg-[#2d6a4f] text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-[#1b4332] w-36 justify-center shadow-lg">
-                <input type="file" className="hidden" accept="image/*" multiple
-                  onChange={e => { handleFile(post.id, e, imageUrls, 'add'); }} />
-                <PlusCircle size={11} /> Añadir slides
-              </label>
+              {currentImage && (
+                <label className="pointer-events-auto cursor-pointer bg-[#2d6a4f] text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-[#1b4332] w-36 justify-center shadow-lg">
+                  <input type="file" className="hidden" accept="image/*" multiple
+                    onChange={e => { handleFile(post.id, e, imageUrls, 'add'); }} />
+                  <PlusCircle size={11} /> Añadir slides
+                </label>
+              )}
+              {/* Generar imagen con IA */}
+              <button
+                onClick={() => setShowAIImg(v => !v)}
+                className="pointer-events-auto bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
+              >
+                🎨 Imagen IA
+              </button>
             </div>
           )}
         </div>
@@ -1322,20 +1394,9 @@ function PostCard({
         )}
       </div>
 
-      {/* Botones de utilidad admin: copiar texto, copiar hashtags, descargar imágenes, generar imagen IA */}
+      {/* Botones de utilidad: copiar texto, copiar hashtags, descargar imágenes */}
       {(isAdmin || canClientEdit) && (
         <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-1.5">
-
-          {/* ── Botón Generar imagen con IA ── */}
-          <button
-            onClick={() => setShowAIImg(v => !v)}
-            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 ${
-              showAIImg
-                ? 'bg-violet-100 border-violet-400 text-violet-700'
-                : 'bg-white border-gray-200 hover:bg-violet-50 hover:border-violet-300 text-gray-600 hover:text-violet-700'
-            }`}
-            title="Generar imagen con IA"
-          >🎨 Imagen IA</button>
 
           {isAdmin && <button
             onClick={() => {
@@ -1496,43 +1557,9 @@ function PostCard({
               autoFocus
             />
             <div className="flex gap-2 flex-wrap">
-              {/* ── Botón Grok AI ── */}
+              {/* ── Botón IA copy ── */}
               <button
-                onClick={async () => {
-                  if (grokLoading) return;
-                  setGrokLoading(true);
-                  try {
-                    // Pasar los posts existentes (excluir el actual) para que Groq no repita temas
-                    const existingCopies = allPosts
-                      .filter(p => p.id !== post.id && p.copy && p.copy.trim())
-                      .map(p => `Post #${p.post_number}: ${p.copy.slice(0, 220)}`);
-
-                    const res = await fetch('/api/groq-generate', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        client_id: clientId,
-                        platform: post.platform,
-                        headline_visual: post.headline_visual,
-                        clientName,
-                        currentCopy: copyDraft,
-                        existingPosts: existingCopies,
-                        language: 'es',
-                      }),
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.copy) {
-                      setCopyDraft(data.copy);
-                      showToast('✨ Texto generado con Groq IA', 'ok');
-                    } else {
-                      showToast(`Error Grok: ${data.error?.slice(0, 80)}`, 'err');
-                    }
-                  } catch (e) {
-                    showToast(`Error de red: ${String(e).slice(0, 60)}`, 'err');
-                  } finally {
-                    setGrokLoading(false);
-                  }
-                }}
+                onClick={() => handleGenerateCopy(copyDraft)}
                 disabled={grokLoading}
                 className="flex-1 py-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg text-[11px] font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1"
               >
@@ -1554,14 +1581,28 @@ function PostCard({
           </div>
         ) : (
           <div className="mb-6 flex-grow relative group/copy">
-            <p className="text-sm text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">{post.copy || <span className="text-gray-300 italic">Sin texto</span>}</p>
-            {(isAdmin || canClientEdit) && !isScheduled && (
-              <div className="absolute top-0 right-0 opacity-0 group-hover/copy:opacity-100 transition-opacity flex gap-1">
-                <button
-                  onClick={() => { setCopyDraft(post.copy); setEditingCopy(true); }}
-                  className="bg-white border border-gray-200 text-gray-400 hover:text-[#2d6a4f] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm"
-                >✏️ Editar</button>
-              </div>
+            {post.copy ? (
+              <>
+                <p className="text-sm text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">{post.copy}</p>
+                {(isAdmin || canClientEdit) && !isScheduled && (
+                  <div className="absolute top-0 right-0 opacity-0 group-hover/copy:opacity-100 transition-opacity flex gap-1">
+                    <button
+                      onClick={() => { setCopyDraft(post.copy); setEditingCopy(true); }}
+                      className="bg-white border border-gray-200 text-gray-400 hover:text-[#2d6a4f] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm"
+                    >✏️ Editar</button>
+                  </div>
+                )}
+              </>
+            ) : (isAdmin || canClientEdit) && !isScheduled ? (
+              <button
+                onClick={async () => { setCopyDraft(''); setEditingCopy(true); await handleGenerateCopy(''); }}
+                disabled={grokLoading}
+                className="w-full py-3 border-2 border-dashed border-violet-300 rounded-xl text-violet-600 font-black text-[12px] uppercase tracking-wide hover:bg-violet-50 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+              >
+                {grokLoading ? <><span className="animate-spin">⏳</span> Generando...</> : '🤖 Generar texto con IA'}
+              </button>
+            ) : (
+              <span className="text-gray-300 italic text-sm">Sin texto</span>
             )}
           </div>
         )}
@@ -1577,7 +1618,14 @@ function PostCard({
                 onChange={e => setTagsDraft(e.target.value)}
                 autoFocus
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={handleGenerateHashtags}
+                  disabled={hashtagsLoading}
+                  className="flex-1 py-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg text-[11px] font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1"
+                >
+                  {hashtagsLoading ? <><span className="animate-spin">⏳</span> Generando...</> : '🤖 IA hashtags'}
+                </button>
                 <button
                   onClick={async () => {
                     const newTags = tagsDraft.split(/\s+/).map(t => t.replace(/^#+/, '')).filter(Boolean);
@@ -1594,20 +1642,35 @@ function PostCard({
               </div>
             </div>
           ) : (
-            <div className="relative group/tags flex flex-wrap gap-1.5">
+            <div className="relative group/tags flex flex-wrap gap-1.5 items-center">
               {post.hashtags?.length > 0
                 ? post.hashtags.map(h => (
                     <span key={h} className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                       #{h.replace(/^#+/, '')}
                     </span>
                   ))
-                : <span className="text-[10px] text-gray-300 italic uppercase">Sin hashtags</span>
+                : (isAdmin || canClientEdit) && !isScheduled
+                  ? <button
+                      onClick={handleGenerateHashtags}
+                      disabled={hashtagsLoading}
+                      className="text-[10px] font-black px-3 py-1 rounded-lg border-2 border-dashed border-violet-300 text-violet-500 hover:bg-violet-50 disabled:opacity-50 flex items-center gap-1 transition-colors"
+                    >
+                      {hashtagsLoading ? <><span className="animate-spin">⏳</span> Generando...</> : '🤖 Generar hashtags IA'}
+                    </button>
+                  : <span className="text-[10px] text-gray-300 italic uppercase">Sin hashtags</span>
               }
-              {(isAdmin || canClientEdit) && !isScheduled && (
+              {(isAdmin || canClientEdit) && !isScheduled && post.hashtags?.length > 0 && (
                 <button
                   onClick={() => { setTagsDraft(post.hashtags?.map(h => `#${h.replace(/^#+/, '')}`).join(' ') ?? ''); setEditingTags(true); }}
                   className="opacity-0 group-hover/tags:opacity-100 transition-opacity ml-1 bg-white border border-gray-200 text-gray-400 hover:text-[#2d6a4f] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm"
                 >✏️ Editar</button>
+              )}
+              {(isAdmin || canClientEdit) && !isScheduled && post.hashtags?.length > 0 && (
+                <button
+                  onClick={handleGenerateHashtags}
+                  disabled={hashtagsLoading}
+                  className="opacity-0 group-hover/tags:opacity-100 transition-opacity ml-0.5 bg-white border border-violet-200 text-violet-500 hover:bg-violet-50 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm disabled:opacity-50"
+                >🤖 IA</button>
               )}
             </div>
           )}
@@ -1672,4 +1735,183 @@ function PostCard({
                 const newStatus = e.target.value;
                 await onUpdatePost(post.id, {
                   status: newStatus,
-                  ...(newStatus !== 'scheduled' ? { webho
+                  ...(newStatus !== 'scheduled' ? { webhook_sent_at: null } : {}),
+                  ...(newStatus === 'approved' ? { feedback: '' } : {}),
+                });
+              }}
+              className="flex-1 text-[10px] font-bold text-gray-700 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
+            >
+              <option value="review">🔵 En revisión</option>
+              <option value="approved">✅ Aprobado</option>
+              <option value="changes">⚠️ Cambios solicitados</option>
+              <option value="changes_done">🟢 Cambios hechos</option>
+              <option value="scheduled">📅 Publicado</option>
+            </select>
+          </div>
+        )}
+
+        {/* Scheduled — estado final, sin botones */}
+        {isScheduled && (
+          <div className="flex flex-col items-center gap-1 py-3 px-4 bg-green-50 rounded-xl border border-green-200">
+            <span className="text-[11px] font-black text-green-700 uppercase tracking-widest flex items-center gap-1.5">
+              {post.platform === 'IG' ? '📸' : post.platform === 'LI' ? '💼' : '📘'}
+              Publicado en {post.platform === 'IG' ? 'Instagram' : post.platform === 'LI' ? 'LinkedIn' : 'Facebook'}
+            </span>
+            {post.webhook_sent_at && (
+              <span className="text-sm font-bold text-green-800">
+                {new Date(post.webhook_sent_at).toLocaleDateString('es-ES', {
+                  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+                })}
+              </span>
+            )}
+            {post.webhook_sent_at && (
+              <span className="text-[10px] text-green-600">
+                {new Date(post.webhook_sent_at).toLocaleTimeString('es-ES', {
+                  hour: '2-digit', minute: '2-digit'
+                })}h
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Botones de revisión — no mostrar si ya está scheduled */}
+        {!isScheduled && (
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                await onUpdatePost(post.id, { status: 'approved', feedback: '' });
+                notifyApproval(post, clientName);
+              }}
+              disabled={isApproved}
+              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tighter transition-colors flex items-center justify-center gap-1.5 shadow-sm ${
+                isApproved
+                  ? 'bg-gray-100 text-gray-400 cursor-default'
+                  : 'bg-[#2d6a4f] text-white hover:bg-[#1b4332]'
+              }`}
+            >
+              <CheckCircle size={12} />
+              {isApproved ? 'Aprobado' : 'Aprobar'}
+            </button>
+            {/* Botón Cambios — toggle entre changes / changes_done / nuevo cambio */}
+            {isChanges ? (
+              <button
+                onClick={async () => {
+                  await onUpdatePost(post.id, { status: 'changes_done' });
+                }}
+                className="flex-1 py-3 bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-600 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle size={12} /> Cambios hechos
+              </button>
+            ) : isChangesDone ? (
+              <div className="flex flex-col gap-2 flex-1">
+                <button
+                  onClick={async () => {
+                    await onUpdatePost(post.id, { status: 'changes' });
+                  }}
+                  className="w-full py-3 border-2 border-green-400 bg-white text-green-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <MessageSquare size={12} /> Ver cambios
+                </button>
+                <button
+                  onClick={async () => {
+                    const n = prompt('Describe los nuevos cambios que necesitas:');
+                    if (n) {
+                      await onUpdatePost(post.id, { status: 'changes', feedback: n });
+                      notifyChangesRequested(post, clientName, n);
+                    }
+                  }}
+                  className="w-full py-2 bg-white text-gray-400 rounded-xl text-[10px] font-bold uppercase tracking-tighter hover:bg-red-50 hover:text-red-500 hover:border-red-300 border-2 border-gray-200 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <MessageSquare size={10} /> Pedir más cambios
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={async () => {
+                  const n = prompt('Describe los cambios que necesitas:');
+                  if (n) {
+                    await onUpdatePost(post.id, { status: 'changes', feedback: n });
+                    notifyChangesRequested(post, clientName, n);
+                  }
+                }}
+                className="flex-1 py-3 border-2 bg-white text-gray-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare size={12} /> Cambios
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Toast local */}
+      {toast && <Toast msg={toast.msg} type={toast.type} />}
+    </div>
+  );
+}
+
+// ─── Grid principal ───────────────────────────────────────────────────────────
+export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
+  const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
+
+  // Portal cliente: filtrar por ?show=1,3,5 si existe
+  const visiblePosts = (() => {
+    if (isAdmin) return posts;
+    const params = new URLSearchParams(window.location.search);
+    const show = params.get('show');
+    if (!show) return posts;
+    const nums = new Set(show.split(',').map(Number).filter(Boolean));
+    return posts.filter(p => nums.has(p.post_number));
+  })();
+
+  const activePosts    = visiblePosts.filter(p => p.status !== 'scheduled');
+  const publishedPosts = visiblePosts.filter(p => p.status === 'scheduled');
+
+  const cardProps = (post: Post) => ({
+    key: post.id,
+    post,
+    allPosts: visiblePosts,
+    clientId,
+    clientName,
+    isAdmin,
+    isClientPortal,
+    igAccountType,
+    onUpdatePost,
+    onDeletePost,
+    uploadingId,
+    handleFile,
+    handleUrl,
+    shareMode,
+    isSelected: selectedPosts?.has(post.post_number) ?? false,
+    onToggleSelect: () => onToggleSelect?.(post.post_number),
+  });
+
+  return (
+    <div className="space-y-12">
+      {/* Posts activos */}
+      {activePosts.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+          {activePosts.map(post => <PostCard {...cardProps(post)} />)}
+        </div>
+      )}
+
+      {/* Sección Publicados */}
+      {publishedPosts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-green-200" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border-2 border-green-300 rounded-full">
+              <CheckCircle size={14} className="text-green-600" />
+              <span className="text-xs font-black uppercase tracking-widest text-green-700">
+                Publicados ✓
+              </span>
+            </div>
+            <div className="flex-1 h-px bg-green-200" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left opacity-80">
+            {publishedPosts.map(post => <PostCard {...cardProps(post)} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

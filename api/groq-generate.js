@@ -26,6 +26,7 @@ module.exports = async function handler(req, res) {
     currentCopy,
     existingPosts = [],   // array de strings: "Post #1: texto..."
     language,
+    mode = 'copy',        // 'copy' | 'hashtags'
   } = req.body || {};
 
   // ── 1. Leer sociales.txt del cliente (voz + histórico real) ─────────────────
@@ -61,7 +62,32 @@ module.exports = async function handler(req, res) {
     ? 'Write ALWAYS in English.'
     : 'Escribe SIEMPRE en español.';
 
-  const systemPrompt = `Eres un experto copywriter de redes sociales especializado en marketing digital para PYMEs españolas.
+  let systemPrompt, userPrompt;
+
+  if (mode === 'hashtags') {
+    // ── Modo hashtags ────────────────────────────────────────────────────────
+    const htCount = platform === 'LI' ? '5-10' : '20-28';
+    systemPrompt = `Eres un experto en SEO y redes sociales especializado en hashtags para PYMEs españolas.
+Tu misión: generar los hashtags perfectos para un post en ${platformLabel}.
+${langNote}
+
+REGLAS ESTRICTAS:
+- Genera entre ${htCount} hashtags relevantes para el negocio y el post.
+- Mezcla hashtags de volumen alto (>500K), medio (50K-500K) y nicho (<50K).
+- Incluye hashtags locales/geográficos si el negocio tiene ubicación.
+- NUNCA incluyas el símbolo # en tu respuesta.
+- Devuelve SOLO las palabras separadas por espacios. Sin explicaciones. Sin numeración.
+${socialesContext ? `\nContexto del cliente:\n${socialesContext.slice(0, 800)}` : ''}`;
+
+    userPrompt = `Cliente: ${clientName || 'empresa cliente'}
+Red social: ${platformLabel}
+${currentCopy ? `Texto del post:\n${currentCopy}` : `Idea del post: ${headline_visual || 'negocio de servicios'}`}
+
+Responde SOLO con las palabras de los hashtags separadas por espacios (sin #, sin explicaciones).`;
+
+  } else {
+    // ── Modo copy (por defecto) ──────────────────────────────────────────────
+    systemPrompt = `Eres un experto copywriter de redes sociales especializado en marketing digital para PYMEs españolas.
 Tu misión: crear el copy perfecto para un post en ${platformLabel}.
 ${langNote}
 
@@ -85,12 +111,13 @@ ${existingPostsSummary}
 ─────────────────────────────────────
 Asegúrate de que el nuevo post aporte un ángulo, tema o formato completamente distinto a los anteriores.` : ''}`;
 
-  const userPrompt = `Cliente: ${clientName || 'empresa cliente'}
+    userPrompt = `Cliente: ${clientName || 'empresa cliente'}
 Red social: ${platformLabel}
 Idea de imagen / contexto visual del post: ${headline_visual || 'imagen profesional del negocio'}
 ${currentCopy ? `Texto actual (mejóralo o reescríbelo completamente si conviene):\n${currentCopy}` : 'Genera un copy original y diferente a los ya existentes.'}
 
 Responde SOLO con el texto del post. Sin hashtags. Sin explicaciones.`;
+  }
 
   // ── 4. Llamar a Groq ─────────────────────────────────────────────────────────
   try {
