@@ -371,7 +371,10 @@ export default function App() {
               <button
                 onClick={() => {
                   setEmailSubject(`Revisión de posts – ${activeClient.name}`);
-                  setEmailBody('');
+                  const contactName = (activeClient.contact && activeClient.contact !== '-')
+                    ? activeClient.contact
+                    : activeClient.name;
+                  setEmailBody(`Hola ${contactName},\n\nte envío el enlace para aprobar los posts:\n\n`);
                   setShowEmailModal(true);
                 }}
                 className="text-[10px] font-bold text-amber-400 border border-amber-700 px-2 py-0.5 rounded hover:bg-amber-900 hover:text-amber-200 transition-colors uppercase tracking-widest hidden md:block"
@@ -567,8 +570,11 @@ export default function App() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-bold text-gray-500 text-xs uppercase tracking-widest">✉️ Email al cliente</h3>
-                <p className="text-white text-2xl font-black mt-1 leading-tight">{activeClient.name}</p>
-                <p className="text-amber-400 text-sm font-bold mt-1">{activeClient.email}</p>
+                {activeClient.contact && activeClient.contact !== '-' && (
+                  <p className="text-white text-2xl font-black mt-1 leading-tight">{activeClient.contact}</p>
+                )}
+                <p className="text-gray-400 text-sm font-bold mt-0.5">{activeClient.name}</p>
+                <p className="text-amber-400 text-xs font-bold mt-0.5">{activeClient.email}</p>
               </div>
               <button
                 onClick={() => setShowEmailModal(false)}

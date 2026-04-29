@@ -6,13 +6,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-const META_APP_ID  = import.meta.env.VITE_META_APP_ID || '1124977686473073';
+// Instagram Login (API moderna — no requiere Facebook Pages)
+const IG_APP_ID    = '972574845424224';
 const REDIRECT_URI = `${window.location.origin}/ig-callback`;
 const OAUTH_URL = (clientId: string) =>
-  `https://www.facebook.com/dialog/oauth` +
-  `?client_id=${META_APP_ID}` +
+  `https://www.instagram.com/oauth/authorize` +
+  `?client_id=${IG_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=instagram_basic,instagram_content_publish,pages_read_engagement,pages_show_list` +
+  `&scope=instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments,instagram_business_manage_messages` +
   `&response_type=code` +
   `&state=${clientId}`;
 
