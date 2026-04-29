@@ -512,8 +512,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Banner J2 completado */}
-        {scheduledCount >= 12 && (
+        {/* Banner J2 completado — solo admin */}
+        {isAdmin && scheduledCount >= 12 && (
           <div className="mb-8 bg-[#2d6a4f] text-white p-6 rounded-2xl shadow-xl flex items-center gap-4 border-4 border-white">
             <span className="text-4xl">🏆</span>
             <div>
