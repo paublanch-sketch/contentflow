@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS posts (
   feedback         TEXT        NOT NULL DEFAULT '',
   image_url        TEXT        NOT NULL DEFAULT '',
   webhook_sent_at  TIMESTAMPTZ,
+  created_by       TEXT        DEFAULT 'admin',  -- 'admin' | 'client'
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -98,3 +99,6 @@ ON CONFLICT (id) DO NOTHING;
 --
 -- Donde {slug} = el id del cliente en clients.json
 -- ════════════════════════════════════════════════════════════════════════════
+
+-- ⚠️  MIGRACIÓN: si la tabla ya existe, ejecutar:
+-- ALTER TABLE posts ADD COLUMN IF NOT EXISTS created_by TEXT DEFAULT 'admin';

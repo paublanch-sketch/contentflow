@@ -23,6 +23,7 @@ export type Post = {
   feedback: string;
   image_url: string;
   webhook_sent_at: string | null;
+  created_by?: 'admin' | 'client' | null; // quién creó el post
 };
 
 export type Client = {
@@ -63,6 +64,8 @@ export default function App() {
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [copiedLink, setCopiedLink]     = useState(false);
   const [igUsername, setIgUsername]     = useState('');
+  const [igPassword, setIgPassword]     = useState('');
+  const [showIgPassword, setShowIgPassword] = useState(false);
   const [igAccountType, setIgAccountType] = useState<'business' | 'personal' | 'none'>('none');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailSubject, setEmailSubject]   = useState('');
@@ -144,6 +147,8 @@ export default function App() {
   useEffect(() => {
     if (!clientId) return;
     setIgUsername('');
+    setIgPassword('');
+    setShowIgPassword(false);
     setIgAccountType('none');
     (async () => {
       // 1. ¿Tiene token OAuth Business/Creator?
@@ -156,9 +161,10 @@ export default function App() {
       }
       // 2. ¿Tiene credenciales personales?
       const { data: creds } = await supabase
-        .from('ig_credentials').select('ig_username').eq('client_id', clientId).maybeSingle();
+        .from('ig_credentials').select('ig_username, ig_password').eq('client_id', clientId).maybeSingle();
       if (creds?.ig_username) {
         setIgUsername(creds.ig_username);
+        if (creds?.ig_password) setIgPassword(creds.ig_password);
         setIgAccountType('personal');
       }
     })();
@@ -211,11 +217,11 @@ export default function App() {
   };
 
   // ── Crear post vacío ──
-  const handleCreatePost = async () => {
+  const handleCreatePost = async (createdBy: 'admin' | 'client' = 'admin') => {
     if (!clientId || creatingPost) return;
     setCreatingPost(true);
     try {
-      // Buscar el primer hueco libre (si se borró el #3, el nuevo ocupa el #3)
+      // Buscar el primer número disponible (si se borró el #3, el nuevo ocupa el #3)
       let nextNum = 1;
       if (posts.length > 0) {
         const usedNums = new Set(posts.map(p => p.post_number));
@@ -234,6 +240,7 @@ export default function App() {
         feedback: '',
         image_url: '',
         webhook_sent_at: null,
+        created_by: createdBy,
       };
       const { data, error } = await supabase
         .from('posts')
@@ -243,7 +250,6 @@ export default function App() {
 
       if (!error && data) {
         setPosts(prev => [...prev, data as Post]);
-        // Scroll al final para ver el nuevo post
         setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
       }
     } finally {
@@ -317,7 +323,7 @@ export default function App() {
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
                         c.platform === 'LI' ? 'bg-blue-900 text-blue-300' : 'bg-pink-900 text-pink-300'
                       }`}>{c.platform}</span>
-                      <span className="text-xs font-semibold truncate">{c.name}</span>
+                      <span className="text-sm font-bold truncate">{c.name}</span>
                     </button>
                   ))}
                   {filteredClients.length === 0 && (
@@ -454,10 +460,19 @@ export default function App() {
         </nav>
       ) : (
         /* ── Navbar cliente ── */
-        <nav className="bg-white border-b p-4 flex justify-center items-center sticky top-0 z-50 shadow-sm">
+        <nav className="bg-white border-b p-4 flex items-center justify-between sticky top-0 z-50 shadow-sm px-6">
           <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-xl italic">
             Portal de Aprobación
           </h1>
+          {isClientPortal && clientId && (
+            <button
+              onClick={() => handleCreatePost('client')}
+              disabled={creatingPost}
+              className="text-[11px] font-black bg-[#2d6a4f] text-white px-4 py-2 rounded-xl hover:bg-[#1b4332] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+            >
+              {creatingPost ? '...' : '＋ Añadir post'}
+            </button>
+          )}
         </nav>
       )}
 
@@ -479,10 +494,10 @@ export default function App() {
               </p>
             </div>
             {isAdmin && (
-              <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0 flex flex-col items-end gap-0.5">
+              <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0 flex flex-col items-end gap-1">
                 {/* Contacto */}
                 {activeClient.contact && activeClient.contact !== '-' && (
-                  <div className="font-bold text-gray-500">{activeClient.contact}</div>
+                  <div className="font-bold text-gray-400 text-[11px]">{activeClient.contact}</div>
                 )}
                 {/* Teléfono (campo notes si contiene número) */}
                 {activeClient.notes && activeClient.notes !== '-' && /\d{6,}/.test(activeClient.notes) && (
@@ -496,10 +511,43 @@ export default function App() {
                     ✉️ {activeClient.email}
                   </a>
                 )}
-                {/* Instagram @ (de ig_credentials Supabase) */}
-                {igUsername && (
-                  <span className="text-pink-400 font-black text-[11px]">📸 @{igUsername}</span>
-                )}
+
+                {/* ── Acceso portal cliente ── */}
+                <div className="mt-1 flex flex-col items-end gap-1 bg-[#252836] rounded-xl px-3 py-2 border border-gray-700">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Acceso cliente</span>
+                  {/* URL portal */}
+                  <button
+                    onClick={() => {
+                      const url = `https://contentflow-4wos.vercel.app/p/${activeClient.id}`;
+                      navigator.clipboard.writeText(url);
+                    }}
+                    title="Copiar URL del portal"
+                    className="text-[10px] text-blue-400 hover:text-blue-300 font-mono truncate max-w-[220px] text-right"
+                  >
+                    🔗 /p/{activeClient.id}
+                  </button>
+                  {/* Instagram @ usuario */}
+                  {igUsername && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-500">👤</span>
+                      <span className="text-[11px] text-pink-400 font-black">@{igUsername}</span>
+                    </div>
+                  )}
+                  {/* Contraseña IG */}
+                  {igPassword && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-500">🔒</span>
+                      <button
+                        onClick={() => setShowIgPassword(p => !p)}
+                        className="text-[10px] font-mono text-amber-300 hover:text-amber-200"
+                        title="Mostrar/ocultar contraseña"
+                      >
+                        {showIgPassword ? igPassword : '••••••••'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {/* Perfil externo */}
                 {activeClient.profile_url && activeClient.profile_url !== '-' && (
                   <a href={activeClient.profile_url} target="_blank" rel="noopener noreferrer"
@@ -549,6 +597,7 @@ export default function App() {
             clientId={clientId}
             clientName={activeClient?.name ?? clientId}
             isAdmin={isAdmin}
+            isClientPortal={isClientPortal}
             igAccountType={igAccountType}
             onUpdatePost={handleUpdatePost}
             onDeletePost={handleDeletePost}
