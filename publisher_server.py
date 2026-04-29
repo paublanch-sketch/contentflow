@@ -437,14 +437,34 @@ async def _publish_async(job_id: str):
 
         from playwright.async_api import async_playwright
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=False)
+            HEADLESS = os.environ.get('HEADLESS', 'true').lower() != 'false'
+            BROWSER_ARGS = [
+                '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-infobars', '--window-size=1280,900',
+            ] if HEADLESS else []
+            browser = await pw.chromium.launch(headless=HEADLESS, args=BROWSER_ARGS)
             # Cargar sesión guardada si existe (evita el formulario de login)
             saved = load_session(post['client_id'], platform)
-            ctx_kwargs = {'viewport': {'width': 1280, 'height': 900}}
+            ctx_kwargs = {
+                'viewport': {'width': 1280, 'height': 900},
+                'user_agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/124.0.0.0 Safari/537.36'
+                ),
+                'locale': 'es-ES',
+                'timezone_id': 'Europe/Madrid',
+            }
             if saved:
                 ctx_kwargs['storage_state'] = saved
                 upd('running', '🍪 Sesión guardada encontrada — saltando login...')
             ctx  = await browser.new_context(**ctx_kwargs)
+            # Ocultar webdriver flag (anti-detección)
+            await ctx.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                window.chrome = { runtime: {} };
+            """)
             page = await ctx.new_page()
             try:
                 if platform == 'IG':
@@ -910,12 +930,12 @@ async def _publish_facebook(page, post, creds, tmp_paths, caption, upd, job):
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8765))
+    host = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
     print()
     print("╔══════════════════════════════════════════════════════════════╗")
-    print("║   ContentFlow Publisher Server v2.0  —  localhost:8765      ║")
+    print(f"║   ContentFlow Publisher Server v2.0  —  {host}:{port}  ║")
     print("║   Plataformas: Instagram · LinkedIn · Facebook               ║")
-    print("║   Deja esta ventana abierta mientras usas ContentFlow        ║")
-    print("║   Ctrl+C para parar                                          ║")
     print("╚══════════════════════════════════════════════════════════════╝")
     print()
-    app.run(host='127.0.0.1', port=8765, debug=False, threaded=True)
+    app.run(host=host, port=port, debug=False, threaded=True)

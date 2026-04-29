@@ -63,6 +63,7 @@ export default function App() {
   const [shareMode, setShareMode]       = useState(false);
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [copiedLink, setCopiedLink]     = useState(false);
+  const [igUsername, setIgUsername]     = useState('');
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click fuera
@@ -135,6 +136,18 @@ export default function App() {
       setSearch(initialClient.name);
     }
   }, []);
+
+  // ── Cargar ig_username cuando cambia el cliente ──
+  useEffect(() => {
+    if (!clientId) return;
+    setIgUsername('');
+    supabase
+      .from('ig_credentials')
+      .select('ig_username')
+      .eq('client_id', clientId)
+      .maybeSingle()
+      .then(({ data }) => { if (data?.ig_username) setIgUsername(data.ig_username); });
+  }, [clientId]);
 
   // ── Cargar posts desde Supabase cuando cambia el cliente ──
   useEffect(() => {
@@ -514,17 +527,32 @@ export default function App() {
                 }
               </p>
             </div>
-            {isAdmin && activeClient.contact && activeClient.contact !== '-' && (
-              <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0">
-                <div className="font-bold text-gray-500">{activeClient.contact}</div>
-                {activeClient.email && activeClient.email !== '-' && (
-                  <a href={`mailto:${activeClient.email}`} className="hover:text-[#2d6a4f] block">
-                    {activeClient.email}
+            {isAdmin && (
+              <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0 flex flex-col items-end gap-0.5">
+                {/* Contacto */}
+                {activeClient.contact && activeClient.contact !== '-' && (
+                  <div className="font-bold text-gray-500">{activeClient.contact}</div>
+                )}
+                {/* Teléfono (campo notes si contiene número) */}
+                {activeClient.notes && activeClient.notes !== '-' && /\d{6,}/.test(activeClient.notes) && (
+                  <a href={`tel:${activeClient.notes.replace(/\s/g,'')}`} className="text-amber-400 hover:text-amber-300 font-bold">
+                    📞 {activeClient.notes}
                   </a>
                 )}
+                {/* Email */}
+                {activeClient.email && activeClient.email !== '-' && (
+                  <a href={`mailto:${activeClient.email}`} className="hover:text-[#2d6a4f] block">
+                    ✉️ {activeClient.email}
+                  </a>
+                )}
+                {/* Instagram @ (de ig_credentials Supabase) */}
+                {igUsername && (
+                  <span className="text-pink-400 font-black text-[11px]">📸 @{igUsername}</span>
+                )}
+                {/* Perfil externo */}
                 {activeClient.profile_url && activeClient.profile_url !== '-' && (
                   <a href={activeClient.profile_url} target="_blank" rel="noopener noreferrer"
-                     className="text-blue-500 hover:underline">
+                     className="text-blue-500 hover:underline text-[10px]">
                     Ver perfil →
                   </a>
                 )}

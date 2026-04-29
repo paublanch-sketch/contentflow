@@ -25,8 +25,8 @@ function serializeImageUrls(urls: string[]): string {
   return JSON.stringify(clean);
 }
 
-// ─── Servidor local de publicación (publisher_server.py) ─────────────────────
-const PUBLISHER_URL = 'http://localhost:8765';
+// ─── Servidor de publicación (local o cloud según VITE_PUBLISHER_URL) ────────
+const PUBLISHER_URL = import.meta.env.VITE_PUBLISHER_URL || 'http://localhost:8765';
 
 // ─── Metricool API ────────────────────────────────────────────────────────────
 const MC_API      = 'https://app.metricool.com/api/v2.0';
@@ -115,11 +115,40 @@ function DateTimePicker({ value, onChange }: { value: string; onChange: (v: stri
           );
         })}
       </div>
-      {/* Hora + resumen en una línea */}
-      <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5 border border-gray-100">
-        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">🕐 Hora</span>
+      {/* Sliders hora + minutos */}
+      <div className="bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">🕐 Hora</span>
+          <span className="text-sm font-black text-purple-700">{selTime}h</span>
+        </div>
+        {/* Slider horas */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-gray-400 w-4">0</span>
+          <input type="range" min={0} max={23} value={parseInt(selTime.split(':')[0])}
+            onChange={e => {
+              const h = String(e.target.value).padStart(2,'0');
+              const m = selTime.split(':')[1] || '00';
+              onTimeChange(`${h}:${m}`);
+            }}
+            className="flex-1 accent-purple-600 h-1.5 cursor-pointer"
+          />
+          <span className="text-[9px] text-gray-400 w-4">23</span>
+        </div>
+        {/* Slider minutos */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-gray-400 w-4">:00</span>
+          <input type="range" min={0} max={59} step={5} value={parseInt(selTime.split(':')[1] || '0')}
+            onChange={e => {
+              const h = selTime.split(':')[0] || '09';
+              const m = String(e.target.value).padStart(2,'0');
+              onTimeChange(`${h}:${m}`);
+            }}
+            className="flex-1 accent-pink-500 h-1.5 cursor-pointer"
+          />
+          <span className="text-[9px] text-gray-400 w-4">:55</span>
+        </div>
         <input type="time" value={selTime} onChange={e => onTimeChange(e.target.value)}
-          className="flex-1 text-right text-xs font-black text-gray-900 bg-transparent border-none outline-none" />
+          className="text-center text-xs font-black text-gray-600 bg-transparent border-none outline-none" />
       </div>
       {selDate && (
         <div className="text-center text-[9px] font-bold text-purple-700 bg-purple-50 rounded py-1 border border-purple-100">
@@ -404,6 +433,66 @@ function ConfirmPublishModal({ postNumber, platform, onConfirm, onCancel }: {
               Publicar
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal programar Instagram (Business API) ────────────────────────────────
+function IgSchedulerModal({ postNumber, imageUrls, onPublishNow, onSchedule, onCancel }: {
+  postNumber: number;
+  imageUrls: string[];
+  onPublishNow: () => void;
+  onSchedule: (dt: string) => void;
+  onCancel: () => void;
+}) {
+  const tomorrow = new Date(Date.now() + 86400000);
+  tomorrow.setHours(9, 0, 0, 0);
+  const tomorrowStr = tomorrow.toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T').slice(0, 16);
+  const [schedDate, setSchedDate] = useState(tomorrowStr);
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-5 max-w-sm w-full border-2 border-pink-200 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">📸</span>
+          <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Instagram · Post #{postNumber}</h3>
+        </div>
+
+        {!imageUrls.length && (
+          <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+            ⚠️ Este post no tiene imagen. Instagram requiere imagen para publicar.
+          </p>
+        )}
+
+        {/* Publicar ahora */}
+        <button onClick={onPublishNow}
+          className="w-full py-3 mb-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:opacity-90 flex items-center justify-center gap-2">
+          ⚡ Publicar ahora
+        </button>
+
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1 h-px bg-gray-100" />
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">o programar</span>
+          <div className="flex-1 h-px bg-gray-100" />
+        </div>
+
+        {/* Calendario */}
+        <div className="border border-pink-100 rounded-xl p-3 bg-white mb-4">
+          <DateTimePicker value={schedDate} onChange={setSchedDate} />
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button onClick={() => onSchedule(schedDate)}
+            disabled={!schedDate}
+            className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-1.5">
+            📅 Programar
+          </button>
         </div>
       </div>
     </div>
@@ -815,6 +904,7 @@ function PostCard({
 
   // ── Instagram Publisher ──
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [showIgScheduler,    setShowIgScheduler]    = useState(false);
   const [publishJobId, setPublishJobId]             = useState<string | null>(null);
   const [publishStatus, setPublishStatus]           = useState<PublishJobStatus | null>(null);
   const [publishMessage, setPublishMessage]         = useState('');
@@ -984,6 +1074,45 @@ function PostCard({
           imageUrls={imageUrls}
           onConfirm={handleSendToMetricool}
           onCancel={() => setShowMcModal(false)}
+        />
+      )}
+
+      {/* Modal programar / publicar IG (Business API) */}
+      {showIgScheduler && (
+        <IgSchedulerModal
+          postNumber={post.post_number}
+          imageUrls={imageUrls}
+          onPublishNow={async () => {
+            setShowIgScheduler(false);
+            await handlePublishIG();
+          }}
+          onSchedule={async (dt: string) => {
+            setShowIgScheduler(false);
+            setPublishStatus('running');
+            setPublishMessage('Programando en Instagram...');
+            setPublishJobId('_api_sched');
+            const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+            try {
+              const res  = await fetch(`${FUNCTIONS_URL}/publish-instagram`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+                body:    JSON.stringify({ post_id: post.id, scheduled_time: dt }),
+              });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                setPublishStatus('success');
+                setPublishMessage(`✅ Programado para el ${new Date(dt).toLocaleString('es-ES', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}h`);
+                await onUpdatePost(post.id, { status: 'scheduled', webhook_sent_at: new Date(dt).toISOString() });
+              } else {
+                setPublishStatus('error');
+                setPublishMessage(data.error || 'Error programando');
+              }
+            } catch (e: any) {
+              setPublishStatus('error');
+              setPublishMessage(e.message);
+            }
+          }}
+          onCancel={() => setShowIgScheduler(false)}
         />
       )}
 
@@ -1343,7 +1472,10 @@ function PostCard({
         {isAdmin && isApproved && (
           <div className="flex flex-col gap-3">
             {/* Botón publicar directo en Instagram/LinkedIn */}
-            <PublishButton platform={post.platform} onClick={() => setShowPublishConfirm(true)} />
+            <PublishButton platform={post.platform} onClick={() => {
+              if (post.platform === 'IG') setShowIgScheduler(true);
+              else setShowPublishConfirm(true);
+            }} />
             {/* Botón Metricool */}
             <button
               onClick={() => setShowMcModal(true)}
