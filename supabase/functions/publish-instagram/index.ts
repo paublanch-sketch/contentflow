@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     if (imageUrls.length === 1) {
       // ── Post individual ────────────────────────────────────────────────────
       const containerRes = await fetch(
-        `https://graph.facebook.com/v19.0/${ig_user_id}/media`, {
+        `https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       const childIds: string[] = [];
       for (const url of imageUrls) {
         const res = await fetch(
-          `https://graph.facebook.com/v19.0/${ig_user_id}/media`, {
+          `https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token }),
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       }
       // Crear contenedor del carrusel
       const carouselRes = await fetch(
-        `https://graph.facebook.com/v19.0/${ig_user_id}/media`, {
+        `https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     for (let i = 0; i < 10; i++) {
       await new Promise(r => setTimeout(r, 3000));
       const statusRes = await fetch(
-        `https://graph.facebook.com/v19.0/${creationId}?fields=status_code&access_token=${access_token}`
+        `https://graph.instagram.com/v21.0/${creationId}?fields=status_code&access_token=${access_token}`
       );
       const { status_code } = await statusRes.json();
       if (status_code === 'FINISHED') break;
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
     // 6. Publicar
     const publishRes = await fetch(
-      `https://graph.facebook.com/v19.0/${ig_user_id}/media_publish`, {
+      `https://graph.instagram.com/v21.0/${ig_user_id}/media_publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ creation_id: creationId, access_token }),

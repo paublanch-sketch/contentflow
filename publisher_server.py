@@ -111,9 +111,25 @@ def load_session(client_id: str, platform: str) -> dict | None:
 def load_credentials(client_id: str, platform: str) -> dict | None:
     """
     Carga credenciales para el cliente y plataforma.
-    Formato nuevo: {"client-id": {"IG": {...}, "LI": {...}}}
-    Formato antiguo (solo IG): {"client-id": {"username": "...", "password": "..."}}
+    Prioridad: 1) Supabase ig_credentials (guardadas desde ContentFlow)
+               2) clients_credentials.json (local, fallback)
     """
+    # 1. Supabase ig_credentials (Instagram)
+    if platform == 'IG' and sb:
+        try:
+            res = sb.table('ig_credentials').select('ig_username,ig_password').eq(
+                'client_id', client_id
+            ).maybe_single().execute()
+            if res and res.data:
+                print(f"  ☁️  Credenciales IG cargadas desde Supabase: {client_id}", flush=True)
+                return {
+                    'username': res.data['ig_username'],
+                    'password': res.data['ig_password'],
+                }
+        except Exception as e:
+            print(f"  ⚠️  Error leyendo ig_credentials: {e}", flush=True)
+
+    # 2. Fallback: clients_credentials.json local
     if not CREDENTIALS_FILE.exists():
         return None
     with open(CREDENTIALS_FILE, encoding='utf-8') as f:
@@ -121,10 +137,8 @@ def load_credentials(client_id: str, platform: str) -> dict | None:
     client = data.get(client_id)
     if not client:
         return None
-    # Formato nuevo con sub-clave de plataforma
     if platform in client:
         return client[platform]
-    # Backwards-compat: formato antiguo (solo IG sin sub-clave)
     if 'username' in client or 'email' in client:
         return client
     return None

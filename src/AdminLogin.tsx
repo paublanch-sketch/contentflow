@@ -29,7 +29,7 @@ export default function AdminLogin({ onLogin }: Props) {
   };
 
   const inputClass = (hasError: boolean) =>
-    `w-full p-3 rounded-lg bg-[#252836] border text-white text-sm font-bold outline-none transition-colors placeholder-gray-600 ${
+    `w-full p-3 rounded-lg bg-[#252836] border text-gray-100 text-sm font-bold outline-none transition-colors placeholder-gray-500 ${
       hasError
         ? 'border-red-500 focus:border-red-400'
         : 'border-gray-700 focus:border-[#52b788]'

@@ -28,7 +28,7 @@ En TotClinic tenemos los tres tipos en distintas tallas y presentaciones.
 
 👉 Consulta el catálogo completo en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#GuantesDesechables', '#MaterialSanitario', '#Enfermería', '#Clínicas', '#HigieneClínica'],
+    hashtags: ['TotClinic', 'GuantesDesechables', 'MaterialSanitario', 'Enfermería', 'Clínicas', 'HigieneClínica'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -52,7 +52,7 @@ En TotClinic las tenemos en diferentes gramajes y tamaños.
 
 👉 Revisa opciones disponibles en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#GasasEstériles', '#MaterialSanitario', '#Curas', '#ProtocoloClínico', '#Enfermería'],
+    hashtags: ['TotClinic', 'GasasEstériles', 'MaterialSanitario', 'Curas', 'ProtocoloClínico', 'Enfermería'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -77,7 +77,7 @@ El tamaño también importa: el apósito debe cubrir al menos 1 cm más allá de
 
 👉 Consulta tipos y tallas disponibles en totclinic.com
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#Apósitos', '#Curas', '#MaterialSanitario', '#Cicatrización', '#Clínicas'],
+    hashtags: ['TotClinic', 'Apósitos', 'Curas', 'MaterialSanitario', 'Cicatrización', 'Clínicas'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -105,7 +105,7 @@ Tener el tipo correcto en stock evita improvisaciones en situaciones de urgencia
 
 👉 Consulta disponibilidad y formatos en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#Vendas', '#PrimerosAuxilios', '#MaterialSanitario', '#Traumatología', '#Enfermería'],
+    hashtags: ['TotClinic', 'Vendas', 'PrimerosAuxilios', 'MaterialSanitario', 'Traumatología', 'Enfermería'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -130,7 +130,7 @@ Tener el tipo correcto en stock mejora el confort del paciente y reduce el riesg
 
 👉 Revisa presentaciones disponibles en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#Esparadrapo', '#MaterialSanitario', '#Clínicas', '#Enfermería', '#Vendaje'],
+    hashtags: ['TotClinic', 'Esparadrapo', 'MaterialSanitario', 'Clínicas', 'Enfermería', 'Vendaje'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -160,7 +160,7 @@ En TotClinic tenemos botiquines ya completos y también venta por separado para 
 
 👉 Consulta modelos disponibles en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#BotiquínEmpresa', '#SeguridadLaboral', '#PrimerosAuxilios', '#MaterialSanitario', '#ObligacionLegal'],
+    hashtags: ['TotClinic', 'BotiquínEmpresa', 'SeguridadLaboral', 'PrimerosAuxilios', 'MaterialSanitario', 'ObligacionLegal'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -187,7 +187,7 @@ En TotClinic lo tenemos todo en formato individual o caja.
 
 👉 Consulta disponibilidad en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#VestuarioDesechable', '#EPIs', '#MaterialSanitario', '#HigieneClínica', '#Clínicas'],
+    hashtags: ['TotClinic', 'VestuarioDesechable', 'EPIs', 'MaterialSanitario', 'HigieneClínica', 'Clínicas'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -215,7 +215,7 @@ Para consultas de alta rotación, los modelos infrarrojos o timpánicos son los 
 
 👉 Consulta modelos disponibles en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#Termómetro', '#Diagnóstico', '#MaterialSanitario', '#Pediatría', '#Enfermería'],
+    hashtags: ['TotClinic', 'Termómetro', 'Diagnóstico', 'MaterialSanitario', 'Pediatría', 'Enfermería'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -242,7 +242,7 @@ Planificar bien el stock evita desplazamientos de urgencia y garantiza una atenc
 
 👉 Consulta el catálogo de productos geriátricos en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#AtenciónGeriátrica', '#CuidadoMayores', '#MaterialSanitario', '#AtenciónDomiciliaria', '#Cuidadores'],
+    hashtags: ['TotClinic', 'AtenciónGeriátrica', 'CuidadoMayores', 'MaterialSanitario', 'AtenciónDomiciliaria', 'Cuidadores'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -271,7 +271,7 @@ En TotClinic tenemos material específico para profesionales del sector, con cer
 
 👉 Consulta disponibilidad en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#MaterialPiercing', '#MaterialTattoo', '#HigieneTattoo', '#MaterialSanitario', '#EstudioDeTattoo'],
+    hashtags: ['TotClinic', 'MaterialPiercing', 'MaterialTattoo', 'HigieneTattoo', 'MaterialSanitario', 'EstudioDeTattoo'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -299,7 +299,7 @@ Atención al cliente de lunes a viernes de 7h a 15h.
 
 👉 Haz tu próximo pedido en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#EnvíoGratis', '#MaterialSanitario', '#GestiónClínica', '#CompraOnline', '#Clínicas'],
+    hashtags: ['TotClinic', 'EnvíoGratis', 'MaterialSanitario', 'GestiónClínica', 'CompraOnline', 'Clínicas'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -329,7 +329,7 @@ En TotClinic tenemos ambas categorías con distintas presentaciones.
 
 👉 Consulta el catálogo en la web.
 🌐 totclinic.com`,
-    hashtags: ['#TotClinic', '#Desinfectantes', '#Antisépticos', '#HigieneClínica', '#MaterialSanitario', '#ProtocoloSanitario'],
+    hashtags: ['TotClinic', 'Desinfectantes', 'Antisépticos', 'HigieneClínica', 'MaterialSanitario', 'ProtocoloSanitario'],
     status: 'review',
     feedback: '',
     image_url: '',

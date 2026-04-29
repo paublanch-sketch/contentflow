@@ -28,7 +28,7 @@ Terrazas, jardines, zonas de piscina, accesos.
 ¿Tu proyecto necesita suelo exterior? Cuéntanos.
 📩 adrian@gregoriojerez.com
 🌐 gregoriojerez.com`,
-    hashtags: ['#BdB', '#SueloExterior', '#CerámicaExterior', '#Reforma', '#Azulejos', '#Terraza', '#Jardín', '#Construcción', '#Antideslizante', '#LespedreresBdB'],
+    hashtags: ['BdB', 'SueloExterior', 'CerámicaExterior', 'Reforma', 'Azulejos', 'Terraza', 'Jardín', 'Construcción', 'Antideslizante', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -54,7 +54,7 @@ En BdB te ayudamos a elegir sin agobios:
 ¿Empezamos con el tuyo?
 📩 adrian@gregoriojerez.com
 🌐 gregoriojerez.com`,
-    hashtags: ['#BdB', '#BañoModerno', '#Azulejos', '#ReformaBaño', '#CerámicaBaño', '#Diseño', '#Reforma', '#DecoracionInteriores', '#InteriorDesign', '#LespedreresBdB'],
+    hashtags: ['BdB', 'BañoModerno', 'Azulejos', 'ReformaBaño', 'CerámicaBaño', 'Diseño', 'Reforma', 'DecoracionInteriores', 'InteriorDesign', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -81,7 +81,7 @@ En BdB lo tenemos en múltiples formatos: desde 30x30 hasta grandes losas de 120
 
 ¿Quieres ver opciones para tu proyecto?
 📩 adrian@gregoriojerez.com`,
-    hashtags: ['#BdB', '#Porcelato', '#Cerámica', '#Azulejos', '#SabiasQue', '#TipsConstrucción', '#MaterialesCalidad', '#Reforma', '#Construir', '#LespedreresBdB'],
+    hashtags: ['BdB', 'Porcelato', 'Cerámica', 'Azulejos', 'SabiasQue', 'TipsConstrucción', 'MaterialesCalidad', 'Reforma', 'Construir', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -109,7 +109,7 @@ En BdB trabajamos con piedra natural para:
 ¿Tienes un proyecto de piscina en marcha?
 📩 adrian@gregoriojerez.com
 🌐 gregoriojerez.com`,
-    hashtags: ['#BdB', '#Piedranatural', '#Piscina', '#Exteriores', '#ConstrucciónPiscina', '#PiedraFachada', '#Jardín', '#ProyectoReal', '#MaterialNatural', '#LespedreresBdB'],
+    hashtags: ['BdB', 'Piedranatural', 'Piscina', 'Exteriores', 'ConstrucciónPiscina', 'PiedraFachada', 'Jardín', 'ProyectoReal', 'MaterialNatural', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -134,7 +134,7 @@ En BdB tenemos piedra natural para fachada en varios formatos y tonalidades:
 Cuéntanos tu proyecto.
 📩 adrian@gregoriojerez.com
 🌐 gregoriojerez.com`,
-    hashtags: ['#BdB', '#FachadaDePiedra', '#PiedraFachada', '#ConstrucciónNatural', '#Fachada', '#ArquitecturaResidencial', '#PiedraCaliza', '#Reforma', '#MaterialNatural', '#LespedreresBdB'],
+    hashtags: ['BdB', 'FachadaDePiedra', 'PiedraFachada', 'ConstrucciónNatural', 'Fachada', 'ArquitecturaResidencial', 'PiedraCaliza', 'Reforma', 'MaterialNatural', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -161,7 +161,7 @@ Evitar estos errores te ahorra dinero, tiempo y disgustos.
 En BdB te asesoramos antes de que compres. Sin coste. Sin compromiso.
 
 📩 adrian@gregoriojerez.com`,
-    hashtags: ['#BdB', '#ConsejosDeObra', '#Azulejos', '#TipsDeReforma', '#Obra', '#CerámicaCalidad', '#Reforma', '#AsesoramientoGratis', '#Construir', '#LespedreresBdB'],
+    hashtags: ['BdB', 'ConsejosDeObra', 'Azulejos', 'TipsDeReforma', 'Obra', 'CerámicaCalidad', 'Reforma', 'AsesoramientoGratis', 'Construir', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -185,7 +185,7 @@ Y una ventaja que no se ve: la piedra natural regula temperatura y humedad de fo
 ¿Lo hablamos aplicado a tu proyecto?
 📩 adrian@gregoriojerez.com
 🌐 gregoriojerez.com`,
-    hashtags: ['#BdB', '#PiedraInterior', '#InteriorismoNatural', '#DecoracionInteriores', '#Piedranatural', '#RevestimientoNatural', '#DiseñoInteriores', '#CasaModerna', '#InspiracionDecor', '#LespedreresBdB'],
+    hashtags: ['BdB', 'PiedraInterior', 'InteriorismoNatural', 'DecoracionInteriores', 'Piedranatural', 'RevestimientoNatural', 'DiseñoInteriores', 'CasaModerna', 'InspiracionDecor', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -210,7 +210,7 @@ Un edificio bien rehabilitado dura otro siglo.
 
 ¿Tienes un proyecto de estas características?
 📩 adrian@gregoriojerez.com`,
-    hashtags: ['#BdB', '#Rehabilitación', '#PiedraHistórica', '#PatrimonioArquitectónico', '#RecuperaciónPatrimonio', '#ConstrucciónSostenible', '#Restauración', '#Mampostería', '#ProyectoReal', '#LespedreresBdB'],
+    hashtags: ['BdB', 'Rehabilitación', 'PiedraHistórica', 'PatrimonioArquitectónico', 'RecuperaciónPatrimonio', 'ConstrucciónSostenible', 'Restauración', 'Mampostería', 'ProyectoReal', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -243,7 +243,7 @@ TEXTURADO →
 En BdB tienes los tres. Y te ayudamos a elegir el que mejor encaja con tu proyecto.
 
 📩 adrian@gregoriojerez.com`,
-    hashtags: ['#BdB', '#AcabadosCerámica', '#AzulejomMate', '#AzulejoBrillo', '#Antideslizante', '#TipsDeObra', '#CerámicaInterior', '#ReformaHogar', '#Azulejos', '#LespedreresBdB'],
+    hashtags: ['BdB', 'AcabadosCerámica', 'AzulejomMate', 'AzulejoBrillo', 'Antideslizante', 'TipsDeObra', 'CerámicaInterior', 'ReformaHogar', 'Azulejos', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -268,7 +268,7 @@ Porque el resultado final depende de los dos.
 
 ¿Tienes dudas sobre la instalación?
 📩 adrian@gregoriojerez.com`,
-    hashtags: ['#BdB', '#InstalacionPiedra', '#ProcesoDeObra', '#PiedraFachada', '#TrabajoBienHecho', '#Obra', '#Construcción', '#MaterialNatural', '#PiedraCaliza', '#LespedreresBdB'],
+    hashtags: ['BdB', 'InstalacionPiedra', 'ProcesoDeObra', 'PiedraFachada', 'TrabajoBienHecho', 'Obra', 'Construcción', 'MaterialNatural', 'PiedraCaliza', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -295,7 +295,7 @@ Rústico, moderno, mediterráneo. La piedra encaja en todos.
 
 ¿Cuál es el estilo de tu jardín?
 📩 adrian@gregoriojerez.com`,
-    hashtags: ['#BdB', '#MurosJardín', '#PiedraExterior', '#JardínNatural', '#PiedraJardín', '#CerramientoJardín', '#Exteriores', '#PiedraCaliza', '#ConstrucciónExterior', '#LespedreresBdB'],
+    hashtags: ['BdB', 'MurosJardín', 'PiedraExterior', 'JardínNatural', 'PiedraJardín', 'CerramientoJardín', 'Exteriores', 'PiedraCaliza', 'ConstrucciónExterior', 'LespedreresBdB'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -321,7 +321,7 @@ Desde la elección del material hasta el asesoramiento en la instalación.
 ¿El tuyo, cuándo empieza?
 📩 adrian@gregoriojerez.com
 🌐 gregoriojerez.com`,
-    hashtags: ['#BdB', '#ProyectoCompleto', '#PiedraYCerámica', '#ProyectoReal', '#FachadaPiedra', '#Porcelato', '#Piscina', '#CasaConEstilo', '#LespedreresBdB', '#Construir'],
+    hashtags: ['BdB', 'ProyectoCompleto', 'PiedraYCerámica', 'ProyectoReal', 'FachadaPiedra', 'Porcelato', 'Piscina', 'CasaConEstilo', 'LespedreresBdB', 'Construir'],
     status: 'review',
     feedback: '',
     image_url: '',

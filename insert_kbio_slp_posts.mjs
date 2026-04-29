@@ -32,7 +32,7 @@ Cada casa es diferente. Cada instalación, también.
 ¿Hablamos de la tuya?
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#PlacasFotovoltaicas', '#EnergíaSolar', '#Autoconsumo', '#ArquitecturaSostenible', '#PaísVasco', '#Baserri', '#ConstrucciónSostenible', '#EnergíaRenovable', '#KitDigital'],
+    hashtags: ['Kabio', 'PlacasFotovoltaicas', 'EnergíaSolar', 'Autoconsumo', 'ArquitecturaSostenible', 'PaísVasco', 'Baserri', 'ConstrucciónSostenible', 'EnergíaRenovable', 'KitDigital'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -60,7 +60,7 @@ Construir bien lleva tiempo. Vale la pena.
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#NuevoBaserri', '#CasaVasca', '#ArquitecturaVasca', '#ConstrucciónNueva', '#Baserri', '#PaísVasco', '#ArquitecturaNatural', '#MaterialesNaturales', '#ProyectoEnCurso'],
+    hashtags: ['Kabio', 'NuevoBaserri', 'CasaVasca', 'ArquitecturaVasca', 'ConstrucciónNueva', 'Baserri', 'PaísVasco', 'ArquitecturaNatural', 'MaterialesNaturales', 'ProyectoEnCurso'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -88,7 +88,7 @@ No hacemos magia. Hacemos arquitectura con criterio.
 ¿Tienes un edificio con potencial?
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#Rehabilitación', '#RehabilitaciónArquitectónica', '#AntesDespués', '#CasaRural', '#ArquitecturaVasca', '#MaterialesNaturales', '#ReformaIntegral', '#PaísVasco', '#TransformaciónDeEspacios'],
+    hashtags: ['Kabio', 'Rehabilitación', 'RehabilitaciónArquitectónica', 'AntesDespués', 'CasaRural', 'ArquitecturaVasca', 'MaterialesNaturales', 'ReformaIntegral', 'PaísVasco', 'TransformaciónDeEspacios'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -118,7 +118,7 @@ El resultado: confort todo el año con una factura que apenas se nota.
 ¿Te lo explicamos aplicado a tu proyecto?
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#ArquitecturaBioclimática', '#Bioclimático', '#EficienciaEnergética', '#CasaPasiva', '#DiseñoSostenible', '#LuzNatural', '#ConstrucciónSostenible', '#ArquitecturaNatural', '#PaísVasco'],
+    hashtags: ['Kabio', 'ArquitecturaBioclimática', 'Bioclimático', 'EficienciaEnergética', 'CasaPasiva', 'DiseñoSostenible', 'LuzNatural', 'ConstrucciónSostenible', 'ArquitecturaNatural', 'PaísVasco'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -146,7 +146,7 @@ Cada material tiene una historia. La de tu casa también.
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#MaterialesNaturales', '#Bioconstrucción', '#PiedraLocal', '#MaderaCertificada', '#CalNatural', '#ConstrucciónSostenible', '#ArquitecturaNatural', '#EcoArquitectura', '#PaísVasco'],
+    hashtags: ['Kabio', 'MaterialesNaturales', 'Bioconstrucción', 'PiedraLocal', 'MaderaCertificada', 'CalNatural', 'ConstrucciónSostenible', 'ArquitecturaNatural', 'EcoArquitectura', 'PaísVasco'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -171,7 +171,7 @@ Queda poco para ver el resultado final.
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#ProcesoDeObra', '#EnObra', '#Rehabilitación', '#ArquitecturaVasca', '#ConstrucciónNatural', '#UltimosDetalles', '#DetrásDelTelón', '#ProyectoEnCurso', '#PaísVasco'],
+    hashtags: ['Kabio', 'ProcesoDeObra', 'EnObra', 'Rehabilitación', 'ArquitecturaVasca', 'ConstrucciónNatural', 'UltimosDetalles', 'DetrásDelTelón', 'ProyectoEnCurso', 'PaísVasco'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -196,7 +196,7 @@ Este es uno de nuestros proyectos terminados. ¿Cuál será el tuyo?
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#DiseñoInterior', '#CocinaRural', '#InterioresNaturales', '#HornoDeLeña', '#ArquitecturaVasca', '#EspaciosParaVivir', '#ReformaIntegral', '#MaterialesNaturales', '#CasaRural'],
+    hashtags: ['Kabio', 'DiseñoInterior', 'CocinaRural', 'InterioresNaturales', 'HornoDeLeña', 'ArquitecturaVasca', 'EspaciosParaVivir', 'ReformaIntegral', 'MaterialesNaturales', 'CasaRural'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -224,7 +224,7 @@ En Kabio trabajamos el aislamiento desde el inicio del proyecto, no como parche 
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#AislamientoTérmico', '#EficienciaEnergética', '#SATE', '#CerramientoExterior', '#CasaEficiente', '#ConstrucciónSostenible', '#RehabilitaciónEnergética', '#PaísVasco', '#ArquitecturaBioclimática'],
+    hashtags: ['Kabio', 'AislamientoTérmico', 'EficienciaEnergética', 'SATE', 'CerramientoExterior', 'CasaEficiente', 'ConstrucciónSostenible', 'RehabilitaciónEnergética', 'PaísVasco', 'ArquitecturaBioclimática'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -249,7 +249,7 @@ Quedaos por aquí. 👀
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#NuevoProyecto', '#NewProject', '#Rehabilitación', '#ArquitecturaVasca', '#CasaConHistoria', '#ProyectoEnCurso', '#PaísVasco', '#Arquitectura', '#ConstrucciónSostenible'],
+    hashtags: ['Kabio', 'NuevoProyecto', 'NewProject', 'Rehabilitación', 'ArquitecturaVasca', 'CasaConHistoria', 'ProyectoEnCurso', 'PaísVasco', 'Arquitectura', 'ConstrucciónSostenible'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -277,7 +277,7 @@ Esto es lo que guía cada proyecto en Kabio. Sin más.
 ¿Empezamos con el tuyo?
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#ConstruirBien', '#ArquitecturaSostenible', '#FilosofíaKabio', '#ConstrucciónDeCalidad', '#ArquitecturaHumana', '#Bioconstrucción', '#PaísVasco', '#DiseñoSostenible', '#ArquitecturaVasca'],
+    hashtags: ['Kabio', 'ConstruirBien', 'ArquitecturaSostenible', 'FilosofíaKabio', 'ConstrucciónDeCalidad', 'ArquitecturaHumana', 'Bioconstrucción', 'PaísVasco', 'DiseñoSostenible', 'ArquitecturaVasca'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -300,7 +300,7 @@ En Kabio trabajamos cada detalle como si fuera lo único que estuvieras mirando.
 
 📩 alex@kabio.es
 🌐 kabio.es`,
-    hashtags: ['#Kabio', '#ElDetalleLoEsTodo', '#Artesanía', '#ConstrucciónArtesanal', '#ArquitecturaVasca', '#DetallesArquitectónicos', '#MaterialesNaturales', '#Forja', '#CarpinteríaArtesanal', '#PaísVasco'],
+    hashtags: ['Kabio', 'ElDetalleLoEsTodo', 'Artesanía', 'ConstrucciónArtesanal', 'ArquitecturaVasca', 'DetallesArquitectónicos', 'MaterialesNaturales', 'Forja', 'CarpinteríaArtesanal', 'PaísVasco'],
     status: 'review',
     feedback: '',
     image_url: '',
@@ -329,7 +329,7 @@ Si tienes un proyecto en mente — grande, pequeño, complejo, o todavía sin fo
 📱 kabio.es
 
 Gracias por seguirnos. ❤️`,
-    hashtags: ['#Kabio', '#SomosKabio', '#EquipoKabio', '#ArquitecturaVasca', '#Rehabilitación', '#Bioclimático', '#EnergíaSolar', '#PaísVasco', '#ArquitecturaSostenible', '#KitDigital'],
+    hashtags: ['Kabio', 'SomosKabio', 'EquipoKabio', 'ArquitecturaVasca', 'Rehabilitación', 'Bioclimático', 'EnergíaSolar', 'PaísVasco', 'ArquitecturaSostenible', 'KitDigital'],
     status: 'review',
     feedback: '',
     image_url: '',
