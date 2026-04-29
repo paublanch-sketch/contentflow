@@ -1,9 +1,6 @@
 // ARCHIVO: src/AdminLogin.tsx
 import { useState } from 'react';
-
-// Credenciales del panel admin
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'interactivos2025';
+import { supabase } from './lib/supabase';
 
 type Props = {
   onLogin: () => void;
@@ -13,19 +10,31 @@ export default function AdminLogin({ onLogin }: Props) {
   const [user, setUser]     = useState('');
   const [pass, setPass]     = useState('');
   const [error, setError]   = useState(false);
+  const [loading, setLoading] = useState(false);
   const [shake, setShake]   = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user === ADMIN_USER && pass === ADMIN_PASS) {
-      sessionStorage.setItem('cf_admin_auth', '1');
-      onLogin();
-    } else {
+    setLoading(true);
+    setError(false);
+
+    // Convierte "admin" → "admin@contentflow.internal" para Supabase Auth
+    const email = user.includes('@') ? user : `${user.trim()}@contentflow.internal`;
+    const { error: authErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    if (authErr) {
       setError(true);
       setShake(true);
       setPass('');
       setTimeout(() => setShake(false), 500);
+    } else {
+      sessionStorage.setItem('cf_admin_auth', '1');
+      onLogin();
     }
+    setLoading(false);
   };
 
   const inputClass = (hasError: boolean) =>
@@ -71,14 +80,15 @@ export default function AdminLogin({ onLogin }: Props) {
           />
           {error && (
             <p className="text-red-400 text-xs font-bold text-center">
-              Usuario o contraseña incorrectos
+              Email o contraseña incorrectos
             </p>
           )}
           <button
             type="submit"
-            className="w-full p-3 bg-[#52b788] hover:bg-[#40a070] text-black font-black text-sm uppercase tracking-widest rounded-lg transition-colors"
+            disabled={loading}
+            className="w-full p-3 bg-[#52b788] hover:bg-[#40a070] text-black font-black text-sm uppercase tracking-widest rounded-lg transition-colors disabled:opacity-50"
           >
-            Acceder
+            {loading ? '⏳ Accediendo...' : 'Acceder'}
           </button>
         </form>
       </div>
