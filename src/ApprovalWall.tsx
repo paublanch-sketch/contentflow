@@ -851,6 +851,11 @@ function PostCard({
   const [copyDraft, setCopyDraft]         = useState(post.copy);
   const [grokLoading, setGrokLoading]     = useState(false);
 
+  // ── Generar imagen con IA ──
+  const [showAIImg, setShowAIImg]         = useState(false);
+  const [aiImgPrompt, setAIImgPrompt]     = useState('');
+  const [aiImgLoading, setAIImgLoading]   = useState(false);
+
   // ── Metricool Publisher ──
   const [showMcModal, setShowMcModal]     = useState(false);
   const [mcSending, setMcSending]         = useState(false);
@@ -1317,10 +1322,22 @@ function PostCard({
         )}
       </div>
 
-      {/* Botones de utilidad admin: copiar texto, copiar hashtags, descargar imágenes */}
-      {isAdmin && (
+      {/* Botones de utilidad admin: copiar texto, copiar hashtags, descargar imágenes, generar imagen IA */}
+      {(isAdmin || canClientEdit) && (
         <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-1.5">
+
+          {/* ── Botón Generar imagen con IA ── */}
           <button
+            onClick={() => setShowAIImg(v => !v)}
+            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 ${
+              showAIImg
+                ? 'bg-violet-100 border-violet-400 text-violet-700'
+                : 'bg-white border-gray-200 hover:bg-violet-50 hover:border-violet-300 text-gray-600 hover:text-violet-700'
+            }`}
+            title="Generar imagen con IA"
+          >🎨 Imagen IA</button>
+
+          {isAdmin && <button
             onClick={() => {
               navigator.clipboard.writeText(post.copy);
               const btn = document.activeElement as HTMLButtonElement;
@@ -1330,7 +1347,7 @@ function PostCard({
             }}
             className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-green-50 hover:border-green-300 text-gray-600 hover:text-green-700 transition-colors"
             title="Copiar texto del post"
-          >📋 Copiar texto</button>
+          >📋 Copiar texto</button>}
 
           <button
             onClick={() => {
@@ -1345,11 +1362,10 @@ function PostCard({
             title="Copiar hashtags"
           >#️⃣ Copiar tags</button>
 
-          {imageUrls.length > 0 && (
+          {isAdmin && imageUrls.length > 0 && (
             <button
               onClick={async () => {
                 const downloadBlob = async (url: string, filename: string) => {
-                  // Para URLs de Supabase Storage, añadir ?download para forzar Content-Disposition
                   const isSupabase = url.includes('supabase.co/storage');
                   const dlUrl = isSupabase
                     ? (url.includes('?') ? `${url}&download=${filename}` : `${url}?download=${filename}`)
@@ -1367,7 +1383,6 @@ function PostCard({
                     document.body.removeChild(a);
                     setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
                   } catch {
-                    // fallback: abrir en nueva pestaña (el usuario puede guardar manualmente)
                     window.open(url, '_blank');
                   }
                 };
@@ -1380,6 +1395,80 @@ function PostCard({
               title="Descargar imagen(es)"
             >⬇️ {imageUrls.length > 1 ? `Descargar ${imageUrls.length} imágenes` : 'Descargar imagen'}</button>
           )}
+        </div>
+      )}
+
+      {/* ── Panel Generar imagen con IA ── */}
+      {showAIImg && (isAdmin || canClientEdit) && !isScheduled && (
+        <div className="mx-4 mb-3 p-3 bg-violet-50 border border-violet-200 rounded-xl flex flex-col gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-black text-violet-700 uppercase tracking-widest">🎨 Generar imagen con IA</span>
+          </div>
+          <textarea
+            rows={2}
+            value={aiImgPrompt}
+            onChange={e => setAIImgPrompt(e.target.value)}
+            placeholder="Describe la imagen... ej: luxury sailing yacht at sunset in Barcelona, aerial view, cinematic, 8k, photorealistic, no text"
+            className="w-full text-xs border border-violet-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white placeholder-violet-300 text-gray-700"
+          />
+          {/* Sugerencias rápidas */}
+          <div className="flex flex-wrap gap-1">
+            {['no text, photorealistic, 8k', 'cinematic lighting', 'aerial drone shot', 'golden hour', 'dark moody'].map(tag => (
+              <button
+                key={tag}
+                onClick={() => setAIImgPrompt(p => p ? `${p}, ${tag}` : tag)}
+                className="text-[9px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 hover:bg-violet-200 font-bold border border-violet-200"
+              >{tag}</button>
+            ))}
+          </div>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={async () => {
+                if (!aiImgPrompt.trim() || aiImgLoading) return;
+                setAIImgLoading(true);
+                try {
+                  // Generación IA: Instagram 1080x1080, sin logo, seed aleatorio
+                  const seed   = Math.floor(Math.random() * 999999);
+                  const encoded = encodeURIComponent(aiImgPrompt.trim() + ', no text, no watermark');
+                  const url    = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}`;
+                  showToast('⏳ Generando imagen... (20-40s)', 'ok');
+                  const blob = await fetch(url).then(r => {
+                    if (!r.ok) throw new Error('Error generando imagen');
+                    return r.blob();
+                  });
+                  // Subir a Supabase usando la infraestructura existente
+                  const ts = Date.now();
+                  const fileName = `${clientId}/${post.id}_ai_${ts}.png`;
+                  const { error } = await supabase.storage
+                    .from('post-images')
+                    .upload(fileName, blob, { upsert: true, contentType: 'image/png' });
+                  if (error) throw error;
+                  const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
+                  const newUrl = `${data.publicUrl}?v=${ts}`;
+                  const updatedUrls = imageUrls.length > 0 ? [...imageUrls, newUrl] : [newUrl];
+                  await onUpdatePost(post.id, { image_url: updatedUrls.length === 1 ? newUrl : JSON.stringify(updatedUrls) });
+                  setShowAIImg(false);
+                  setAIImgPrompt('');
+                  showToast('✅ Imagen generada y guardada', 'ok');
+                } catch (e) {
+                  showToast(`❌ Error: ${String(e).slice(0, 60)}`, 'err');
+                } finally {
+                  setAIImgLoading(false);
+                }
+              }}
+              disabled={!aiImgPrompt.trim() || aiImgLoading}
+              className="flex-1 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-[11px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
+            >
+              {aiImgLoading ? <><span className="animate-spin inline-block">⏳</span> Generando...</> : '🎨 Generar y añadir'}
+            </button>
+            <button
+              onClick={() => { setShowAIImg(false); setAIImgPrompt(''); }}
+              className="px-3 py-1.5 text-gray-400 hover:text-gray-600 text-[11px] font-bold border border-gray-200 rounded-lg"
+            >Cancelar</button>
+          </div>
+          <p className="text-[9px] text-violet-400 text-center">
+            La imagen se genera en 20-40 segundos y se añade automáticamente al post
+          </p>
         </div>
       )}
 
@@ -1583,183 +1672,4 @@ function PostCard({
                 const newStatus = e.target.value;
                 await onUpdatePost(post.id, {
                   status: newStatus,
-                  ...(newStatus !== 'scheduled' ? { webhook_sent_at: null } : {}),
-                  ...(newStatus === 'approved' ? { feedback: '' } : {}),
-                });
-              }}
-              className="flex-1 text-[10px] font-bold text-gray-700 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
-            >
-              <option value="review">🔵 En revisión</option>
-              <option value="approved">✅ Aprobado</option>
-              <option value="changes">⚠️ Cambios solicitados</option>
-              <option value="changes_done">🟢 Cambios hechos</option>
-              <option value="scheduled">📅 Publicado</option>
-            </select>
-          </div>
-        )}
-
-        {/* Scheduled — estado final, sin botones */}
-        {isScheduled && (
-          <div className="flex flex-col items-center gap-1 py-3 px-4 bg-green-50 rounded-xl border border-green-200">
-            <span className="text-[11px] font-black text-green-700 uppercase tracking-widest flex items-center gap-1.5">
-              {post.platform === 'IG' ? '📸' : post.platform === 'LI' ? '💼' : '📘'}
-              Publicado en {post.platform === 'IG' ? 'Instagram' : post.platform === 'LI' ? 'LinkedIn' : 'Facebook'}
-            </span>
-            {post.webhook_sent_at && (
-              <span className="text-sm font-bold text-green-800">
-                {new Date(post.webhook_sent_at).toLocaleDateString('es-ES', {
-                  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
-                })}
-              </span>
-            )}
-            {post.webhook_sent_at && (
-              <span className="text-[10px] text-green-600">
-                {new Date(post.webhook_sent_at).toLocaleTimeString('es-ES', {
-                  hour: '2-digit', minute: '2-digit'
-                })}h
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Botones de revisión — no mostrar si ya está scheduled */}
-        {!isScheduled && (
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                await onUpdatePost(post.id, { status: 'approved', feedback: '' });
-                notifyApproval(post, clientName);
-              }}
-              disabled={isApproved}
-              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tighter transition-colors flex items-center justify-center gap-1.5 shadow-sm ${
-                isApproved
-                  ? 'bg-gray-100 text-gray-400 cursor-default'
-                  : 'bg-[#2d6a4f] text-white hover:bg-[#1b4332]'
-              }`}
-            >
-              <CheckCircle size={12} />
-              {isApproved ? 'Aprobado' : 'Aprobar'}
-            </button>
-            {/* Botón Cambios — toggle entre changes / changes_done / nuevo cambio */}
-            {isChanges ? (
-              <button
-                onClick={async () => {
-                  await onUpdatePost(post.id, { status: 'changes_done' });
-                }}
-                className="flex-1 py-3 bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-600 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-              >
-                <CheckCircle size={12} /> Cambios hechos
-              </button>
-            ) : isChangesDone ? (
-              <div className="flex flex-col gap-2 flex-1">
-                <button
-                  onClick={async () => {
-                    await onUpdatePost(post.id, { status: 'changes' });
-                  }}
-                  className="w-full py-3 border-2 border-green-400 bg-white text-green-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-green-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                >
-                  <MessageSquare size={12} /> Ver cambios
-                </button>
-                <button
-                  onClick={async () => {
-                    const n = prompt('Describe los nuevos cambios que necesitas:');
-                    if (n) {
-                      await onUpdatePost(post.id, { status: 'changes', feedback: n });
-                      notifyChangesRequested(post, clientName, n);
-                    }
-                  }}
-                  className="w-full py-2 bg-white text-gray-400 rounded-xl text-[10px] font-bold uppercase tracking-tighter hover:bg-red-50 hover:text-red-500 hover:border-red-300 border-2 border-gray-200 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                >
-                  <MessageSquare size={10} /> Pedir más cambios
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={async () => {
-                  const n = prompt('Describe los cambios que necesitas:');
-                  if (n) {
-                    await onUpdatePost(post.id, { status: 'changes', feedback: n });
-                    notifyChangesRequested(post, clientName, n);
-                  }
-                }}
-                className="flex-1 py-3 border-2 bg-white text-gray-600 rounded-xl text-xs font-black uppercase tracking-tighter hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-              >
-                <MessageSquare size={12} /> Cambios
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Toast local */}
-      {toast && <Toast msg={toast.msg} type={toast.type} />}
-    </div>
-  );
-}
-
-// ─── Grid principal ───────────────────────────────────────────────────────────
-export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
-  const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
-
-  // Portal cliente: filtrar por ?show=1,3,5 si existe
-  const visiblePosts = (() => {
-    if (isAdmin) return posts;
-    const params = new URLSearchParams(window.location.search);
-    const show = params.get('show');
-    if (!show) return posts;
-    const nums = new Set(show.split(',').map(Number).filter(Boolean));
-    return posts.filter(p => nums.has(p.post_number));
-  })();
-
-  const activePosts    = visiblePosts.filter(p => p.status !== 'scheduled');
-  const publishedPosts = visiblePosts.filter(p => p.status === 'scheduled');
-
-  const cardProps = (post: Post) => ({
-    key: post.id,
-    post,
-    allPosts: visiblePosts,
-    clientId,
-    clientName,
-    isAdmin,
-    isClientPortal,
-    igAccountType,
-    onUpdatePost,
-    onDeletePost,
-    uploadingId,
-    handleFile,
-    handleUrl,
-    shareMode,
-    isSelected: selectedPosts?.has(post.post_number) ?? false,
-    onToggleSelect: () => onToggleSelect?.(post.post_number),
-  });
-
-  return (
-    <div className="space-y-12">
-      {/* Posts activos */}
-      {activePosts.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
-          {activePosts.map(post => <PostCard {...cardProps(post)} />)}
-        </div>
-      )}
-
-      {/* Sección Publicados */}
-      {publishedPosts.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-green-200" />
-            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border-2 border-green-300 rounded-full">
-              <CheckCircle size={14} className="text-green-600" />
-              <span className="text-xs font-black uppercase tracking-widest text-green-700">
-                Publicados ✓
-              </span>
-            </div>
-            <div className="flex-1 h-px bg-green-200" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left opacity-80">
-            {publishedPosts.map(post => <PostCard {...cardProps(post)} />)}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                  ...(newStatus !== 'scheduled' ? { webho
