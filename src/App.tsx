@@ -64,6 +64,9 @@ export default function App() {
   const [copiedLink, setCopiedLink]     = useState(false);
   const [igUsername, setIgUsername]     = useState('');
   const [igAccountType, setIgAccountType] = useState<'business' | 'personal' | 'none'>('none');
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailSubject, setEmailSubject]   = useState('');
+  const [emailBody, setEmailBody]         = useState('');
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click fuera
@@ -364,6 +367,19 @@ export default function App() {
               </button>
             )}
 
+            {activeClient && activeClient.email && activeClient.email !== '-' && !shareMode && (
+              <button
+                onClick={() => {
+                  setEmailSubject(`Revisión de posts – ${activeClient.name}`);
+                  setEmailBody('');
+                  setShowEmailModal(true);
+                }}
+                className="text-[10px] font-bold text-amber-400 border border-amber-700 px-2 py-0.5 rounded hover:bg-amber-900 hover:text-amber-200 transition-colors uppercase tracking-widest hidden md:block"
+              >
+                ✉️ Email cliente
+              </button>
+            )}
+
             {/* ── Modo selección: generar enlace con posts elegidos ── */}
             {shareMode && activeClient && (
               <div className="flex items-center gap-2">
@@ -538,6 +554,80 @@ export default function App() {
           />
         )}
       </div>
+
+      {/* ── Modal Enviar Email ── */}
+      {showEmailModal && activeClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1d27] border border-gray-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-black text-white text-base">✉️ Enviar email al cliente</h3>
+                <p className="text-amber-400 text-xs font-bold mt-0.5">{activeClient.name}</p>
+              </div>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="text-gray-500 hover:text-gray-300 text-xl font-black"
+              >✕</button>
+            </div>
+
+            {/* Para */}
+            <div className="mb-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Para</label>
+              <div className="px-3 py-2 rounded-xl bg-[#252836] border border-gray-700 text-amber-400 text-sm font-bold">
+                {activeClient.email}
+              </div>
+            </div>
+
+            {/* Asunto */}
+            <div className="mb-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Asunto</label>
+              <input
+                type="text"
+                value={emailSubject}
+                onChange={e => setEmailSubject(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[#252836] border border-gray-700 text-white text-sm font-bold focus:outline-none focus:border-amber-500 placeholder-gray-600"
+                placeholder="Asunto del correo..."
+              />
+            </div>
+
+            {/* Cuerpo */}
+            <div className="mb-5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Mensaje</label>
+              <textarea
+                value={emailBody}
+                onChange={e => setEmailBody(e.target.value)}
+                rows={7}
+                className="w-full px-3 py-2 rounded-xl bg-[#252836] border border-gray-700 text-white text-sm focus:outline-none focus:border-amber-500 placeholder-gray-600 resize-none"
+                placeholder={`Hola ${activeClient.contact || activeClient.name},\n\n`}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const to      = encodeURIComponent(activeClient.email);
+                  const subject = encodeURIComponent(emailSubject);
+                  const body    = encodeURIComponent(emailBody);
+                  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+                }}
+                className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-sm uppercase tracking-widest rounded-xl transition-colors"
+              >
+                ✉️ Abrir en correo
+              </button>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="px-4 py-3 text-gray-500 hover:text-gray-300 text-xs font-bold uppercase tracking-widest border border-gray-700 rounded-xl"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            <p className="text-[10px] text-gray-600 text-center mt-3">
+              Abre tu cliente de correo (Outlook, Mail...) con el mensaje listo para enviar
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

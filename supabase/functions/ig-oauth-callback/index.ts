@@ -1,6 +1,5 @@
 // supabase/functions/ig-oauth-callback/index.ts
-// Instagram Login directo — sin Facebook
-// code → token corto (api.instagram.com) → token largo (graph.instagram.com) → guarda en ig_tokens
+// Facebook OAuth code → Facebook user token → Instagram Business Account → guarda en ig_tokens
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -23,53 +22,91 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // 1. Código → token corto (Instagram API)
-    const body = new URLSearchParams({
-      client_id:     META_APP_ID,
-      client_secret: META_APP_SECRET,
-      grant_type:    'authorization_code',
-      redirect_uri:  redirect_uri,
-      code,
-    });
-    const tokenRes  = await fetch('https://api.instagram.com/oauth/access_token', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    body.toString(),
-    });
-    const tokenData = await tokenRes.json();
-    if (tokenData.error_type || tokenData.error_message) {
-      throw new Error(`Instagram error: ${tokenData.error_message || JSON.stringify(tokenData)}`);
+    // 1. Código Facebook → token corto de usuario Facebook
+    const fbTokenRes = await fetch(
+      `https://graph.facebook.com/oauth/access_token` +
+      `?client_id=${META_APP_ID}` +
+      `&client_secret=${META_APP_SECRET}` +
+      `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
+      `&code=${code}`
+    );
+    const fbTokenData = await fbTokenRes.json();
+    if (fbTokenData.error) {
+      throw new Error(`Facebook token error: ${fbTokenData.error.message || JSON.stringify(fbTokenData.error)}`);
     }
-    const shortToken = tokenData.access_token;
-    const igUserId   = String(tokenData.user_id);
+    const fbShortToken = fbTokenData.access_token;
 
-    // 2. Token corto → token largo (60 días)
-    const longRes  = await fetch(
-      `https://graph.instagram.com/access_token` +
-      `?grant_type=ig_exchange_token` +
+    // 2. Token corto → token largo de usuario Facebook (60 días)
+    const fbLongRes = await fetch(
+      `https://graph.facebook.com/oauth/access_token` +
+      `?grant_type=fb_exchange_token` +
       `&client_id=${META_APP_ID}` +
       `&client_secret=${META_APP_SECRET}` +
-      `&access_token=${shortToken}`
+      `&fb_exchange_token=${fbShortToken}`
     );
-    const longData = await longRes.json();
-    if (longData.error) throw new Error(`Token largo: ${longData.error.message}`);
-    const longToken   = longData.access_token;
-    const expiresInMs = (longData.expires_in || 5184000) * 1000;
+    const fbLongData = await fbLongRes.json();
+    if (fbLongData.error) {
+      throw new Error(`Token largo Facebook: ${fbLongData.error.message}`);
+    }
+    const fbLongToken  = fbLongData.access_token;
+    const expiresInMs  = (fbLongData.expires_in || 5184000) * 1000;
 
-    // 3. Obtener username
-    const userRes  = await fetch(
-      `https://graph.instagram.com/v21.0/me?fields=id,username&access_token=${longToken}`
+    // 3. Obtener páginas del usuario
+    const pagesRes = await fetch(
+      `https://graph.facebook.com/me/accounts?access_token=${fbLongToken}`
     );
-    const userData = await userRes.json();
-    if (userData.error) throw new Error(`Perfil: ${userData.error.message}`);
-    const igUsername = userData.username || '';
+    const pagesData = await pagesRes.json();
+    if (pagesData.error) {
+      throw new Error(`Páginas Facebook: ${pagesData.error.message}`);
+    }
+    const pages: Array<{ id: string; access_token: string; name: string }> = pagesData.data || [];
+    if (pages.length === 0) {
+      throw new Error('No se encontraron páginas de Facebook. Asegúrate de tener una Página vinculada a tu cuenta de Instagram Business/Creator.');
+    }
 
-    // 4. Guardar en Supabase
+    // 4. Buscar cuenta Instagram Business en las páginas
+    let igUserId   = '';
+    let igUsername = '';
+    let igToken    = fbLongToken; // fallback al token de usuario
+
+    for (const page of pages) {
+      const igRes = await fetch(
+        `https://graph.facebook.com/v21.0/${page.id}` +
+        `?fields=instagram_business_account` +
+        `&access_token=${page.access_token}`
+      );
+      const igData = await igRes.json();
+
+      if (igData.instagram_business_account?.id) {
+        igUserId = igData.instagram_business_account.id;
+        igToken  = page.access_token; // token de página para publicar
+
+        // 5. Obtener username del IG Business Account
+        const userRes = await fetch(
+          `https://graph.facebook.com/v21.0/${igUserId}` +
+          `?fields=id,username,name` +
+          `&access_token=${igToken}`
+        );
+        const userData = await userRes.json();
+        if (userData.error) throw new Error(`Perfil IG: ${userData.error.message}`);
+        igUsername = userData.username || userData.name || igUserId;
+        break; // usar la primera página con IG Business
+      }
+    }
+
+    if (!igUserId) {
+      throw new Error(
+        'No se encontró ninguna cuenta de Instagram Business/Creator vinculada a tus páginas de Facebook. ' +
+        'Ve a Configuración de Instagram → Cuenta → Cambiar a cuenta profesional y vincula tu página de Facebook.'
+      );
+    }
+
+    // 6. Guardar en Supabase
     const { error: upsertErr } = await sb.from('ig_tokens').upsert({
       client_id,
       ig_user_id:   igUserId,
       ig_username:  igUsername,
-      access_token: longToken,
+      access_token: igToken,
       expires_at:   new Date(Date.now() + expiresInMs).toISOString(),
       updated_at:   new Date().toISOString(),
     });
