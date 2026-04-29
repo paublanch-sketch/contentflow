@@ -824,10 +824,11 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
-  post, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
+  post, allPosts, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
   shareMode, isSelected, onToggleSelect,
 }: {
   post: Post;
+  allPosts: Post[];
   clientId: string;
   clientName: string;
   isAdmin: boolean;
@@ -1412,14 +1413,21 @@ function PostCard({
                   if (grokLoading) return;
                   setGrokLoading(true);
                   try {
+                    // Pasar los posts existentes (excluir el actual) para que Groq no repita temas
+                    const existingCopies = allPosts
+                      .filter(p => p.id !== post.id && p.copy && p.copy.trim())
+                      .map(p => `Post #${p.post_number}: ${p.copy.slice(0, 220)}`);
+
                     const res = await fetch('/api/groq-generate', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
+                        client_id: clientId,
                         platform: post.platform,
                         headline_visual: post.headline_visual,
                         clientName,
                         currentCopy: copyDraft,
+                        existingPosts: existingCopies,
                         language: 'es',
                       }),
                     });
@@ -1709,6 +1717,7 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isC
   const cardProps = (post: Post) => ({
     key: post.id,
     post,
+    allPosts: visiblePosts,
     clientId,
     clientName,
     isAdmin,

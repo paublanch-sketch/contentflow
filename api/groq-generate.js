@@ -1,8 +1,11 @@
 // api/groq-generate.js — Vercel Serverless Function
-// Genera texto para posts usando Groq (llama-3.3-70b) + contexto sociales.txt del cliente
+// Orden de contexto para generar el copy:
+//   1. sociales.txt del cliente (voz, estilo, histórico)
+//   2. Posts ya creados en la página (para no repetir temas)
+//   3. Contexto del post actual (plataforma, idea de imagen)
 
-const GROQ_API_KEY  = process.env.GROQ_API_KEY  || '';
-const SUPABASE_URL  = process.env.SUPABASE_URL   || 'https://afbussamfzqfvozrycsr.supabase.co';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL  || 'https://afbussamfzqfvozrycsr.supabase.co';
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,9 +18,17 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'GROQ_API_KEY no configurada en las variables de entorno de Vercel.' });
   }
 
-  const { client_id, platform, headline_visual, clientName, currentCopy, language } = req.body || {};
+  const {
+    client_id,
+    platform,
+    headline_visual,
+    clientName,
+    currentCopy,
+    existingPosts = [],   // array de strings: "Post #1: texto..."
+    language,
+  } = req.body || {};
 
-  // ── 1. Intentar cargar sociales.txt del cliente desde Supabase Storage ──────
+  // ── 1. Leer sociales.txt del cliente (voz + histórico real) ─────────────────
   let socialesContext = '';
   if (client_id) {
     try {
@@ -26,16 +37,20 @@ module.exports = async function handler(req, res) {
       if (socRes.ok) {
         const text = await socRes.text();
         if (text && text.length > 10) {
-          // Recortar a máximo 3000 caracteres para no gastar tokens innecesarios
-          socialesContext = text.slice(0, 3000);
+          socialesContext = text.slice(0, 3000); // máx 3000 chars para no gastar tokens
         }
       }
     } catch (_) {
-      // Si falla la descarga, continuamos sin contexto (no bloqueamos la generación)
+      // Sin contexto de sociales → seguimos igualmente
     }
   }
 
-  // ── 2. Construir el prompt con contexto de voz del cliente ──────────────────
+  // ── 2. Preparar resumen de posts ya creados (para no repetir) ───────────────
+  const existingPostsSummary = Array.isArray(existingPosts) && existingPosts.length > 0
+    ? existingPosts.slice(0, 11).join('\n').slice(0, 2500)
+    : '';
+
+  // ── 3. Construir el prompt completo ─────────────────────────────────────────
   const platformLabel = platform === 'LI'
     ? 'LinkedIn (tono profesional, B2B, insights de valor)'
     : 'Instagram (tono cercano, visual, emojis estratégicos)';
@@ -56,20 +71,28 @@ REGLAS DE FORMATO:
 - NUNCA incluyas hashtags en el copy (se añaden aparte en otro campo).
 - NUNCA añadas explicaciones ni comentarios extra. Devuelve SOLO el texto del post.
 ${socialesContext ? `
-VOZ Y ESTILO DEL CLIENTE (histórico real de sus publicaciones y notas de estilo):
----
+═══ VOZ Y ESTILO DEL CLIENTE (leer primero) ═══
+A continuación tienes el histórico real de publicaciones y notas de estilo del cliente.
+Imita exactamente esta voz. Usa sus expresiones habituales, su tono y sus temas recurrentes.
+─────────────────────────────────────
 ${socialesContext}
----
-Imita esta voz y estilo. Usa referencias a sus temas habituales si es apropiado.` : ''}`;
+─────────────────────────────────────` : ''}
+${existingPostsSummary ? `
+═══ POSTS YA CREADOS PARA ESTE CLIENTE (no repetir estos temas) ═══
+Los siguientes posts ya han sido generados. El nuevo post DEBE ser diferente en tema y enfoque:
+─────────────────────────────────────
+${existingPostsSummary}
+─────────────────────────────────────
+Asegúrate de que el nuevo post aporte un ángulo, tema o formato completamente distinto a los anteriores.` : ''}`;
 
   const userPrompt = `Cliente: ${clientName || 'empresa cliente'}
 Red social: ${platformLabel}
 Idea de imagen / contexto visual del post: ${headline_visual || 'imagen profesional del negocio'}
-${currentCopy ? `Texto actual (mejóralo o reescríbelo completamente si lo ves mejor):\n${currentCopy}` : 'Genera un copy original para este post.'}
+${currentCopy ? `Texto actual (mejóralo o reescríbelo completamente si conviene):\n${currentCopy}` : 'Genera un copy original y diferente a los ya existentes.'}
 
-Responde SOLO con el texto del post, sin hashtags, sin comentarios.`;
+Responde SOLO con el texto del post. Sin hashtags. Sin explicaciones.`;
 
-  // ── 3. Llamar a Groq ────────────────────────────────────────────────────────
+  // ── 4. Llamar a Groq ─────────────────────────────────────────────────────────
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -96,9 +119,12 @@ Responde SOLO con el texto del post, sin hashtags, sin comentarios.`;
 
     const data      = await groqRes.json();
     const generated = data.choices?.[0]?.message?.content?.trim() || '';
-    const hadContext = !!socialesContext;
 
-    return res.status(200).json({ copy: generated, had_context: hadContext });
+    return res.status(200).json({
+      copy:        generated,
+      had_context: !!socialesContext,
+      had_posts:   existingPosts.length > 0,
+    });
   } catch (e) {
     console.error('[groq-generate] Error:', e);
     return res.status(500).json({ error: String(e) });

@@ -221,13 +221,13 @@ export default function App() {
     if (!clientId || creatingPost) return;
     setCreatingPost(true);
     try {
-      // Buscar el primer número disponible (si se borró el #3, el nuevo ocupa el #3)
       let nextNum = 1;
       if (posts.length > 0) {
         const usedNums = new Set(posts.map(p => p.post_number));
         while (usedNums.has(nextNum)) nextNum++;
       }
-      const newPost: Post = {
+
+      const basePost = {
         id: `${clientId}-${Date.now()}`,
         client_id: clientId,
         post_number: nextNum,
@@ -236,21 +236,28 @@ export default function App() {
         visual_prompt: '',
         copy: '',
         hashtags: [],
-        status: 'review',
+        status: 'review' as const,
         feedback: '',
         image_url: '',
         webhook_sent_at: null,
-        created_by: createdBy,
       };
-      const { data, error } = await supabase
-        .from('posts')
-        .insert(newPost)
-        .select()
-        .single();
 
-      if (!error && data) {
-        setPosts(prev => [...prev, data as Post]);
+      // Intentar con created_by; si falla (columna no existe), reintentar sin él
+      let data: Post | null = null;
+      let result = await supabase.from('posts').insert({ ...basePost, created_by: createdBy }).select().single();
+
+      if (result.error) {
+        console.warn('Insert con created_by falló, reintentando sin él:', result.error.message);
+        result = await supabase.from('posts').insert(basePost).select().single();
+      }
+
+      if (!result.error && result.data) {
+        data = result.data as Post;
+        setPosts(prev => [...prev, data!]);
         setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+      } else {
+        console.error('Error creando post:', result.error);
+        alert(`Error al crear post: ${result.error?.message}`);
       }
     } finally {
       setCreatingPost(false);
@@ -356,7 +363,7 @@ export default function App() {
             {/* ── Botón Crear post ── */}
             {isAdmin && clientId && (
               <button
-                onClick={handleCreatePost}
+                onClick={() => handleCreatePost('admin')}
                 disabled={creatingPost}
                 className="text-[10px] font-bold bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shrink-0"
               >
