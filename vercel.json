@@ -4,7 +4,8 @@
     "api/metricool-post.js":    { "memory": 128,  "maxDuration": 10 },
     "api/metricool-debug.js":   { "memory": 128,  "maxDuration": 10 },
     "api/groq-generate.js":     { "memory": 128,  "maxDuration": 15 },
-    "api/compose-image.js":     { "memory": 1024, "maxDuration": 60 }
+    "api/compose-image.js":     { "memory": 1024, "maxDuration": 60 },
+    "api/proxy-image.js":       { "memory": 256,  "maxDuration": 50 }
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

@@ -1695,10 +1695,16 @@ function PostCard({
                   const encoded = encodeURIComponent(aiImgPrompt.trim() + ', no text, no watermark');
                   const url    = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}`;
                   showToast('⏳ Generando imagen... (20-40s)', 'ok');
-                  const blob = await fetch(url).then(r => {
-                    if (!r.ok) throw new Error('Error generando imagen');
-                    return r.blob();
+                  const proxyRes = await fetch('/api/proxy-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
                   });
+                  if (!proxyRes.ok) {
+                    const err = await proxyRes.json().catch(() => ({}));
+                    throw new Error(err.error || 'Error generando imagen');
+                  }
+                  const blob = await proxyRes.blob();
                   // Subir a Supabase usando la infraestructura existente
                   const ts = Date.now();
                   const fileName = `${clientId}/${post.id}_ai_${ts}.png`;

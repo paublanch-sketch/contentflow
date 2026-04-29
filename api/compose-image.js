@@ -98,10 +98,23 @@ module.exports = async function handler(req, res) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Retry con backoff para 429 (especialmente Pollinations)
 async function fetchBuf(url, timeoutMs) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-  return Buffer.from(await res.arrayBuffer());
+  const MAX_RETRIES = 4;
+  const DELAYS      = [4000, 8000, 15000, 25000];
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (res.status === 429) {
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, DELAYS[attempt]));
+        continue;
+      }
+      throw new Error(`HTTP 429 (rate limit) fetching ${url}`);
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
 }
 
 function calcTL(pos, cW, cH, eW = 0, eH = 0, pad = 40) {
