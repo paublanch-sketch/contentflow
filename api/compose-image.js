@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
     const sharp = require('sharp');
 
     // ── 1. Fondo ─────────────────────────────────────────────────────────────
-    const bgBuf = await fetchBuf(bgUrl, 40000);
+    const bgBuf = await fetchBuf(bgUrl);
     const base  = sharp(bgBuf).resize(1080, 1080, { fit: 'cover', position: 'centre' });
 
     const composites = [];
@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
     // ── 4. Logo ──────────────────────────────────────────────────────────────
     if (logoUrl) {
       try {
-        const lBuf  = await fetchBuf(logoUrl, 8000);
+        const lBuf  = await fetchBuf(logoUrl);
         const lResized = await sharp(lBuf)
           .resize(Number(logoSize), Number(logoSize), { fit: 'inside' })
           .png().toBuffer();
@@ -83,7 +83,7 @@ module.exports = async function handler(req, res) {
     // ── 5. Imagen extra ───────────────────────────────────────────────────────
     if (img2Url) {
       try {
-        const i2Buf = await fetchBuf(img2Url, 8000);
+        const i2Buf = await fetchBuf(img2Url);
         const i2Resized = await sharp(i2Buf)
           .resize(Number(img2Size), Number(img2Size), { fit: 'inside' })
           .png().toBuffer();
@@ -111,21 +111,33 @@ module.exports = async function handler(req, res) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Retry con backoff para 429 (especialmente Pollinations)
-async function fetchBuf(url, timeoutMs) {
-  const MAX_RETRIES = 4;
-  const DELAYS      = [4000, 8000, 15000, 25000];
+// Fetch con retry 429 — timeouts cortísimos para no superar los 60s de Vercel Hobby
+// Peor caso total: 8+3+8+6+8+10 = 43s < 60s
+async function fetchBuf(url) {
+  const MAX_RETRIES = 3;
+  const DELAYS      = [3000, 6000, 10000]; // ms entre intentos
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    let res;
+    try {
+      res = await fetch(url, { signal: AbortSignal.timeout(8000) }); // 8s por intento
+    } catch (e) {
+      // timeout o error de red
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, DELAYS[attempt]));
+        continue;
+      }
+      throw new Error(`Timeout/red fetching image after ${MAX_RETRIES + 1} intentos`);
+    }
+
     if (res.status === 429) {
       if (attempt < MAX_RETRIES) {
         await new Promise(r => setTimeout(r, DELAYS[attempt]));
         continue;
       }
-      throw new Error(`HTTP 429 (rate limit) fetching ${url}`);
+      throw new Error('Servicio de imágenes ocupado (429). Inténtalo en 30 segundos.');
     }
-    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching image`);
     return Buffer.from(await res.arrayBuffer());
   }
 }
@@ -186,12 +198,12 @@ function buildTextSVG(rawText, pos, color, fontSize, fontWeight) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080">
   <!-- sombra -->
   <text x="${x + 2}" y="${y + 2}" text-anchor="${ax}"
-        font-family="Arial,Helvetica,sans-serif"
+        font-family="sans-serif"
         font-size="${fontSize}" font-weight="${fontWeight}"
         fill="rgba(0,0,0,0.75)">${mkTspans(2, 2)}</text>
   <!-- texto principal -->
   <text x="${x}" y="${y}" text-anchor="${ax}"
-        font-family="Arial,Helvetica,sans-serif"
+        font-family="sans-serif"
         font-size="${fontSize}" font-weight="${fontWeight}"
         fill="${esc(color)}">${mkTspans(0, 0)}</text>
 </svg>`;

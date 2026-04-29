@@ -1226,7 +1226,14 @@ function PostCard({
     setTlLoading(true);
     try {
       showToast('⏳ Componiendo texto + logo...', 'ok');
-      const cleanUrl = srcUrl.split('?')[0];
+      // Quitar solo cache-busters (?v= y &_ts=), mantener params de Pollinations
+      let cleanUrl = srcUrl;
+      try {
+        const u = new URL(srcUrl);
+        u.searchParams.delete('v');
+        u.searchParams.delete('_ts');
+        cleanUrl = u.toString();
+      } catch { cleanUrl = srcUrl; }
       const res = await fetch('/api/compose-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1967,7 +1974,22 @@ function PostCard({
                 src={aiImgPreviewUrl}
                 alt="Preview IA"
                 className="w-full rounded-lg"
-                onError={() => showToast('❌ Error cargando imagen, intenta otro prompt', 'err')}
+                onError={e => {
+                  // Pollinations a veces devuelve 429 (HTML) → img falla → reintentamos con nuevo seed
+                  const img = e.currentTarget;
+                  const retries = Number(img.dataset.retries ?? 0);
+                  if (retries < 4) {
+                    img.dataset.retries = String(retries + 1);
+                    showToast(`⏳ Reintentando imagen... (${retries + 1}/4)`, 'ok');
+                    setTimeout(() => {
+                      const seed    = Math.floor(Math.random() * 999999);
+                      const encoded = encodeURIComponent(aiImgPrompt.trim() + ', no text, no watermark');
+                      setAiImgPreviewUrl(`https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}`);
+                    }, (retries + 1) * 5000); // 5s, 10s, 15s, 20s
+                  } else {
+                    showToast('❌ Sin respuesta de Pollinations. Prueba en unos minutos.', 'err');
+                  }
+                }}
               />
               <div className="absolute bottom-0 left-0 right-0 bg-black/50 flex gap-2 p-2">
                 <button
