@@ -27,6 +27,7 @@ module.exports = async function handler(req, res) {
     existingPosts = [],   // array de strings: "Post #1: texto..."
     language,
     mode = 'copy',        // 'copy' | 'hashtags'
+    hashtagCount,         // número objetivo calculado desde posts del cliente
   } = req.body || {};
 
   // ── 1. Leer sociales.txt del cliente (voz + histórico real) ─────────────────
@@ -66,17 +67,20 @@ module.exports = async function handler(req, res) {
 
   if (mode === 'hashtags') {
     // ── Modo hashtags ────────────────────────────────────────────────────────
-    const htCount = platform === 'LI' ? '5-10' : '20-28';
+    // Si viene hashtagCount del cliente, usarlo exacto; si no, rango por plataforma
+    const htCount = hashtagCount
+      ? String(hashtagCount)
+      : (platform === 'LI' ? '5-10' : '20-28');
     systemPrompt = `Eres un experto en SEO y redes sociales especializado en hashtags para PYMEs españolas.
 Tu misión: generar los hashtags perfectos para un post en ${platformLabel}.
 ${langNote}
 
 REGLAS ESTRICTAS:
-- Genera entre ${htCount} hashtags relevantes para el negocio y el post.
+- Genera EXACTAMENTE ${htCount} hashtags relevantes para el negocio y el post. Ni más, ni menos.
 - Mezcla hashtags de volumen alto (>500K), medio (50K-500K) y nicho (<50K).
 - Incluye hashtags locales/geográficos si el negocio tiene ubicación.
 - NUNCA incluyas el símbolo # en tu respuesta.
-- Devuelve SOLO las palabras separadas por espacios. Sin explicaciones. Sin numeración.
+- Devuelve SOLO las palabras separadas por espacios. Sin explicaciones. Sin numeración. Sin saltos de línea.
 ${socialesContext ? `\nContexto del cliente:\n${socialesContext.slice(0, 800)}` : ''}`;
 
     userPrompt = `Cliente: ${clientName || 'empresa cliente'}

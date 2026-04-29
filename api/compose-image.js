@@ -10,12 +10,17 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const {
-    bgUrl,                        // URL imagen de fondo (Pollinations)
-    text        = '',             // Texto principal
+    bgUrl,                        // URL imagen de fondo
+    text        = '',             // Texto 1
     textPos     = 'bc',          // Posición: tl/tc/tr/ml/mc/mr/bl/bc/br
     textColor   = '#ffffff',
     fontSize    = 72,
     fontWeight  = 'bold',
+    text2       = '',             // Texto 2 (opcional)
+    text2Pos    = 'tc',
+    text2Color  = '#ffffff',
+    text2Size   = 48,
+    text2Weight = 'bold',
     logoUrl     = '',             // URL logo PNG (opcional)
     logoPos     = 'tl',
     logoSize    = 180,            // px ancho máximo del logo
@@ -46,12 +51,20 @@ module.exports = async function handler(req, res) {
       composites.push({ input: darkBuf, top: 0, left: 0 });
     }
 
-    // ── 3. Texto con SVG ─────────────────────────────────────────────────────
+    // ── 3. Texto 1 con SVG ───────────────────────────────────────────────────
     if (text.trim()) {
       const svgBuf = Buffer.from(
         buildTextSVG(text, textPos, textColor, Number(fontSize), fontWeight)
       );
       composites.push({ input: svgBuf, top: 0, left: 0 });
+    }
+
+    // ── 3b. Texto 2 con SVG (opcional) ───────────────────────────────────────
+    if (text2 && text2.trim()) {
+      const svgBuf2 = Buffer.from(
+        buildTextSVG(text2, text2Pos, text2Color, Number(text2Size), text2Weight)
+      );
+      composites.push({ input: svgBuf2, top: 0, left: 0 });
     }
 
     // ── 4. Logo ──────────────────────────────────────────────────────────────

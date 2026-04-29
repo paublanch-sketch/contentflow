@@ -822,6 +822,64 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
   });
 }
 
+// ─── Canvas helpers (composición en navegador, sin Sharp) ────────────────────
+function canvasLoadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload  = () => resolve(img);
+    img.onerror = () => reject(new Error(`No se pudo cargar: ${src.slice(0, 60)}`));
+    img.src = src;
+  });
+}
+function canvasCalcPos(pos: string, cW: number, cH: number, eW: number, eH: number, pad = 40) {
+  const half = (total: number, elem: number) => Math.max(0, Math.floor((total - elem) / 2));
+  const M: Record<string, [number, number]> = {
+    tl: [pad, pad],            tc: [pad, half(cW, eW)],            tr: [pad, cW - eW - pad],
+    ml: [half(cH, eH), pad],   mc: [half(cH, eH), half(cW, eW)],  mr: [half(cH, eH), cW - eW - pad],
+    bl: [cH - eH - pad, pad],  bc: [cH - eH - pad, half(cW, eW)], br: [cH - eH - pad, cW - eW - pad],
+  };
+  const [top, left] = M[pos] ?? M.bc;
+  return { top: Math.max(0, top), left: Math.max(0, left) };
+}
+function canvasDrawText(
+  ctx: CanvasRenderingContext2D,
+  text: string, pos: string, color: string, fontSize: number, bold: boolean,
+) {
+  const PAD = 60;
+  ctx.font = `${bold ? 'bold' : 'normal'} ${fontSize}px Arial, Helvetica, sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  const maxW = 1080 - PAD * 2;
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const cand = cur ? `${cur} ${w}` : w;
+    if (ctx.measureText(cand).width <= maxW) { cur = cand; }
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  const lineH  = fontSize * 1.25;
+  const totalH = lines.length * lineH;
+  const PM: Record<string, { ta: CanvasTextAlign; x: number; y0: number }> = {
+    tl: { ta: 'left',   x: PAD,        y0: PAD + fontSize },
+    tc: { ta: 'center', x: 540,        y0: PAD + fontSize },
+    tr: { ta: 'right',  x: 1080 - PAD, y0: PAD + fontSize },
+    ml: { ta: 'left',   x: PAD,        y0: (1080 - totalH) / 2 + fontSize },
+    mc: { ta: 'center', x: 540,        y0: (1080 - totalH) / 2 + fontSize },
+    mr: { ta: 'right',  x: 1080 - PAD, y0: (1080 - totalH) / 2 + fontSize },
+    bl: { ta: 'left',   x: PAD,        y0: 1080 - PAD - totalH + fontSize },
+    bc: { ta: 'center', x: 540,        y0: 1080 - PAD - totalH + fontSize },
+    br: { ta: 'right',  x: 1080 - PAD, y0: 1080 - PAD - totalH + fontSize },
+  };
+  const { ta, x, y0 } = PM[pos] ?? PM.bc;
+  ctx.textAlign = ta;
+  lines.forEach((line, i) => {
+    const y = y0 + i * lineH;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillText(line, x + 2, y + 2);
+    ctx.fillStyle = color;              ctx.fillText(line, x, y);
+  });
+}
+
 // ─── Grid de posición 3×3 ─────────────────────────────────────────────────────
 const POS_CELLS: [string, string][] = [
   ['tl','↖'],['tc','↑'],['tr','↗'],
@@ -892,7 +950,29 @@ function PostCard({
   const [composeImg2Size, setComposeImg2Size]   = useState(300);
   const [composeDark, setComposeDark]           = useState(35);
   const [composeLoading, setComposeLoading]     = useState(false);
-  const [hashtagsLoading, setHashtagsLoading] = useState(false);
+  const [hashtagsLoading, setHashtagsLoading]   = useState(false);
+
+  // ── AI Img: preview antes de guardar ──
+  const [aiImgPreviewUrl, setAiImgPreviewUrl]   = useState('');
+
+  // ── Texto + Logo sobre imagen existente (solo admin) ──────────────────────
+  const [showTextLogo,    setShowTextLogo]    = useState(false);
+  const [tlText1,         setTlText1]         = useState('');
+  const [tlText1Pos,      setTlText1Pos]      = useState('bc');
+  const [tlText1Color,    setTlText1Color]    = useState('#ffffff');
+  const [tlText1Size,     setTlText1Size]     = useState(72);
+  const [tlText1Bold,     setTlText1Bold]     = useState(true);
+  const [tlText2,         setTlText2]         = useState('');
+  const [tlText2Pos,      setTlText2Pos]      = useState('tc');
+  const [tlText2Color,    setTlText2Color]    = useState('#ffffff');
+  const [tlText2Size,     setTlText2Size]     = useState(48);
+  const [tlText2Bold,     setTlText2Bold]     = useState(false);
+  const [tlLogo,          setTlLogo]          = useState('');
+  const [tlLogoPos,       setTlLogoPos]       = useState('tl');
+  const [tlLogoSize,      setTlLogoSize]      = useState(180);
+  const [tlDark,          setTlDark]          = useState(0);
+  const [tlLogoUploading, setTlLogoUploading] = useState(false);
+  const [tlLoading,       setTlLoading]       = useState(false);
 
   // ── Metricool Publisher ──
   const [showMcModal, setShowMcModal]     = useState(false);
@@ -1086,7 +1166,7 @@ function PostCard({
   // Limpiar polling al desmontar
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  // ── Helper: Compose (fondo Pollinations + texto + logo + img) ───────────────
+  // ── Helper: Compose (fondo Pollinations + texto + logo + img, server-side) ──
   const handleCompose = async () => {
     if (!composeBg.trim() || composeLoading) return;
     setComposeLoading(true);
@@ -1094,7 +1174,7 @@ function PostCard({
       const seed      = Math.floor(Math.random() * 999999);
       const bgEncoded = encodeURIComponent(composeBg.trim() + ', no text, no watermark, photorealistic, 8k');
       const bgUrl     = `https://image.pollinations.ai/prompt/${bgEncoded}?width=1080&height=1080&nologo=true&seed=${seed}`;
-      showToast('⏳ Generando fondo IA... (20-40s)', 'ok');
+      showToast('⏳ Generando fondo IA... (puede tardar ~40s)', 'ok');
 
       const res = await fetch('/api/compose-image', {
         method: 'POST',
@@ -1119,9 +1199,7 @@ function PostCard({
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
-      showToast('⏳ Componiendo imagen...', 'ok');
       const blob = await res.blob();
-
       const ts       = Date.now();
       const fileName = `${clientId}/${post.id}_comp_${ts}.png`;
       const { error } = await supabase.storage
@@ -1138,6 +1216,61 @@ function PostCard({
       showToast(`❌ Error: ${String(e).slice(0, 80)}`, 'err');
     } finally {
       setComposeLoading(false);
+    }
+  };
+
+  // ── Helper: Texto + Logo sobre imagen existente (solo admin) ────────────────
+  const handleTextLogo = async () => {
+    const srcUrl = imageUrls[safeIdx];
+    if (!srcUrl || tlLoading) return;
+    setTlLoading(true);
+    try {
+      showToast('⏳ Componiendo texto + logo...', 'ok');
+      const cleanUrl = srcUrl.split('?')[0];
+      const res = await fetch('/api/compose-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bgUrl:        cleanUrl,
+          text:         tlText1,
+          textPos:      tlText1Pos,
+          textColor:    tlText1Color,
+          fontSize:     tlText1Size,
+          fontWeight:   tlText1Bold ? 'bold' : 'normal',
+          text2:        tlText2,
+          text2Pos:     tlText2Pos,
+          text2Color:   tlText2Color,
+          text2Size:    tlText2Size,
+          text2Weight:  tlText2Bold ? 'bold' : 'normal',
+          logoUrl:      tlLogo,
+          logoPos:      tlLogoPos,
+          logoSize:     tlLogoSize,
+          overlayOpacity: tlDark / 100,
+          img2Url:      '',
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const blob     = await res.blob();
+      const ts       = Date.now();
+      const fileName = `${clientId}/${post.id}_tl_${ts}.png`;
+      const { error } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, blob, { upsert: true, contentType: 'image/png' });
+      if (error) throw error;
+      const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
+      const newUrl   = `${data.publicUrl}?v=${ts}`;
+      const updated  = [...imageUrls];
+      updated[safeIdx] = newUrl;           // reemplaza el slide actual
+      await onUpdatePost(post.id, { image_url: serializeImageUrls(updated) });
+      setShowTextLogo(false);
+      showToast('✅ Imagen guardada con texto y logo', 'ok');
+    } catch (e) {
+      showToast(`❌ Error: ${String(e).slice(0, 80)}`, 'err');
+    } finally {
+      setTlLoading(false);
     }
   };
 
@@ -1178,6 +1311,13 @@ function PostCard({
     if (hashtagsLoading) return;
     setHashtagsLoading(true);
     try {
+      // Calcular número objetivo de hashtags desde los posts existentes del cliente
+      const postsWithTags = allPosts.filter(p => p.id !== post.id && (p.hashtags?.length ?? 0) > 0);
+      const avgCount = postsWithTags.length > 0
+        ? Math.round(postsWithTags.reduce((sum, p) => sum + (p.hashtags?.length ?? 0), 0) / postsWithTags.length)
+        : (post.platform === 'LI' ? 7 : 22);
+      const targetCount = Math.min(Math.max(avgCount, 5), 30); // clamp 5–30
+
       const res = await fetch('/api/groq-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1186,6 +1326,7 @@ function PostCard({
           headline_visual: post.headline_visual, clientName,
           currentCopy: post.copy || tagsDraft,
           language: 'es', mode: 'hashtags',
+          hashtagCount: targetCount,
         }),
       });
       const data = await res.json();
@@ -1432,16 +1573,20 @@ function PostCard({
                   <PlusCircle size={11} /> Añadir slides
                 </label>
               )}
-              {/* Generar imagen con IA */}
-              <button
-                onClick={() => { setShowAIImg(v => !v); setShowCompose(false); }}
-                className="pointer-events-auto bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
-              >🎨 Imagen IA</button>
-              {/* Compose: fondo + texto + logo */}
-              <button
-                onClick={() => { setShowCompose(v => !v); setShowAIImg(false); setComposeText(post.headline_visual || ''); setComposeBg(post.headline_visual || ''); }}
-                className="pointer-events-auto bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
-              >✍️ Texto + fondo</button>
+              {/* Generar imagen IA — solo admin + sin imagen */}
+              {isAdmin && !currentImage && (
+                <button
+                  onClick={() => { setShowAIImg(v => !v); setAiImgPreviewUrl(''); }}
+                  className="pointer-events-auto bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
+                >🎨 Imagen IA</button>
+              )}
+              {/* Texto + Logo sobre imagen existente — solo admin + con imagen */}
+              {isAdmin && currentImage && !isScheduled && (
+                <button
+                  onClick={() => { setShowTextLogo(v => !v); setShowAIImg(false); }}
+                  className="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
+                >✍️ Texto + logo</button>
+              )}
             </div>
           )}
         </div>
@@ -1554,6 +1699,137 @@ function PostCard({
         </div>
       )}
 
+      {/* ── Panel Texto + Logo sobre imagen existente (solo admin) ── */}
+      {showTextLogo && isAdmin && currentImage && !isScheduled && (
+        <div className="mx-4 mb-3 p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex flex-col gap-3 text-[11px]">
+          <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">✍️ Texto + Logo sobre imagen</span>
+
+          {/* Preview imagen actual */}
+          <img src={currentImage} alt="Base" className="w-full rounded-lg border border-indigo-200 object-cover max-h-48" />
+
+          {/* ── Texto 1 ── */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">📝 Texto 1</p>
+            <input value={tlText1} onChange={e => setTlText1(e.target.value)}
+              placeholder="ej: BARCELONASAIL"
+              className="w-full text-xs border border-indigo-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700" />
+            <div className="flex gap-2 items-start flex-wrap">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
+                <PosGrid value={tlText1Pos} onChange={setTlText1Pos} />
+              </div>
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+                <div className="flex gap-2 items-center flex-wrap">
+                  <label className="text-[8px] text-gray-400 font-bold uppercase">Color</label>
+                  <input type="color" value={tlText1Color} onChange={e => setTlText1Color(e.target.value)}
+                    className="w-7 h-7 rounded cursor-pointer border border-gray-200" />
+                  <label className="text-[8px] text-gray-400 font-bold uppercase ml-1">Tamaño</label>
+                  <input type="number" value={tlText1Size} onChange={e => setTlText1Size(Number(e.target.value))}
+                    min={16} max={200} step={4}
+                    className="w-14 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={tlText1Bold} onChange={e => setTlText1Bold(e.target.checked)} className="rounded" />
+                  <span className="text-[9px] text-gray-500 font-bold uppercase">Negrita</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Texto 2 ── */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">📝 Texto 2 (opcional)</p>
+            <input value={tlText2} onChange={e => setTlText2(e.target.value)}
+              placeholder="ej: Link en bio"
+              className="w-full text-xs border border-indigo-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700" />
+            <div className="flex gap-2 items-start flex-wrap">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
+                <PosGrid value={tlText2Pos} onChange={setTlText2Pos} />
+              </div>
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+                <div className="flex gap-2 items-center flex-wrap">
+                  <label className="text-[8px] text-gray-400 font-bold uppercase">Color</label>
+                  <input type="color" value={tlText2Color} onChange={e => setTlText2Color(e.target.value)}
+                    className="w-7 h-7 rounded cursor-pointer border border-gray-200" />
+                  <label className="text-[8px] text-gray-400 font-bold uppercase ml-1">Tamaño</label>
+                  <input type="number" value={tlText2Size} onChange={e => setTlText2Size(Number(e.target.value))}
+                    min={16} max={200} step={4}
+                    className="w-14 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={tlText2Bold} onChange={e => setTlText2Bold(e.target.checked)} className="rounded" />
+                  <span className="text-[9px] text-gray-500 font-bold uppercase">Negrita</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Logo ── */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🏷️ Logo (URL o desde ordenador)</p>
+            <div className="flex gap-2 items-center">
+              <input value={tlLogo} onChange={e => setTlLogo(e.target.value)}
+                placeholder="https://... .png"
+                className="flex-1 text-xs border border-indigo-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700" />
+              <label className="cursor-pointer bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[10px] font-bold px-2 py-1.5 rounded-lg border border-indigo-200 flex items-center gap-1 shrink-0">
+                {tlLogoUploading ? '⏳' : '📁'}
+                <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  setTlLogoUploading(true);
+                  try {
+                    const ts   = Date.now();
+                    const path = `logos/${clientId}_${ts}.png`;
+                    const { error } = await supabase.storage.from('post-images').upload(path, file, { upsert: true });
+                    if (error) throw error;
+                    const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+                    setTlLogo(data.publicUrl);
+                  } catch { showToast('❌ Error subiendo logo', 'err'); }
+                  finally { setTlLogoUploading(false); }
+                }} />
+                Subir
+              </label>
+            </div>
+            {tlLogo && <img src={tlLogo} alt="Logo preview" className="h-10 object-contain rounded border border-indigo-200 bg-white p-1" />}
+            <div className="flex gap-2 items-start flex-wrap">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
+                <PosGrid value={tlLogoPos} onChange={setTlLogoPos} />
+              </div>
+              <div className="flex flex-col gap-1 justify-center mt-4">
+                <label className="text-[8px] text-gray-400 font-bold uppercase">Ancho px</label>
+                <input type="number" value={tlLogoSize} onChange={e => setTlLogoSize(Number(e.target.value))}
+                  min={40} max={600} step={10}
+                  className="w-20 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Oscuridad (opcional, 0 por defecto) ── */}
+          <div className="flex items-center gap-2">
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Oscurecer</p>
+            <input type="range" min={0} max={70} step={5} value={tlDark} onChange={e => setTlDark(Number(e.target.value))}
+              className="flex-1 accent-indigo-600" />
+            <span className="text-[9px] text-gray-500 font-bold w-8 text-right">{tlDark}%</span>
+          </div>
+
+          {/* ── Botones ── */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleTextLogo}
+              disabled={(!tlText1.trim() && !tlText2.trim() && !tlLogo) || tlLoading}
+              className="flex-1 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg text-[11px] font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              {tlLoading ? <><span className="animate-spin">⏳</span> Componiendo...</> : '💾 Guardar imagen'}
+            </button>
+            <button onClick={() => setShowTextLogo(false)}
+              className="px-3 py-1.5 text-gray-400 hover:text-gray-600 text-[11px] font-bold border border-gray-200 rounded-lg"
+            >Cancelar</button>
+          </div>
+          <p className="text-[9px] text-indigo-400 text-center">Reemplaza la imagen actual del post con la versión compuesta</p>
+        </div>
+      )}
+
       {/* ── Panel Compose: fondo IA + texto + logo + img extra ── */}
       {showCompose && (isAdmin || canClientEdit) && !isScheduled && (
         <div className="mx-4 mb-3 p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-xl flex flex-col gap-3 text-[11px]">
@@ -1599,9 +1875,9 @@ function PostCard({
 
           {/* Logo */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🏷️ Logo PNG (URL, opcional)</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🏷️ Logo PNG (URL pública, opcional)</p>
             <input value={composeLogo} onChange={e => setComposeLogo(e.target.value)}
-              placeholder="https://... .png"
+              placeholder="https://tudominio.com/logo.png"
               className="w-full text-xs border border-fuchsia-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white text-gray-700" />
             <div className="flex gap-2 items-start flex-wrap">
               <div className="flex flex-col gap-0.5">
@@ -1661,8 +1937,8 @@ function PostCard({
         </div>
       )}
 
-      {/* ── Panel Generar imagen con IA ── */}
-      {showAIImg && (isAdmin || canClientEdit) && !isScheduled && (
+      {/* ── Panel Generar imagen con IA (solo admin, sin imagen) ── */}
+      {showAIImg && isAdmin && !isScheduled && (
         <div className="mx-4 mb-3 p-3 bg-violet-50 border border-violet-200 rounded-xl flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-black text-violet-700 uppercase tracking-widest">🎨 Generar imagen con IA</span>
@@ -1684,59 +1960,71 @@ function PostCard({
               >{tag}</button>
             ))}
           </div>
+          {/* Preview instantánea vía <img> (sin proxy, sin CORS) */}
+          {aiImgPreviewUrl && (
+            <div className="relative rounded-lg overflow-hidden border border-violet-200">
+              <img
+                src={aiImgPreviewUrl}
+                alt="Preview IA"
+                className="w-full rounded-lg"
+                onError={() => showToast('❌ Error cargando imagen, intenta otro prompt', 'err')}
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/50 flex gap-2 p-2">
+                <button
+                  onClick={async () => {
+                    setAIImgLoading(true);
+                    try {
+                      // Guardar URL directamente en el post (img tag la renderiza bien)
+                      const ts = Date.now();
+                      const urlWithTs = `${aiImgPreviewUrl}&_ts=${ts}`;
+                      const updatedUrls = imageUrls.length > 0 ? [...imageUrls, urlWithTs] : [urlWithTs];
+                      await onUpdatePost(post.id, { image_url: updatedUrls.length === 1 ? urlWithTs : JSON.stringify(updatedUrls) });
+                      setShowAIImg(false);
+                      setAIImgPrompt('');
+                      setAiImgPreviewUrl('');
+                      showToast('✅ Imagen guardada en el post', 'ok');
+                    } catch (e) {
+                      showToast(`❌ ${String(e).slice(0, 60)}`, 'err');
+                    } finally {
+                      setAIImgLoading(false);
+                    }
+                  }}
+                  disabled={aiImgLoading}
+                  className="flex-1 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded text-[10px] font-black uppercase flex items-center justify-center gap-1"
+                >
+                  {aiImgLoading ? '⏳' : '💾'} Guardar en post
+                </button>
+                <button
+                  onClick={() => {
+                    const seed = Math.floor(Math.random() * 999999);
+                    const encoded = encodeURIComponent(aiImgPrompt.trim() + ', no text, no watermark');
+                    setAiImgPreviewUrl(`https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}`);
+                  }}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-bold"
+                >🔄 Otra</button>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2 items-center">
             <button
-              onClick={async () => {
-                if (!aiImgPrompt.trim() || aiImgLoading) return;
-                setAIImgLoading(true);
-                try {
-                  // Generación IA: Instagram 1080x1080, sin logo, seed aleatorio
-                  const seed   = Math.floor(Math.random() * 999999);
-                  const encoded = encodeURIComponent(aiImgPrompt.trim() + ', no text, no watermark');
-                  const url    = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}`;
-                  showToast('⏳ Generando imagen... (20-40s)', 'ok');
-                  const proxyRes = await fetch('/api/proxy-image', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url }),
-                  });
-                  if (!proxyRes.ok) {
-                    const err = await proxyRes.json().catch(() => ({}));
-                    throw new Error(err.error || 'Error generando imagen');
-                  }
-                  const blob = await proxyRes.blob();
-                  // Subir a Supabase usando la infraestructura existente
-                  const ts = Date.now();
-                  const fileName = `${clientId}/${post.id}_ai_${ts}.png`;
-                  const { error } = await supabase.storage
-                    .from('post-images')
-                    .upload(fileName, blob, { upsert: true, contentType: 'image/png' });
-                  if (error) throw error;
-                  const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
-                  const newUrl = `${data.publicUrl}?v=${ts}`;
-                  const updatedUrls = imageUrls.length > 0 ? [...imageUrls, newUrl] : [newUrl];
-                  await onUpdatePost(post.id, { image_url: updatedUrls.length === 1 ? newUrl : JSON.stringify(updatedUrls) });
-                  setShowAIImg(false);
-                  setAIImgPrompt('');
-                  showToast('✅ Imagen generada y guardada', 'ok');
-                } catch (e) {
-                  showToast(`❌ Error: ${String(e).slice(0, 60)}`, 'err');
-                } finally {
-                  setAIImgLoading(false);
-                }
+              onClick={() => {
+                if (!aiImgPrompt.trim()) return;
+                const seed    = Math.floor(Math.random() * 999999);
+                const encoded = encodeURIComponent(aiImgPrompt.trim() + ', no text, no watermark');
+                setAiImgPreviewUrl(`https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}`);
               }}
-              disabled={!aiImgPrompt.trim() || aiImgLoading}
+              disabled={!aiImgPrompt.trim()}
               className="flex-1 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-[11px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
             >
-              {aiImgLoading ? <><span className="animate-spin inline-block">⏳</span> Generando...</> : '🎨 Generar y añadir'}
+              {aiImgPreviewUrl ? '🔄 Regenerar' : '🎨 Ver imagen'}
             </button>
             <button
-              onClick={() => { setShowAIImg(false); setAIImgPrompt(''); }}
+              onClick={() => { setShowAIImg(false); setAIImgPrompt(''); setAiImgPreviewUrl(''); }}
               className="px-3 py-1.5 text-gray-400 hover:text-gray-600 text-[11px] font-bold border border-gray-200 rounded-lg"
             >Cancelar</button>
           </div>
           <p className="text-[9px] text-violet-400 text-center">
-            La imagen se genera en 20-40 segundos y se añade automáticamente al post
+            La imagen carga sola en la preview — guárdala cuando te guste
           </p>
         </div>
       )}
@@ -1853,7 +2141,7 @@ function PostCard({
             <div className="relative group/tags flex flex-wrap gap-1.5 items-center">
               {post.hashtags?.length > 0
                 ? post.hashtags.map(h => (
-                    <span key={h} className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                    <span key={h} className="text-[10px] text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-full border border-blue-300" style={{color:'#1d4ed8',background:'#dbeafe'}}>
                       #{h.replace(/^#+/, '')}
                     </span>
                   ))
