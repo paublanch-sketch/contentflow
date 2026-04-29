@@ -608,11 +608,15 @@ export default function App() {
                   const to      = encodeURIComponent(activeClient.email);
                   const subject = encodeURIComponent(emailSubject);
                   const body    = encodeURIComponent(emailBody);
-                  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+                  // Abre Gmail en nueva pestaña directamente (evita el selector de protocolo de Windows)
+                  window.open(
+                    `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`,
+                    '_blank'
+                  );
                 }}
                 className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-sm uppercase tracking-widest rounded-xl transition-colors"
               >
-                ✉️ Abrir en correo
+                ✉️ Abrir en Gmail
               </button>
               <button
                 onClick={() => setShowEmailModal(false)}
@@ -623,7 +627,7 @@ export default function App() {
             </div>
 
             <p className="text-[10px] text-gray-600 text-center mt-3">
-              Abre tu cliente de correo (Outlook, Mail...) con el mensaje listo para enviar
+              Abre Gmail en el navegador con el mensaje listo para enviar
             </p>
           </div>
         </div>
