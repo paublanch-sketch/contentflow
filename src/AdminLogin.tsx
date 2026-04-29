@@ -95,4 +95,3 @@ export default function AdminLogin({ onLogin }: Props) {
       `}</style>
     </div>
   );
-}

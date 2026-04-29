@@ -59,11 +59,11 @@ export default function App() {
   const [showDrop, setShowDrop]     = useState(false);
   const [creatingPost, setCreatingPost] = useState(false);
   const [showMcSettings, setShowMcSettings] = useState(false);
-  const [showTracker, setShowTracker]   = useState(false);
   const [shareMode, setShareMode]       = useState(false);
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [copiedLink, setCopiedLink]     = useState(false);
   const [igUsername, setIgUsername]     = useState('');
+  const [igAccountType, setIgAccountType] = useState<'business' | 'personal' | 'none'>('none');
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click fuera
@@ -137,16 +137,28 @@ export default function App() {
     }
   }, []);
 
-  // ── Cargar ig_username cuando cambia el cliente ──
+  // ── Cargar ig_username y tipo de cuenta cuando cambia el cliente ──
   useEffect(() => {
     if (!clientId) return;
     setIgUsername('');
-    supabase
-      .from('ig_credentials')
-      .select('ig_username')
-      .eq('client_id', clientId)
-      .maybeSingle()
-      .then(({ data }) => { if (data?.ig_username) setIgUsername(data.ig_username); });
+    setIgAccountType('none');
+    (async () => {
+      // 1. ¿Tiene token OAuth Business/Creator?
+      const { data: token } = await supabase
+        .from('ig_tokens').select('ig_username').eq('client_id', clientId).maybeSingle();
+      if (token?.ig_username) {
+        setIgUsername(token.ig_username);
+        setIgAccountType('business');
+        return;
+      }
+      // 2. ¿Tiene credenciales personales?
+      const { data: creds } = await supabase
+        .from('ig_credentials').select('ig_username').eq('client_id', clientId).maybeSingle();
+      if (creds?.ig_username) {
+        setIgUsername(creds.ig_username);
+        setIgAccountType('personal');
+      }
+    })();
   }, [clientId]);
 
   // ── Cargar posts desde Supabase cuando cambia el cliente ──
@@ -240,83 +252,12 @@ export default function App() {
   const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
   const approvedCount  = posts.filter(p => p.status === 'approved').length;
 
-  // ── Modal Tracker Excel/Sheets ──
-  const TRACKER_EMBED_KEY = 'cf_tracker_url';
-  const DEFAULT_TRACKER   = 'https://docs.google.com/spreadsheets/d/18wHuuQiPARQnueM69XidBW94OXsllXG5mY8FW6TO_IY/htmlview';
-  const [trackerUrl, setTrackerUrl] = useState<string>(
-    () => localStorage.getItem(TRACKER_EMBED_KEY) || DEFAULT_TRACKER
-  );
-  const [trackerInput, setTrackerInput] = useState('');
-
   // ── Guard: si es panel admin y no hay auth → mostrar login ──
   if (isIgCallback) {
     return <IgCallback />;
   }
   if (showMcSettings) {
     return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
-  }
-
-  // Modal Tracker
-  if (showTracker) {
-    return (
-      <div className="fixed inset-0 z-50 bg-[#0f1117] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 bg-[#1a1d27] border-b border-gray-800">
-          <h2 className="font-black text-[#52b788] uppercase tracking-widest text-sm">📋 Tracker de Clientes</h2>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={trackerInput}
-              onChange={e => setTrackerInput(e.target.value)}
-              placeholder="Pega URL de Google Sheets o Excel Online..."
-              className="w-96 text-xs bg-[#252836] border border-gray-700 text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#52b788] placeholder-gray-600"
-            />
-            <button
-              onClick={() => {
-                // Convertir URL de Google Sheets a embed si es necesario
-                let url = trackerInput.trim();
-                if (url.includes('docs.google.com/spreadsheets') && !url.includes('/htmlview') && !url.includes('output=html')) {
-                  url = url.replace('/edit', '/htmlview');
-                }
-                setTrackerUrl(url);
-                localStorage.setItem(TRACKER_EMBED_KEY, url);
-                setTrackerInput('');
-              }}
-              className="text-xs font-black bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] uppercase tracking-widest"
-            >
-              Cargar
-            </button>
-            <button
-              onClick={() => setShowTracker(false)}
-              className="text-gray-400 hover:text-white text-xl font-black px-2"
-            >✕</button>
-          </div>
-        </div>
-        {/* Iframe */}
-        {trackerUrl ? (
-          <iframe
-            src={trackerUrl}
-            className="flex-1 w-full border-0"
-            title="Tracker clientes"
-          />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
-            <p className="text-5xl">📊</p>
-            <p className="text-sm font-bold uppercase tracking-widest">Sin tracker configurado</p>
-            <p className="text-xs text-gray-600 max-w-md text-center">
-              Pega la URL de tu Google Sheets o Excel Online arriba y pulsa Cargar.<br/>
-              Se guardará para la próxima vez.
-            </p>
-            <div className="text-xs text-gray-600 bg-[#1a1d27] rounded-xl p-4 max-w-lg">
-              <p className="font-bold text-gray-400 mb-2">Google Sheets:</p>
-              <p>Archivo → Compartir → Publicar en la web → Hoja → Página web → Publicar → copia la URL</p>
-              <p className="font-bold text-gray-400 mt-3 mb-2">Excel Online (OneDrive):</p>
-              <p>Insertar → Compartir → Insertar → copia la URL del iframe (solo la parte del src="...")</p>
-            </div>
-          </div>
-        )}
-      </div>
-    );
   }
   if (!isClientPortal && !adminAuth) {
     return <AdminLogin onLogin={() => setAdminAuth(true)} />;
@@ -464,35 +405,21 @@ export default function App() {
                 >✕ Cancelar</button>
               </div>
             )}
-            {/* Botón ajustes Metricool */}
-            <button
-              onClick={() => setShowMcSettings(true)}
-              title="Ajustes Metricool"
-              className="text-[10px] font-bold text-purple-400 border border-purple-800 px-2 py-0.5 rounded hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
-            >
-              📊 Metricool
-            </button>
-
-            {/* ── Instagram + Tracker (solo clientes IG) ── */}
+            {/* ── Instagram (solo clientes IG) ── */}
             {activeClient?.platform === 'IG' ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <ConnectInstagram
-                  clientId={activeClient.id}
-                  clientName={activeClient.name}
-                />
-                <button
-                  onClick={() => setShowTracker(true)}
-                  className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  📋 Ver tracker de clientes
-                </button>
-              </div>
+              <ConnectInstagram
+                clientId={activeClient.id}
+                clientName={activeClient.name}
+                onUsernameChange={setIgUsername}
+                onAccountTypeChange={setIgAccountType}
+              />
             ) : (
               <button
-                onClick={() => setShowTracker(true)}
-                className="text-[10px] font-bold text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded hover:bg-emerald-900 hover:text-emerald-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
+                onClick={() => setShowMcSettings(true)}
+                title="Ajustes Metricool"
+                className="text-[10px] font-bold text-purple-400 border border-purple-800 px-2 py-0.5 rounded hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
               >
-                📋 Tracker
+                📊 Metricool
               </button>
             )}
 
@@ -598,6 +525,7 @@ export default function App() {
             clientId={clientId}
             clientName={activeClient?.name ?? clientId}
             isAdmin={isAdmin}
+            igAccountType={igAccountType}
             onUpdatePost={handleUpdatePost}
             onDeletePost={handleDeletePost}
             shareMode={shareMode}

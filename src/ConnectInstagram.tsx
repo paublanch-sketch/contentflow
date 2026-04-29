@@ -17,14 +17,15 @@ const OAUTH_URL = (clientId: string) =>
   `&state=${clientId}`;
 
 interface Props {
-  clientId:          string;
-  clientName:        string;
-  onUsernameChange?: (username: string) => void;
+  clientId:             string;
+  clientName:           string;
+  onUsernameChange?:    (username: string) => void;
+  onAccountTypeChange?: (type: 'business' | 'personal' | 'none') => void;
 }
 
 type Mode = 'none' | 'business' | 'personal';
 
-export function ConnectInstagram({ clientId, clientName, onUsernameChange }: Props) {
+export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAccountTypeChange }: Props) {
   const [loading,    setLoading]    = useState(true);
   const [mode,       setMode]       = useState<Mode>('none');
   const [igUsername, setIgUsername] = useState('');
@@ -51,6 +52,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange }: Pro
         setMode('business');
         setIgUsername(token.ig_username);
         onUsernameChange?.(token.ig_username);
+        onAccountTypeChange?.('business');
         setLoading(false);
         return;
       }
@@ -66,6 +68,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange }: Pro
         setMode('personal');
         setIgUsername(creds.ig_username);
         onUsernameChange?.(creds.ig_username);
+        onAccountTypeChange?.('personal');
         setLoading(false);
         return;
       }
@@ -73,6 +76,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange }: Pro
       setMode('none');
       setIgUsername('');
       onUsernameChange?.('');
+      onAccountTypeChange?.('none');
       setLoading(false);
     })();
   }, [clientId]);
@@ -96,6 +100,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange }: Pro
       setMode('personal');
       setIgUsername(userInput.trim());
       onUsernameChange?.(userInput.trim());
+      onAccountTypeChange?.('personal');
       setShowForm(false);
       setUserInput(''); setPassInput('');
     }
@@ -108,7 +113,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange }: Pro
     await supabase.from('ig_tokens').delete().eq('client_id', clientId);
     await supabase.from('ig_credentials').delete().eq('client_id', clientId);
     await supabase.from('sessions').delete().eq('client_id', clientId);
-    setMode('none'); setIgUsername(''); onUsernameChange?.('');
+    setMode('none'); setIgUsername(''); onUsernameChange?.(''); onAccountTypeChange?.('none');
   };
 
   // ── Loading ──────────────────────────────────────────────────────────────────

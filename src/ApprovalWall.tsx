@@ -348,6 +348,7 @@ type Props = {
   clientId: string;
   clientName: string;
   isAdmin: boolean;
+  igAccountType?: 'business' | 'personal' | 'none';
   onUpdatePost: (postId: string, updates: Partial<Post>) => Promise<void>;
   onDeletePost: (postId: string) => Promise<void>;
   shareMode?: boolean;
@@ -822,13 +823,14 @@ async function notifyChangesRequested(post: Post, clientName: string, feedback: 
 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
-  post, clientId, clientName, isAdmin, onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
+  post, clientId, clientName, isAdmin, igAccountType = 'none', onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
   shareMode, isSelected, onToggleSelect,
 }: {
   post: Post;
   clientId: string;
   clientName: string;
   isAdmin: boolean;
+  igAccountType?: 'business' | 'personal' | 'none';
   onUpdatePost: Props['onUpdatePost'];
   onDeletePost: Props['onDeletePost'];
   uploadingId: string | null;
@@ -1470,21 +1472,46 @@ function PostCard({
 
         {/* Botones publicar — solo admin + approved */}
         {isAdmin && isApproved && (
-          <div className="flex flex-col gap-3">
-            {/* Botón publicar directo en Instagram/LinkedIn */}
-            <PublishButton platform={post.platform} onClick={() => {
-              if (post.platform === 'IG') setShowIgScheduler(true);
-              else setShowPublishConfirm(true);
-            }} />
-            {/* Botón Metricool */}
-            <button
-              onClick={() => setShowMcModal(true)}
-              disabled={mcSending}
-              className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {mcSending ? <Loader2 size={14} className="animate-spin" /> : '📊'}
-              {mcSending ? 'Enviando a Metricool...' : 'Programar en Metricool'}
-            </button>
+          <div className="flex flex-col gap-2">
+            {post.platform === 'IG' ? (
+              <>
+                {/* Botón 1: Instagram API (Business) o publisher.py (Personal) */}
+                <button
+                  onClick={() => setShowIgScheduler(true)}
+                  className={`w-full py-3 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
+                    igAccountType === 'business'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90'
+                      : igAccountType === 'personal'
+                        ? 'bg-gradient-to-br from-orange-500 to-rose-500 hover:opacity-90'
+                        : 'bg-gradient-to-br from-slate-700 to-slate-800 hover:opacity-90'
+                  }`}
+                >
+                  📸 {igAccountType === 'business' ? 'Instagram API' : igAccountType === 'personal' ? 'Instagram (Publisher)' : 'Publicar Instagram'}
+                </button>
+                {/* Botón 2: Metricool (siempre visible) */}
+                <button
+                  onClick={() => setShowMcModal(true)}
+                  disabled={mcSending}
+                  className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {mcSending ? <Loader2 size={14} className="animate-spin" /> : '📊'}
+                  {mcSending ? 'Enviando a Metricool...' : 'Programar en Metricool'}
+                </button>
+              </>
+            ) : (
+              <>
+                {/* LinkedIn / Facebook: botón directo + Metricool */}
+                <PublishButton platform={post.platform} onClick={() => setShowPublishConfirm(true)} />
+                <button
+                  onClick={() => setShowMcModal(true)}
+                  disabled={mcSending}
+                  className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-black uppercase tracking-tighter hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {mcSending ? <Loader2 size={14} className="animate-spin" /> : '📊'}
+                  {mcSending ? 'Enviando a Metricool...' : 'Programar en Metricool'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -1613,7 +1640,7 @@ function PostCard({
 }
 
 // ─── Grid principal ───────────────────────────────────────────────────────────
-export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
+export default function ApprovalWall({ posts, clientId, clientName, isAdmin, igAccountType = 'none', onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
   const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
 
   // Portal cliente: filtrar por ?show=1,3,5 si existe
@@ -1635,6 +1662,7 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, onU
     clientId,
     clientName,
     isAdmin,
+    igAccountType,
     onUpdatePost,
     onDeletePost,
     uploadingId,
