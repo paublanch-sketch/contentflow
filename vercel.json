@@ -1,9 +1,10 @@
 {
   "functions": {
-    "api/metricool-blogs.js":  { "memory": 128, "maxDuration": 10 },
-    "api/metricool-post.js":   { "memory": 128, "maxDuration": 10 },
-    "api/metricool-debug.js":  { "memory": 128, "maxDuration": 10 },
-    "api/groq-generate.js":    { "memory": 128, "maxDuration": 15 }
+    "api/metricool-blogs.js":   { "memory": 128,  "maxDuration": 10 },
+    "api/metricool-post.js":    { "memory": 128,  "maxDuration": 10 },
+    "api/metricool-debug.js":   { "memory": 128,  "maxDuration": 10 },
+    "api/groq-generate.js":     { "memory": 128,  "maxDuration": 15 },
+    "api/compose-image.js":     { "memory": 1024, "maxDuration": 60 }
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
