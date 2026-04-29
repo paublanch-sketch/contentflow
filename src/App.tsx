@@ -372,7 +372,7 @@ export default function App() {
                 </span>
                 <button
                   onClick={() => {
-                    const base = `https://contentflow-liard-nine.vercel.app/p/${activeClient.id}`;
+                    const base = `https://contentflow-4wos.vercel.app/p/${activeClient.id}`;
                     const url = selectedPosts.size > 0
                       ? `${base}?show=${[...selectedPosts].sort((a,b)=>a-b).join(',')}`
                       : base;
