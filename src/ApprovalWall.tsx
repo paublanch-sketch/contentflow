@@ -843,8 +843,8 @@ function PostCard({
   isSelected?: boolean;
   onToggleSelect?: () => void;
 }) {
-  // El cliente puede editar todos los posts visibles en su portal
-  const canClientEdit = isClientPortal;
+  // El cliente SOLO puede editar los posts que él mismo ha creado
+  const canClientEdit = isClientPortal && post.created_by === 'client';
 
   const [toast, setToast]                 = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
   const [editingCopy, setEditingCopy]     = useState(false);
