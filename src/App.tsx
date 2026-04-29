@@ -367,7 +367,7 @@ export default function App() {
               </button>
             )}
 
-            {activeClient && activeClient.email && activeClient.email !== '-' && !shareMode && (
+            {activeClient && activeClient.email && activeClient.email !== '-' && (
               <button
                 onClick={() => {
                   setEmailSubject(`Revisión de posts – ${activeClient.name}`);
@@ -403,17 +403,22 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => {
-                    const allNums = posts.map(p => p.post_number);
-                    const allSelected = allNums.every(n => selectedPosts.has(n));
+                    // Solo posts que NO sean approved ni scheduled (publicados/aprobados)
+                    const selectableNums = posts
+                      .filter(p => p.status !== 'approved' && p.status !== 'scheduled')
+                      .map(p => p.post_number);
+                    const allSelected = selectableNums.every(n => selectedPosts.has(n));
                     if (allSelected) {
                       setSelectedPosts(new Set());
                     } else {
-                      setSelectedPosts(new Set(allNums));
+                      setSelectedPosts(new Set(selectableNums));
                     }
                   }}
                   className="text-[10px] font-bold text-gray-300 border border-gray-600 px-2 py-0.5 rounded hover:bg-gray-800 uppercase tracking-widest"
                 >
-                  {posts.every(p => selectedPosts.has(p.post_number)) ? '☐ Deseleccionar todos' : '☑ Seleccionar todos'}
+                  {posts.filter(p => p.status !== 'approved' && p.status !== 'scheduled')
+                       .every(p => selectedPosts.has(p.post_number))
+                    ? '☐ Deseleccionar todos' : '☑ Seleccionar todos'}
                 </button>
                 <button
                   onClick={() => { setShareMode(false); setSelectedPosts(new Set()); }}
@@ -561,8 +566,9 @@ export default function App() {
           <div className="bg-[#1a1d27] border border-gray-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="font-black text-white text-base">✉️ Enviar email al cliente</h3>
-                <p className="text-amber-400 text-xs font-bold mt-0.5">{activeClient.name}</p>
+                <h3 className="font-bold text-gray-500 text-xs uppercase tracking-widest">✉️ Email al cliente</h3>
+                <p className="text-white text-2xl font-black mt-1 leading-tight">{activeClient.name}</p>
+                <p className="text-amber-400 text-sm font-bold mt-1">{activeClient.email}</p>
               </div>
               <button
                 onClick={() => setShowEmailModal(false)}
