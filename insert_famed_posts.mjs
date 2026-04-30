@@ -173,7 +173,7 @@ Porque tus pies te llevan a todos lados. Cuídalos.
     post_number: 7,
     platform: 'IG',
     headline_visual: 'RECUPERA TU SONRISA COMPLETA — Implante desde 60€/mes',
-    visual_prompt: '',
+    visual_prompt: 'https://www.canva.com/d/oavMr_62vgGENsQ',
     copy: `¿Llevas tiempo con ese hueco en tu boca que intenta evitar sonreír en las fotos? 🦷
 
 Tienes solución. Y es más sencillo de lo que crees.

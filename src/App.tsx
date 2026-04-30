@@ -213,8 +213,10 @@ export default function App() {
 
   // ── Borrar post ──
   const handleDeletePost = async (postId: string) => {
+    const scrollY = window.scrollY;
     setPosts(prev => prev.filter(p => p.id !== postId));
     await supabase.from('posts').delete().eq('id', postId);
+    requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'instant' as ScrollBehavior }));
   };
 
   // ── Crear post vacío ──
@@ -255,7 +257,6 @@ export default function App() {
       if (!result.error && result.data) {
         data = result.data as Post;
         setPosts(prev => [...prev, data!]);
-        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
       } else {
         console.error('Error creando post:', result.error);
         alert(`Error al crear post: ${result.error?.message}`);
