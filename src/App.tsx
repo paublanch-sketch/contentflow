@@ -22,6 +22,7 @@ export type Post = {
   status: PostStatus;
   feedback: string;
   image_url: string;
+  reel_url?: string;
   webhook_sent_at: string | null;
   created_by?: 'admin' | 'client' | null; // quién creó el post
 };
@@ -200,7 +201,7 @@ export default function App() {
       prev.map(p => p.id === postId ? { ...p, ...updates } : p)
     );
 
-    const allowed = ['status', 'feedback', 'image_url', 'webhook_sent_at', 'copy', 'hashtags', 'headline_visual', 'visual_prompt'] as const;
+    const allowed = ['status', 'feedback', 'image_url', 'reel_url', 'webhook_sent_at', 'copy', 'hashtags', 'headline_visual', 'visual_prompt'] as const;
     const dbUpdates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in updates) dbUpdates[key] = (updates as any)[key];

@@ -672,6 +672,34 @@ function Lightbox({ urls, startIdx, onClose }: { urls: string[]; startIdx: numbe
   );
 }
 
+// ─── VideoModal ────────────────────────────────────────────────────────────────
+function VideoModal({ url, onClose }: { url: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <video
+        src={url}
+        controls
+        autoPlay
+        className="max-h-[90vh] max-w-[90vw] rounded-xl shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-black transition-colors"
+      >✕</button>
+    </div>
+  );
+}
+
 // ─── Toast interno ────────────────────────────────────────────────────────────
 function Toast({ msg, type }: { msg: string; type: 'ok' | 'err' }) {
   return (
@@ -773,6 +801,34 @@ function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   return { uploadingId, handleFile, handleUrl };
 }
 
+// ─── Hook para subir vídeo/reel a Supabase Storage ────────────────────────────
+function useVideoUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
+  const [uploadingVideoId, setUploadingVideoId] = useState<string | null>(null);
+
+  const handleVideoFile = async (
+    postId: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingVideoId(postId);
+    const ts = Date.now();
+    const ext = file.name.split('.').pop() ?? 'mp4';
+    const fileName = `${clientId}/${postId}_reel_${ts}.${ext}`;
+    const { error } = await supabase.storage
+      .from('post-images')
+      .upload(fileName, file, { upsert: true, contentType: file.type });
+    if (!error) {
+      const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
+      const url = `${data.publicUrl}?v=${ts}`;
+      await onUpdatePost(postId, { reel_url: url });
+    }
+    setUploadingVideoId(null);
+    e.target.value = '';
+  };
+
+  return { uploadingVideoId, handleVideoFile };
+}
 
 // ─── Notificaciones email vía EmailJS ────────────────────────────────────────
 const EMAILJS_SERVICE_ID  = 'service_9hv3bd4';
@@ -903,6 +959,7 @@ function PosGrid({ value, onChange }: { value: string; onChange: (v: string) => 
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
   post, allPosts, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
+  uploadingVideoId, handleVideoFile,
   shareMode, isSelected, onToggleSelect,
 }: {
   post: Post;
@@ -917,6 +974,8 @@ function PostCard({
   uploadingId: string | null;
   handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
+  uploadingVideoId: string | null;
+  handleVideoFile: (id: string, e: React.ChangeEvent<HTMLInputElement>) => void;
   shareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -978,6 +1037,7 @@ function PostCard({
   const [showMcModal, setShowMcModal]     = useState(false);
   const [mcSending, setMcSending]         = useState(false);
   const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const handleSendToMetricool = async (creds: McClientCreds, schedDate: string) => {
     setShowMcModal(false); setMcSending(true);
@@ -1640,6 +1700,56 @@ function PostCard({
           </div>
         )}
       </div>
+
+      {/* ── Sección Reel / Vídeo ── */}
+      {(post.reel_url || (isAdmin || canClientEdit)) && (
+        <div className="border-t border-gray-100 px-4 py-2.5 flex items-center gap-2 bg-gray-50/60">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">🎬 Reel</span>
+          {uploadingVideoId === post.id
+            ? <Loader2 size={14} className="animate-spin text-[#2d6a4f]" />
+            : post.reel_url
+              ? (
+                <button
+                  onClick={() => setShowVideoModal(true)}
+                  className="flex items-center gap-1.5 text-[10px] font-bold text-[#2d6a4f] hover:text-[#1b4332] bg-white border border-[#2d6a4f]/30 hover:border-[#2d6a4f] px-2.5 py-1 rounded-lg transition-colors shadow-sm"
+                  title="Ver vídeo en grande"
+                >
+                  ▶ Ver vídeo
+                </button>
+              )
+              : (
+                (isAdmin || canClientEdit) && (
+                  <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 hover:border-gray-400 px-2.5 py-1 rounded-lg transition-colors shadow-sm">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="video/*"
+                      onChange={e => handleVideoFile(post.id, e)}
+                    />
+                    📹 Subir reel
+                  </label>
+                )
+              )
+          }
+          {/* Reemplazar vídeo si ya hay uno — solo admin */}
+          {isAdmin && post.reel_url && (
+            <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 ml-auto">
+              <input
+                type="file"
+                className="hidden"
+                accept="video/*"
+                onChange={e => handleVideoFile(post.id, e)}
+              />
+              🔄
+            </label>
+          )}
+        </div>
+      )}
+
+      {/* VideoModal */}
+      {showVideoModal && post.reel_url && (
+        <VideoModal url={post.reel_url} onClose={() => setShowVideoModal(false)} />
+      )}
 
       {/* Botones de utilidad: copiar texto, copiar hashtags, descargar imágenes */}
       {(isAdmin || canClientEdit) && (
@@ -2370,6 +2480,7 @@ function PostCard({
 // ─── Grid principal ───────────────────────────────────────────────────────────
 export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
   const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
+  const { uploadingVideoId, handleVideoFile }  = useVideoUpload(clientId, onUpdatePost);
 
   // Portal cliente: filtrar por ?show=1,3,5 si existe
   const visiblePosts = (() => {
@@ -2398,6 +2509,8 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isC
     uploadingId,
     handleFile,
     handleUrl,
+    uploadingVideoId,
+    handleVideoFile,
     shareMode,
     isSelected: selectedPosts?.has(post.post_number) ?? false,
     onToggleSelect: () => onToggleSelect?.(post.post_number),

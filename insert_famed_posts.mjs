@@ -6,7 +6,7 @@
 
 const SUPABASE_URL = 'https://afbussamfzqfvozrycsr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg';
-const CLIENT_ID = 'famed-sl';
+const CLIENT_ID = 'centro-de-especialidades-medicas-famed-sl';
 
 const posts = [
   {
