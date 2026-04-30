@@ -805,26 +805,45 @@ function useImageUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
 function useVideoUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   const [uploadingVideoId, setUploadingVideoId] = useState<string | null>(null);
 
+  // Devuelve { ok: true } o { ok: false, msg: string }
   const handleVideoFile = async (
     postId: string,
     e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  ): Promise<{ ok: boolean; msg?: string }> => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) return { ok: false, msg: 'Sin archivo' };
     setUploadingVideoId(postId);
     const ts = Date.now();
     const ext = file.name.split('.').pop() ?? 'mp4';
     const fileName = `${clientId}/${postId}_reel_${ts}.${ext}`;
-    const { error } = await supabase.storage
+
+    const { error: uploadError } = await supabase.storage
       .from('post-images')
       .upload(fileName, file, { upsert: true, contentType: file.type });
-    if (!error) {
-      const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
-      const url = `${data.publicUrl}?v=${ts}`;
-      await onUpdatePost(postId, { reel_url: url });
+
+    if (uploadError) {
+      console.error('Video upload error:', uploadError);
+      setUploadingVideoId(null);
+      e.target.value = '';
+      return { ok: false, msg: uploadError.message };
     }
+
+    const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
+    const url = `${data.publicUrl}?v=${ts}`;
+    const { error: dbError } = await (supabase.from('posts').update({ reel_url: url }).eq('id', postId) as any);
+
+    if (dbError) {
+      console.error('DB reel_url error:', dbError);
+      setUploadingVideoId(null);
+      e.target.value = '';
+      return { ok: false, msg: `BD: ${dbError.message}` };
+    }
+
+    // También actualizar el estado local vía onUpdatePost (sin re-llamar a supabase)
+    await onUpdatePost(postId, { reel_url: url });
     setUploadingVideoId(null);
     e.target.value = '';
+    return { ok: true };
   };
 
   return { uploadingVideoId, handleVideoFile };
@@ -975,7 +994,7 @@ function PostCard({
   handleFile: (id: string, e: React.ChangeEvent<HTMLInputElement>, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   uploadingVideoId: string | null;
-  handleVideoFile: (id: string, e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleVideoFile: (id: string, e: React.ChangeEvent<HTMLInputElement>) => Promise<{ ok: boolean; msg?: string }>;
   shareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -1724,7 +1743,10 @@ function PostCard({
                       type="file"
                       className="hidden"
                       accept="video/*"
-                      onChange={e => handleVideoFile(post.id, e)}
+                      onChange={async e => {
+                        const res = await handleVideoFile(post.id, e);
+                        if (!res.ok) setToast({ msg: `Error al subir vídeo: ${res.msg}`, type: 'err' });
+                      }}
                     />
                     📹 Subir reel
                   </label>
@@ -1738,7 +1760,10 @@ function PostCard({
                 type="file"
                 className="hidden"
                 accept="video/*"
-                onChange={e => handleVideoFile(post.id, e)}
+                onChange={async e => {
+                  const res = await handleVideoFile(post.id, e);
+                  if (!res.ok) setToast({ msg: `Error: ${res.msg}`, type: 'err' });
+                }}
               />
               🔄
             </label>
