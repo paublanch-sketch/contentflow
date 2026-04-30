@@ -812,6 +812,12 @@ function useVideoUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   ): Promise<{ ok: boolean; msg?: string }> => {
     const file = e.target.files?.[0];
     if (!file) return { ok: false, msg: 'Sin archivo' };
+    // Aviso si supera 500 MB (límite configurable en Supabase Storage)
+    const MAX_MB = 500;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      e.target.value = '';
+      return { ok: false, msg: `El vídeo pesa ${(file.size/1024/1024).toFixed(0)} MB. Máximo ${MAX_MB} MB. Comprime el vídeo antes de subirlo.` };
+    }
     setUploadingVideoId(postId);
     const ts = Date.now();
     const ext = file.name.split('.').pop() ?? 'mp4';
