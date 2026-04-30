@@ -198,7 +198,7 @@ Recupera la confianza de sonreír sin pensarlo.
     post_number: 8,
     platform: 'IG',
     headline_visual: 'NUTRICIÓN QUE SE ADAPTA A TI',
-    visual_prompt: '',
+    visual_prompt: 'https://www.canva.com/d/r_aoiGo9ccM8zWL',
     copy: `Dietas de moda, apps que prometen milagros, el cuñado que sabe de todo… 😅
 
 Y mientras tanto, tú sin resultados reales.
@@ -224,7 +224,7 @@ Porque la salud empieza en lo que comes. Y tú mereces un plan que funcione.
     post_number: 9,
     platform: 'IG',
     headline_visual: 'PILATES E HIPOPRESIVOS — Más que ejercicio',
-    visual_prompt: '',
+    visual_prompt: 'https://www.canva.com/d/Mhm9PQ0Ba9cce3H',
     copy: `¿Sabías que hay una forma de fortalecer el core, mejorar la postura y cuidar el suelo pélvico… al mismo tiempo? 🧘
 
 Se llama Pilates con Hipopresivos. Y en Clínicas FAMED lo practicamos de forma terapéutica, es decir, adaptado a tu cuerpo y tu momento de vida.
@@ -251,7 +251,7 @@ Tu cuerpo cambia cuando le das lo que necesita. 💙
     post_number: 10,
     platform: 'IG',
     headline_visual: 'LÁSER CO2 — Resetea tu piel desde dentro',
-    visual_prompt: '',
+    visual_prompt: 'https://www.canva.com/d/m0ea2D-En-LpfMb',
     copy: `¿Y si pudieras resetear tu piel en un solo tratamiento? 🔑✨
 
 Pocos lo conocen… pero todos quieren sus resultados.
