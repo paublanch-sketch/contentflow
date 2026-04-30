@@ -1594,21 +1594,55 @@ function PostCard({
             ? <Loader2 className="animate-spin text-[#2d6a4f]" />
             : currentImage
               ? (
-                <img
-                  key={currentImage}
-                  src={currentImage}
-                  className="w-full h-full object-cover cursor-zoom-in"
-                  alt="Post"
-                  onClick={() => setLightboxIdx(safeIdx)}
-                  title="Click para ver en grande"
-                />
+                <>
+                  <img
+                    key={currentImage}
+                    src={currentImage}
+                    className="w-full h-full object-cover cursor-zoom-in"
+                    alt="Post"
+                    onClick={() => post.reel_url ? setShowVideoModal(true) : setLightboxIdx(safeIdx)}
+                    title="Click para ver en grande"
+                  />
+                  {/* Badge de reel sobre la miniatura */}
+                  {post.reel_url && (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center cursor-pointer"
+                      onClick={() => setShowVideoModal(true)}
+                    >
+                      <div className="bg-black/50 rounded-full w-14 h-14 flex items-center justify-center shadow-lg backdrop-blur-sm">
+                        <span className="text-white text-2xl ml-1">▶</span>
+                      </div>
+                    </div>
+                  )}
+                </>
               )
-              : (
-                <div className="text-center p-4 text-gray-300">
-                  <ImageIcon size={40} className="mx-auto mb-2" />
-                  <p className="text-[10px] font-bold">Sin imagen</p>
-                </div>
-              )
+              : post.reel_url
+                ? (
+                  /* Sin miniatura pero con reel: mostrar preview del vídeo */
+                  <div className="relative w-full h-full cursor-pointer" onClick={() => setShowVideoModal(true)}>
+                    <video
+                      src={post.reel_url}
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                      muted
+                      playsInline
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <div className="bg-black/60 rounded-full w-14 h-14 flex items-center justify-center shadow-lg backdrop-blur-sm">
+                        <span className="text-white text-2xl ml-1">▶</span>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                      🎬 REEL
+                    </div>
+                  </div>
+                )
+                : (
+                  <div className="text-center p-4 text-gray-300">
+                    <ImageIcon size={40} className="mx-auto mb-2" />
+                    <p className="text-[10px] font-bold">Sin imagen</p>
+                  </div>
+                )
           }
 
           {/* Flechas navegación (siempre visibles si hay >1 imagen, z-20 para estar por encima del overlay admin) */}
