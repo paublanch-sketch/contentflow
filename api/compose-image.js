@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
     textRotation  = 0,            // rotación texto 1
     text2Rotation = 0,            // rotación texto 2
     overlayOpacity = 0.35,        // Oscuridad sobre el fondo (0–1)
+    overlayColor  = '#000000',    // Color del overlay (hex)
   } = req.body || {};
 
   if (!bgUrl) return res.status(400).json({ error: 'bgUrl es obligatorio' });
@@ -46,12 +47,17 @@ module.exports = async function handler(req, res) {
 
     const composites = [];
 
-    // ── 2. Capa oscura para legibilidad ──────────────────────────────────────
+    // ── 2. Capa de color para legibilidad ────────────────────────────────────
     if (overlayOpacity > 0) {
       const alpha = Math.min(Math.round(overlayOpacity * 255), 255);
+      // Parsear color hex (#rrggbb)
+      const hex = (overlayColor || '#000000').replace('#', '');
+      const r   = parseInt(hex.slice(0, 2), 16) || 0;
+      const g   = parseInt(hex.slice(2, 4), 16) || 0;
+      const b   = parseInt(hex.slice(4, 6), 16) || 0;
       const darkBuf = await sharp({
         create: { width: 1080, height: 1080, channels: 4,
-                  background: { r: 0, g: 0, b: 0, alpha } },
+                  background: { r, g, b, alpha } },
       }).png().toBuffer();
       composites.push({ input: darkBuf, top: 0, left: 0 });
     }

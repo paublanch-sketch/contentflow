@@ -962,124 +962,106 @@ function canvasDrawText(
 }
 
 // ─── Grid de posición 3×3 ─────────────────────────────────────────────────────
-// ─── TlPreviewCanvas — preview en vivo del editor de texto/imagen ─────────────
+// ─── Preview CSS puro — sin canvas, sin CORS ─────────────────────────────────
 type TlPreviewProps = {
   baseImage: string;
-  text1: string; text1Pos: string; text1Color: string; text1Size: number; text1Bold: boolean; text1Rot: number;
-  text2: string; text2Pos: string; text2Color: string; text2Size: number; text2Bold: boolean; text2Rot: number;
-  logo: string;  logoPos: string;  logoSize: number; logoRot: number;
-  dark: number;
+  text1: string; text1Pos: string; text1Color: string; text1Size: number;
+  text1Bold: boolean; text1Rot: number; text1Font: string;
+  logo: string; logoPos: string; logoSize: number; logoRot: number;
+  overlayColor: string; overlayOpacity: number; // 0-100
 };
 
-function posToCanvas(pos: string, W: number, eW: number, eH: number, pad = 20) {
-  const half  = (total: number, el: number) => (total - el) / 2;
-  const map: Record<string, [number, number, CanvasTextAlign]> = {
-    tl: [pad,           pad,             'left'  ],
-    tc: [pad,           half(W, eW),     'center'],
-    tr: [pad,           W - pad,         'right' ],
-    ml: [half(W, eH),   pad,             'left'  ],
-    mc: [half(W, eH),   half(W, eW),     'center'],
-    mr: [half(W, eH),   W - pad,         'right' ],
-    bl: [W - pad - eH,  pad,             'left'  ],
-    bc: [W - pad - eH,  half(W, eW),     'center'],
-    br: [W - pad - eH,  W - pad,         'right' ],
+// Mapea código de posición a estilos CSS absolutos
+function posToCSS(pos: string): React.CSSProperties {
+  const PAD = '5%';
+  const map: Record<string, React.CSSProperties> = {
+    tl: { top: PAD, left: PAD,   transform: 'none',                    textAlign: 'left'   },
+    tc: { top: PAD, left: '50%', transform: 'translateX(-50%)',         textAlign: 'center' },
+    tr: { top: PAD, right: PAD,  transform: 'none',                    textAlign: 'right'  },
+    ml: { top: '50%', left: PAD,   transform: 'translateY(-50%)',       textAlign: 'left'   },
+    mc: { top: '50%', left: '50%', transform: 'translate(-50%,-50%)',   textAlign: 'center' },
+    mr: { top: '50%', right: PAD,  transform: 'translateY(-50%)',       textAlign: 'right'  },
+    bl: { bottom: PAD, left: PAD,   transform: 'none',                  textAlign: 'left'   },
+    bc: { bottom: PAD, left: '50%', transform: 'translateX(-50%)',      textAlign: 'center' },
+    br: { bottom: PAD, right: PAD,  transform: 'none',                  textAlign: 'right'  },
   };
   return map[pos] ?? map['bc'];
 }
 
-function TlPreviewCanvas({ baseImage, text1, text1Pos, text1Color, text1Size, text1Bold, text1Rot,
-  text2, text2Pos, text2Color, text2Size, text2Bold, text2Rot,
-  logo, logoPos, logoSize, logoRot, dark }: TlPreviewProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const W = 360;
+// Añade rotación al transform existente
+function addRotation(base: React.CSSProperties, rot: number): React.CSSProperties {
+  if (rot === 0) return base;
+  const existing = (base.transform && base.transform !== 'none') ? base.transform + ' ' : '';
+  return { ...base, transform: `${existing}rotate(${rot}deg)` };
+}
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.width = W; canvas.height = W;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+// hex color → rgba string con opacidad 0-100
+function hexToRgba(hex: string, opacity: number): string {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${opacity/100})`;
+}
 
-    const scale = W / 1080;
+// Fuente CSS según nombre
+const FONT_CSS: Record<string,string> = {
+  montserrat: 'Montserrat, Arial, sans-serif',
+  poppins:    'Poppins, Arial, sans-serif',
+  inter:      'Inter, Arial, sans-serif',
+  oswald:     'Oswald, Arial Narrow, sans-serif',
+  roboto:     'Roboto, Arial, sans-serif',
+  system:     'Arial, Helvetica, sans-serif',
+};
 
-    const drawAll = (logoImg?: HTMLImageElement) => {
-      ctx.clearRect(0, 0, W, W);
+function TlPreviewCSS({ baseImage, text1, text1Pos, text1Color, text1Size,
+  text1Bold, text1Rot, text1Font,
+  logo, logoPos, logoSize, logoRot,
+  overlayColor, overlayOpacity }: TlPreviewProps) {
 
-      // Dark overlay solo
-      ctx.fillStyle = `rgba(0,0,0,${dark / 100})`;
-      ctx.fillRect(0, 0, W, W);
+  const textStyle: React.CSSProperties = {
+    ...addRotation(posToCSS(text1Pos), text1Rot),
+    position:   'absolute',
+    color:      text1Color,
+    fontSize:   `${text1Size / 10}px`,   // 1080→preview escala ~10x
+    fontWeight: text1Bold ? 'bold' : 'normal',
+    fontFamily: FONT_CSS[text1Font] ?? FONT_CSS.system,
+    textShadow: '1px 1px 4px rgba(0,0,0,0.85)',
+    whiteSpace: 'pre-wrap',
+    maxWidth:   '90%',
+    lineHeight: 1.2,
+    pointerEvents: 'none',
+    userSelect: 'none',
+  };
 
-      // Helper dibujar texto con rotación
-      const drawText = (txt: string, pos: string, color: string, size: number, bold: boolean, rot: number) => {
-        if (!txt.trim()) return;
-        const fs = size * scale;
-        ctx.font = `${bold ? 'bold' : 'normal'} ${fs}px Montserrat, Arial, sans-serif`;
-        ctx.textBaseline = 'top';
-        const [row, col, align] = posToCanvas(pos, W, ctx.measureText(txt).width, fs);
-        ctx.textAlign = align;
-        ctx.save();
-        ctx.translate(col, row);
-        ctx.rotate((rot * Math.PI) / 180);
-        // sombra
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillText(txt, 2, 2);
-        // texto
-        ctx.fillStyle = color;
-        ctx.fillText(txt, 0, 0);
-        ctx.restore();
-      };
-
-      drawText(text1, text1Pos, text1Color, text1Size, text1Bold, text1Rot);
-      drawText(text2, text2Pos, text2Color, text2Size, text2Bold, text2Rot);
-
-      // Logo/imagen
-      if (logoImg && logo) {
-        const lW = logoSize * scale;
-        const lH = (logoImg.naturalHeight / logoImg.naturalWidth) * lW;
-        const [row, col] = posToCanvas(logoPos, W, lW, lH);
-        ctx.save();
-        const cx = col + lW / 2;
-        const cy = row + lH / 2;
-        ctx.translate(cx, cy);
-        ctx.rotate((logoRot * Math.PI) / 180);
-        ctx.drawImage(logoImg, -lW / 2, -lH / 2, lW, lH);
-        ctx.restore();
-      }
-    };
-
-    // Primero dibujamos la imagen de fondo
-    const bg = new Image();
-    bg.crossOrigin = 'anonymous';
-    bg.onload = () => {
-      ctx.drawImage(bg, 0, 0, W, W);
-      if (logo) {
-        const li = new Image();
-        li.crossOrigin = 'anonymous';
-        li.onload  = () => drawAll(li);
-        li.onerror = () => drawAll();
-        li.src = logo;
-      } else {
-        drawAll();
-      }
-    };
-    bg.onerror = () => {
-      ctx.fillStyle = '#1a1d27';
-      ctx.fillRect(0, 0, W, W);
-      drawAll();
-    };
-    bg.src = baseImage;
-  }, [baseImage, text1, text1Pos, text1Color, text1Size, text1Bold, text1Rot,
-      text2, text2Pos, text2Color, text2Size, text2Bold, text2Rot,
-      logo, logoPos, logoSize, logoRot, dark]);
+  const logoBaseCSS = posToCSS(logoPos);
+  const logoStyle: React.CSSProperties = {
+    ...addRotation(logoBaseCSS, logoRot),
+    position: 'absolute',
+    width:    `${logoSize / 10}px`,
+    maxWidth: '80%',
+    pointerEvents: 'none',
+  };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">👁 Preview en vivo</p>
-      <canvas
-        ref={canvasRef}
-        className="w-full rounded-xl border-2 border-indigo-600 shadow-lg"
-        style={{ aspectRatio: '1', imageRendering: 'auto' }}
-      />
+      <div className="relative w-full rounded-xl border-2 border-indigo-600 shadow-lg overflow-hidden"
+           style={{ aspectRatio: '1' }}>
+        {/* Imagen de fondo */}
+        <img src={baseImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+
+        {/* Overlay de color */}
+        {overlayOpacity > 0 && (
+          <div className="absolute inset-0"
+               style={{ backgroundColor: hexToRgba(overlayColor, overlayOpacity) }} />
+        )}
+
+        {/* Texto */}
+        {text1.trim() && <div style={textStyle}>{text1}</div>}
+
+        {/* Imagen overlay */}
+        {logo && <img src={logo} alt="" style={logoStyle} />}
+      </div>
     </div>
   );
 }
@@ -1181,7 +1163,9 @@ function PostCard({
   const [tlLogoSize,      setTlLogoSize]      = useState(180);
   const [tlLogoRot,       setTlLogoRot]       = useState(0);
   const [tlMode,          setTlMode]          = useState<'text'|'image'>('text');
+  const [tlOverlayColor,  setTlOverlayColor]  = useState('#000000');
   const [tlDark,          setTlDark]          = useState(0);
+  const [tlText1Font,     setTlText1Font]     = useState('system');
   const [tlLogoUploading, setTlLogoUploading] = useState(false);
   const [tlLoading,       setTlLoading]       = useState(false);
 
@@ -1461,23 +1445,26 @@ function PostCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bgUrl:        cleanUrl,
-          text:         tlText1,
+          text:         tlMode === 'text' ? tlText1 : '',
           textPos:      tlText1Pos,
           textColor:    tlText1Color,
           fontSize:     tlText1Size,
           fontWeight:   tlText1Bold ? 'bold' : 'normal',
+          fontName:     tlText1Font === 'system' ? 'montserrat' : tlText1Font,
           textRotation: tlText1Rot,
-          text2:        tlText2,
+          text2:        tlMode === 'text' ? tlText2 : '',
           text2Pos:     tlText2Pos,
           text2Color:   tlText2Color,
           text2Size:    tlText2Size,
           text2Weight:  tlText2Bold ? 'bold' : 'normal',
+          text2Font:    tlText1Font === 'system' ? 'montserrat' : tlText1Font,
           text2Rotation: tlText2Rot,
-          logoUrl:      tlLogo,
+          logoUrl:      tlMode === 'image' ? tlLogo : '',
           logoPos:      tlLogoPos,
           logoSize:     tlLogoSize,
           logoRotation: tlLogoRot,
           overlayOpacity: tlDark / 100,
+          overlayColor:   tlOverlayColor,
           img2Url:      '',
         }),
       });
@@ -2050,14 +2037,16 @@ function PostCard({
             >🖼️ Imagen</button>
           </div>
 
-          {/* ── Preview en vivo ── */}
-          <TlPreviewCanvas
+          {/* ── Preview en vivo (CSS puro, sin canvas) ── */}
+          <TlPreviewCSS
             baseImage={currentImage}
-            text1={tlMode === 'text' ? tlText1 : ''} text1Pos={tlText1Pos} text1Color={tlText1Color}
-            text1Size={tlText1Size} text1Bold={tlText1Bold} text1Rot={tlText1Rot}
-            text2="" text2Pos="tc" text2Color="#fff" text2Size={48} text2Bold={false} text2Rot={0}
-            logo={tlMode === 'image' ? tlLogo : ''} logoPos={tlLogoPos} logoSize={tlLogoSize} logoRot={tlLogoRot}
-            dark={tlDark}
+            text1={tlMode === 'text' ? tlText1 : ''}
+            text1Pos={tlText1Pos} text1Color={tlText1Color}
+            text1Size={tlText1Size} text1Bold={tlText1Bold}
+            text1Rot={tlText1Rot} text1Font={tlText1Font}
+            logo={tlMode === 'image' ? tlLogo : ''}
+            logoPos={tlLogoPos} logoSize={tlLogoSize} logoRot={tlLogoRot}
+            overlayColor={tlOverlayColor} overlayOpacity={tlDark}
           />
 
           {/* ── Modo TEXTO ── */}
@@ -2067,6 +2056,30 @@ function PostCard({
                 placeholder="Escribe el texto..."
                 className="w-full text-base font-bold text-gray-900 bg-white border-2 border-indigo-400 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400" />
 
+              {/* Fuente */}
+              <div className="bg-gray-800 rounded-xl p-3 border border-gray-700">
+                <label className="text-[9px] text-gray-400 font-black uppercase mb-1.5 block">Fuente</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: 'system',     label: 'Arial',      style: 'Arial, sans-serif' },
+                    { id: 'montserrat', label: 'Montserrat', style: 'Montserrat, sans-serif' },
+                    { id: 'poppins',    label: 'Poppins',    style: 'Poppins, sans-serif' },
+                    { id: 'inter',      label: 'Inter',      style: 'Inter, sans-serif' },
+                    { id: 'oswald',     label: 'Oswald',     style: 'Oswald, sans-serif' },
+                    { id: 'roboto',     label: 'Roboto',     style: 'Roboto, sans-serif' },
+                  ].map(f => (
+                    <button key={f.id} onClick={() => setTlText1Font(f.id)}
+                      style={{ fontFamily: f.style }}
+                      className={`py-1.5 px-2 rounded-lg text-xs transition-all ${
+                        tlText1Font === f.id
+                          ? 'bg-indigo-600 text-white font-bold shadow-md'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >{f.label}</button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 {/* Posición */}
                 <div className="bg-gray-800 rounded-xl p-3 border border-gray-700">
@@ -2074,7 +2087,7 @@ function PostCard({
                   <PosGrid value={tlText1Pos} onChange={setTlText1Pos} />
                 </div>
                 {/* Color + Tamaño + Negrita */}
-                <div className="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col gap-2">
+                <div className="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col gap-2.5">
                   <div className="flex items-center gap-2">
                     <label className="text-[9px] text-gray-400 font-black uppercase w-12">Color</label>
                     <input type="color" value={tlText1Color} onChange={e => setTlText1Color(e.target.value)}
@@ -2084,9 +2097,9 @@ function PostCard({
                     <label className="text-[9px] text-gray-400 font-black uppercase w-12">Tamaño</label>
                     <input type="number" value={tlText1Size} onChange={e => setTlText1Size(Number(e.target.value))}
                       min={16} max={300} step={4}
-                      className="flex-1 text-base font-black text-gray-900 bg-white border-2 border-gray-300 rounded-lg px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                      className="flex-1 text-base font-black text-gray-900 bg-white border-2 border-gray-300 rounded-lg px-2 py-1.5 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer mt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={tlText1Bold} onChange={e => setTlText1Bold(e.target.checked)} className="w-4 h-4 rounded accent-indigo-500" />
                     <span className="text-xs text-gray-300 font-black uppercase">Negrita</span>
                   </label>
@@ -2163,12 +2176,20 @@ function PostCard({
             </div>
           )}
 
-          {/* ── Oscuridad (opcional) ── */}
-          <div className="bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 flex items-center gap-3">
-            <label className="text-[9px] text-gray-400 font-black uppercase shrink-0">Oscurecer</label>
-            <input type="range" min={0} max={70} step={5} value={tlDark} onChange={e => setTlDark(Number(e.target.value))}
-              className="flex-1 accent-indigo-500" />
-            <span className="text-sm font-black text-indigo-300 w-10 text-right">{tlDark}%</span>
+          {/* ── Overlay de color ── */}
+          <div className="bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-700 flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <label className="text-[9px] text-gray-400 font-black uppercase shrink-0">Color overlay</label>
+              <input type="color" value={tlOverlayColor} onChange={e => setTlOverlayColor(e.target.value)}
+                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent p-0" />
+              <span className="text-[9px] text-gray-500 font-mono">{tlOverlayColor}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-[9px] text-gray-400 font-black uppercase shrink-0 w-16">Opacidad</label>
+              <input type="range" min={0} max={80} step={5} value={tlDark} onChange={e => setTlDark(Number(e.target.value))}
+                className="flex-1 accent-indigo-500" />
+              <span className="text-sm font-black text-indigo-300 w-10 text-right">{tlDark}%</span>
+            </div>
           </div>
 
           {/* ── Guardar ── */}
