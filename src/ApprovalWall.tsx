@@ -962,6 +962,128 @@ function canvasDrawText(
 }
 
 // ─── Grid de posición 3×3 ─────────────────────────────────────────────────────
+// ─── TlPreviewCanvas — preview en vivo del editor de texto/imagen ─────────────
+type TlPreviewProps = {
+  baseImage: string;
+  text1: string; text1Pos: string; text1Color: string; text1Size: number; text1Bold: boolean; text1Rot: number;
+  text2: string; text2Pos: string; text2Color: string; text2Size: number; text2Bold: boolean; text2Rot: number;
+  logo: string;  logoPos: string;  logoSize: number; logoRot: number;
+  dark: number;
+};
+
+function posToCanvas(pos: string, W: number, eW: number, eH: number, pad = 20) {
+  const half  = (total: number, el: number) => (total - el) / 2;
+  const map: Record<string, [number, number, CanvasTextAlign]> = {
+    tl: [pad,           pad,             'left'  ],
+    tc: [pad,           half(W, eW),     'center'],
+    tr: [pad,           W - pad,         'right' ],
+    ml: [half(W, eH),   pad,             'left'  ],
+    mc: [half(W, eH),   half(W, eW),     'center'],
+    mr: [half(W, eH),   W - pad,         'right' ],
+    bl: [W - pad - eH,  pad,             'left'  ],
+    bc: [W - pad - eH,  half(W, eW),     'center'],
+    br: [W - pad - eH,  W - pad,         'right' ],
+  };
+  return map[pos] ?? map['bc'];
+}
+
+function TlPreviewCanvas({ baseImage, text1, text1Pos, text1Color, text1Size, text1Bold, text1Rot,
+  text2, text2Pos, text2Color, text2Size, text2Bold, text2Rot,
+  logo, logoPos, logoSize, logoRot, dark }: TlPreviewProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const W = 360;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = W; canvas.height = W;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const scale = W / 1080;
+
+    const drawAll = (logoImg?: HTMLImageElement) => {
+      ctx.clearRect(0, 0, W, W);
+
+      // Dark overlay solo
+      ctx.fillStyle = `rgba(0,0,0,${dark / 100})`;
+      ctx.fillRect(0, 0, W, W);
+
+      // Helper dibujar texto con rotación
+      const drawText = (txt: string, pos: string, color: string, size: number, bold: boolean, rot: number) => {
+        if (!txt.trim()) return;
+        const fs = size * scale;
+        ctx.font = `${bold ? 'bold' : 'normal'} ${fs}px Montserrat, Arial, sans-serif`;
+        ctx.textBaseline = 'top';
+        const [row, col, align] = posToCanvas(pos, W, ctx.measureText(txt).width, fs);
+        ctx.textAlign = align;
+        ctx.save();
+        ctx.translate(col, row);
+        ctx.rotate((rot * Math.PI) / 180);
+        // sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillText(txt, 2, 2);
+        // texto
+        ctx.fillStyle = color;
+        ctx.fillText(txt, 0, 0);
+        ctx.restore();
+      };
+
+      drawText(text1, text1Pos, text1Color, text1Size, text1Bold, text1Rot);
+      drawText(text2, text2Pos, text2Color, text2Size, text2Bold, text2Rot);
+
+      // Logo/imagen
+      if (logoImg && logo) {
+        const lW = logoSize * scale;
+        const lH = (logoImg.naturalHeight / logoImg.naturalWidth) * lW;
+        const [row, col] = posToCanvas(logoPos, W, lW, lH);
+        ctx.save();
+        const cx = col + lW / 2;
+        const cy = row + lH / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((logoRot * Math.PI) / 180);
+        ctx.drawImage(logoImg, -lW / 2, -lH / 2, lW, lH);
+        ctx.restore();
+      }
+    };
+
+    // Primero dibujamos la imagen de fondo
+    const bg = new Image();
+    bg.crossOrigin = 'anonymous';
+    bg.onload = () => {
+      ctx.drawImage(bg, 0, 0, W, W);
+      if (logo) {
+        const li = new Image();
+        li.crossOrigin = 'anonymous';
+        li.onload  = () => drawAll(li);
+        li.onerror = () => drawAll();
+        li.src = logo;
+      } else {
+        drawAll();
+      }
+    };
+    bg.onerror = () => {
+      ctx.fillStyle = '#1a1d27';
+      ctx.fillRect(0, 0, W, W);
+      drawAll();
+    };
+    bg.src = baseImage;
+  }, [baseImage, text1, text1Pos, text1Color, text1Size, text1Bold, text1Rot,
+      text2, text2Pos, text2Color, text2Size, text2Bold, text2Rot,
+      logo, logoPos, logoSize, logoRot, dark]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">👁 Preview en vivo</p>
+      <canvas
+        ref={canvasRef}
+        className="w-full rounded-xl border-2 border-indigo-600 shadow-lg"
+        style={{ aspectRatio: '1', imageRendering: 'auto' }}
+      />
+    </div>
+  );
+}
+
 const POS_CELLS: [string, string][] = [
   ['tl','↖'],['tc','↑'],['tr','↗'],
   ['ml','←'],['mc','·'],['mr','→'],
@@ -1040,21 +1162,25 @@ function PostCard({
   // ── AI Img: preview antes de guardar ──
   const [aiImgPreviewUrl, setAiImgPreviewUrl]   = useState('');
 
-  // ── Texto + Logo sobre imagen existente (solo admin) ──────────────────────
+  // ── Añadir texto o imagen sobre imagen existente (solo admin) ──────────────
   const [showTextLogo,    setShowTextLogo]    = useState(false);
   const [tlText1,         setTlText1]         = useState('');
   const [tlText1Pos,      setTlText1Pos]      = useState('bc');
   const [tlText1Color,    setTlText1Color]    = useState('#ffffff');
   const [tlText1Size,     setTlText1Size]     = useState(72);
   const [tlText1Bold,     setTlText1Bold]     = useState(true);
+  const [tlText1Rot,      setTlText1Rot]      = useState(0);
   const [tlText2,         setTlText2]         = useState('');
   const [tlText2Pos,      setTlText2Pos]      = useState('tc');
   const [tlText2Color,    setTlText2Color]    = useState('#ffffff');
   const [tlText2Size,     setTlText2Size]     = useState(48);
   const [tlText2Bold,     setTlText2Bold]     = useState(false);
+  const [tlText2Rot,      setTlText2Rot]      = useState(0);
   const [tlLogo,          setTlLogo]          = useState('');
   const [tlLogoPos,       setTlLogoPos]       = useState('tl');
   const [tlLogoSize,      setTlLogoSize]      = useState(180);
+  const [tlLogoRot,       setTlLogoRot]       = useState(0);
+  const [tlMode,          setTlMode]          = useState<'text'|'image'>('text');
   const [tlDark,          setTlDark]          = useState(0);
   const [tlLogoUploading, setTlLogoUploading] = useState(false);
   const [tlLoading,       setTlLoading]       = useState(false);
@@ -1340,14 +1466,17 @@ function PostCard({
           textColor:    tlText1Color,
           fontSize:     tlText1Size,
           fontWeight:   tlText1Bold ? 'bold' : 'normal',
+          textRotation: tlText1Rot,
           text2:        tlText2,
           text2Pos:     tlText2Pos,
           text2Color:   tlText2Color,
           text2Size:    tlText2Size,
           text2Weight:  tlText2Bold ? 'bold' : 'normal',
+          text2Rotation: tlText2Rot,
           logoUrl:      tlLogo,
           logoPos:      tlLogoPos,
           logoSize:     tlLogoSize,
+          logoRotation: tlLogoRot,
           overlayOpacity: tlDark / 100,
           img2Url:      '',
         }),
@@ -1717,12 +1846,12 @@ function PostCard({
                   className="pointer-events-auto bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
                 >🎨 Imagen IA</button>
               )}
-              {/* Texto + Logo sobre imagen existente — solo admin + con imagen */}
+              {/* Añadir texto o imagen — solo admin + con imagen */}
               {isAdmin && currentImage && !isScheduled && (
                 <button
                   onClick={() => { setShowTextLogo(v => !v); setShowAIImg(false); }}
-                  className="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-36 justify-center shadow-lg transition-colors"
-                >✍️ Texto + logo</button>
+                  className="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 w-40 justify-center shadow-lg transition-colors"
+                >✍️ Añadir texto o imagen</button>
               )}
             </div>
           )}
@@ -1892,134 +2021,165 @@ function PostCard({
         </div>
       )}
 
-      {/* ── Panel Texto + Logo sobre imagen existente (solo admin) ── */}
+      {/* ── Panel Añadir texto o imagen (solo admin) ── */}
       {showTextLogo && isAdmin && currentImage && !isScheduled && (
-        <div className="mx-4 mb-3 p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex flex-col gap-3 text-[11px]">
-          <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">✍️ Texto + Logo sobre imagen</span>
-
-          {/* Preview imagen actual */}
-          <img src={currentImage} alt="Base" className="w-full rounded-lg border border-indigo-200 object-cover max-h-48" />
-
-          {/* ── Texto 1 ── */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">📝 Texto 1</p>
-            <input value={tlText1} onChange={e => setTlText1(e.target.value)}
-              placeholder="ej: BARCELONASAIL"
-              className="w-full text-xs border border-indigo-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700" />
-            <div className="flex gap-2 items-start flex-wrap">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
-                <PosGrid value={tlText1Pos} onChange={setTlText1Pos} />
-              </div>
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-                <div className="flex gap-2 items-center flex-wrap">
-                  <label className="text-[8px] text-gray-400 font-bold uppercase">Color</label>
-                  <input type="color" value={tlText1Color} onChange={e => setTlText1Color(e.target.value)}
-                    className="w-7 h-7 rounded cursor-pointer border border-gray-200" />
-                  <label className="text-[8px] text-gray-400 font-bold uppercase ml-1">Tamaño</label>
-                  <input type="number" value={tlText1Size} onChange={e => setTlText1Size(Number(e.target.value))}
-                    min={16} max={200} step={4}
-                    className="w-14 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
-                </div>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={tlText1Bold} onChange={e => setTlText1Bold(e.target.checked)} className="rounded" />
-                  <span className="text-[9px] text-gray-500 font-bold uppercase">Negrita</span>
-                </label>
-              </div>
-            </div>
+        <div className="mx-4 mb-3 p-4 bg-gray-900 border border-indigo-700 rounded-xl flex flex-col gap-4 text-sm">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-indigo-300 uppercase tracking-widest">✍️ Añadir al post</span>
+            <button onClick={() => setShowTextLogo(false)} className="text-gray-400 hover:text-white text-lg font-black leading-none">✕</button>
           </div>
 
-          {/* ── Texto 2 ── */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">📝 Texto 2 (opcional)</p>
-            <input value={tlText2} onChange={e => setTlText2(e.target.value)}
-              placeholder="ej: Link en bio"
-              className="w-full text-xs border border-indigo-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700" />
-            <div className="flex gap-2 items-start flex-wrap">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
-                <PosGrid value={tlText2Pos} onChange={setTlText2Pos} />
-              </div>
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-                <div className="flex gap-2 items-center flex-wrap">
-                  <label className="text-[8px] text-gray-400 font-bold uppercase">Color</label>
-                  <input type="color" value={tlText2Color} onChange={e => setTlText2Color(e.target.value)}
-                    className="w-7 h-7 rounded cursor-pointer border border-gray-200" />
-                  <label className="text-[8px] text-gray-400 font-bold uppercase ml-1">Tamaño</label>
-                  <input type="number" value={tlText2Size} onChange={e => setTlText2Size(Number(e.target.value))}
-                    min={16} max={200} step={4}
-                    className="w-14 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
-                </div>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={tlText2Bold} onChange={e => setTlText2Bold(e.target.checked)} className="rounded" />
-                  <span className="text-[9px] text-gray-500 font-bold uppercase">Negrita</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Logo ── */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🏷️ Logo (URL o desde ordenador)</p>
-            <div className="flex gap-2 items-center">
-              <input value={tlLogo} onChange={e => setTlLogo(e.target.value)}
-                placeholder="https://... .png"
-                className="flex-1 text-xs border border-indigo-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700" />
-              <label className="cursor-pointer bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[10px] font-bold px-2 py-1.5 rounded-lg border border-indigo-200 flex items-center gap-1 shrink-0">
-                {tlLogoUploading ? '⏳' : '📁'}
-                <input type="file" accept="image/*" className="hidden" onChange={async e => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  setTlLogoUploading(true);
-                  try {
-                    const ts   = Date.now();
-                    const path = `logos/${clientId}_${ts}.png`;
-                    const { error } = await supabase.storage.from('post-images').upload(path, file, { upsert: true });
-                    if (error) throw error;
-                    const { data } = supabase.storage.from('post-images').getPublicUrl(path);
-                    setTlLogo(data.publicUrl);
-                  } catch { showToast('❌ Error subiendo logo', 'err'); }
-                  finally { setTlLogoUploading(false); }
-                }} />
-                Subir
-              </label>
-            </div>
-            {tlLogo && <img src={tlLogo} alt="Logo preview" className="h-10 object-contain rounded border border-indigo-200 bg-white p-1" />}
-            <div className="flex gap-2 items-start flex-wrap">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
-                <PosGrid value={tlLogoPos} onChange={setTlLogoPos} />
-              </div>
-              <div className="flex flex-col gap-1 justify-center mt-4">
-                <label className="text-[8px] text-gray-400 font-bold uppercase">Ancho px</label>
-                <input type="number" value={tlLogoSize} onChange={e => setTlLogoSize(Number(e.target.value))}
-                  min={40} max={600} step={10}
-                  className="w-20 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
-              </div>
-            </div>
-          </div>
-
-          {/* ── Oscuridad (opcional, 0 por defecto) ── */}
-          <div className="flex items-center gap-2">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Oscurecer</p>
-            <input type="range" min={0} max={70} step={5} value={tlDark} onChange={e => setTlDark(Number(e.target.value))}
-              className="flex-1 accent-indigo-600" />
-            <span className="text-[9px] text-gray-500 font-bold w-8 text-right">{tlDark}%</span>
-          </div>
-
-          {/* ── Botones ── */}
-          <div className="flex gap-2">
+          {/* Toggle Texto / Imagen */}
+          <div className="flex gap-1 bg-gray-800 p-1 rounded-xl">
             <button
-              onClick={handleTextLogo}
-              disabled={(!tlText1.trim() && !tlText2.trim() && !tlLogo) || tlLoading}
-              className="flex-1 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg text-[11px] font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              {tlLoading ? <><span className="animate-spin">⏳</span> Componiendo...</> : '💾 Guardar imagen'}
-            </button>
-            <button onClick={() => setShowTextLogo(false)}
-              className="px-3 py-1.5 text-gray-400 hover:text-gray-600 text-[11px] font-bold border border-gray-200 rounded-lg"
-            >Cancelar</button>
+              onClick={() => setTlMode('text')}
+              className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                tlMode === 'text'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >📝 Texto</button>
+            <button
+              onClick={() => setTlMode('image')}
+              className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                tlMode === 'image'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >🖼️ Imagen</button>
           </div>
-          <p className="text-[9px] text-indigo-400 text-center">Reemplaza la imagen actual del post con la versión compuesta</p>
+
+          {/* ── Preview en vivo ── */}
+          <TlPreviewCanvas
+            baseImage={currentImage}
+            text1={tlMode === 'text' ? tlText1 : ''} text1Pos={tlText1Pos} text1Color={tlText1Color}
+            text1Size={tlText1Size} text1Bold={tlText1Bold} text1Rot={tlText1Rot}
+            text2="" text2Pos="tc" text2Color="#fff" text2Size={48} text2Bold={false} text2Rot={0}
+            logo={tlMode === 'image' ? tlLogo : ''} logoPos={tlLogoPos} logoSize={tlLogoSize} logoRot={tlLogoRot}
+            dark={tlDark}
+          />
+
+          {/* ── Modo TEXTO ── */}
+          {tlMode === 'text' && (
+            <div className="flex flex-col gap-3">
+              <input value={tlText1} onChange={e => setTlText1(e.target.value)}
+                placeholder="Escribe el texto..."
+                className="w-full text-base font-bold text-gray-900 bg-white border-2 border-indigo-400 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400" />
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Posición */}
+                <div className="bg-gray-800 rounded-xl p-3 border border-gray-700">
+                  <p className="text-[9px] text-gray-400 font-black uppercase mb-1.5">Posición</p>
+                  <PosGrid value={tlText1Pos} onChange={setTlText1Pos} />
+                </div>
+                {/* Color + Tamaño + Negrita */}
+                <div className="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[9px] text-gray-400 font-black uppercase w-12">Color</label>
+                    <input type="color" value={tlText1Color} onChange={e => setTlText1Color(e.target.value)}
+                      className="w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-600 flex-1" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[9px] text-gray-400 font-black uppercase w-12">Tamaño</label>
+                    <input type="number" value={tlText1Size} onChange={e => setTlText1Size(Number(e.target.value))}
+                      min={16} max={300} step={4}
+                      className="flex-1 text-base font-black text-gray-900 bg-white border-2 border-gray-300 rounded-lg px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer mt-1">
+                    <input type="checkbox" checked={tlText1Bold} onChange={e => setTlText1Bold(e.target.checked)} className="w-4 h-4 rounded accent-indigo-500" />
+                    <span className="text-xs text-gray-300 font-black uppercase">Negrita</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Rotación */}
+              <div className="bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 flex items-center gap-3">
+                <label className="text-[9px] text-gray-400 font-black uppercase shrink-0">Rotar</label>
+                <input type="range" min={-180} max={180} step={5} value={tlText1Rot}
+                  onChange={e => setTlText1Rot(Number(e.target.value))}
+                  className="flex-1 accent-indigo-500" />
+                <span className="text-sm font-black text-indigo-300 w-12 text-right">{tlText1Rot}°</span>
+                <button onClick={() => setTlText1Rot(0)} className="text-gray-500 hover:text-gray-200 font-black text-base">↺</button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Modo IMAGEN ── */}
+          {tlMode === 'image' && (
+            <div className="flex flex-col gap-3">
+              {/* Subir o URL */}
+              <div className="flex gap-2">
+                <input value={tlLogo} onChange={e => setTlLogo(e.target.value)}
+                  placeholder="https://... .png o sube desde ordenador"
+                  className="flex-1 text-sm text-gray-900 bg-white border-2 border-indigo-400 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400" />
+                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-4 py-3 rounded-xl flex items-center gap-1 shrink-0 transition-colors shadow-md">
+                  {tlLogoUploading ? '⏳' : '📁 Subir'}
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    setTlLogoUploading(true);
+                    try {
+                      const ts   = Date.now();
+                      const path = `logos/${clientId}_${ts}.png`;
+                      const { error } = await supabase.storage.from('post-images').upload(path, file, { upsert: true });
+                      if (error) throw error;
+                      const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+                      setTlLogo(data.publicUrl);
+                      showToast('✅ Imagen subida', 'ok');
+                    } catch { showToast('❌ Error subiendo imagen', 'err'); }
+                    finally { setTlLogoUploading(false); }
+                  }} />
+                </label>
+              </div>
+
+              {tlLogo && (
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Posición */}
+                  <div className="bg-gray-800 rounded-xl p-3 border border-gray-700">
+                    <p className="text-[9px] text-gray-400 font-black uppercase mb-1.5">Posición</p>
+                    <PosGrid value={tlLogoPos} onChange={setTlLogoPos} />
+                  </div>
+                  {/* Ancho */}
+                  <div className="bg-gray-800 rounded-xl p-3 border border-gray-700 flex flex-col gap-2 justify-center">
+                    <label className="text-[9px] text-gray-400 font-black uppercase">Ancho px</label>
+                    <input type="number" value={tlLogoSize} onChange={e => setTlLogoSize(Number(e.target.value))}
+                      min={40} max={800} step={10}
+                      className="w-full text-base font-black text-gray-900 bg-white border-2 border-gray-300 rounded-lg px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  </div>
+                </div>
+              )}
+
+              {/* Rotación */}
+              {tlLogo && (
+                <div className="bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 flex items-center gap-3">
+                  <label className="text-[9px] text-gray-400 font-black uppercase shrink-0">Rotar</label>
+                  <input type="range" min={-180} max={180} step={5} value={tlLogoRot}
+                    onChange={e => setTlLogoRot(Number(e.target.value))}
+                    className="flex-1 accent-indigo-500" />
+                  <span className="text-sm font-black text-indigo-300 w-12 text-right">{tlLogoRot}°</span>
+                  <button onClick={() => setTlLogoRot(0)} className="text-gray-500 hover:text-gray-200 font-black text-base">↺</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Oscuridad (opcional) ── */}
+          <div className="bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 flex items-center gap-3">
+            <label className="text-[9px] text-gray-400 font-black uppercase shrink-0">Oscurecer</label>
+            <input type="range" min={0} max={70} step={5} value={tlDark} onChange={e => setTlDark(Number(e.target.value))}
+              className="flex-1 accent-indigo-500" />
+            <span className="text-sm font-black text-indigo-300 w-10 text-right">{tlDark}%</span>
+          </div>
+
+          {/* ── Guardar ── */}
+          <button
+            onClick={handleTextLogo}
+            disabled={(tlMode === 'text' ? !tlText1.trim() : !tlLogo) || tlLoading}
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+          >
+            {tlLoading ? <><span className="animate-spin inline-block">⏳</span> Componiendo...</> : '💾 Guardar en post'}
+          </button>
+          <p className="text-[9px] text-indigo-500 text-center">Se añade como nueva imagen en el carrusel del post</p>
         </div>
       )}
 

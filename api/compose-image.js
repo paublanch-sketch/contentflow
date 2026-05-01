@@ -23,12 +23,15 @@ module.exports = async function handler(req, res) {
     text2Size   = 48,
     text2Weight = 'bold',
     text2Font   = 'montserrat',
-    logoUrl     = '',             // URL logo PNG (opcional)
-    logoPos     = 'tl',
-    logoSize    = 180,            // px ancho máximo del logo
-    img2Url     = '',             // Segunda imagen (opcional)
-    img2Pos     = 'br',
-    img2Size    = 300,
+    logoUrl      = '',            // URL logo PNG (opcional)
+    logoPos      = 'tl',
+    logoSize     = 180,           // px ancho máximo del logo
+    logoRotation = 0,             // grados
+    img2Url      = '',            // Segunda imagen (opcional)
+    img2Pos      = 'br',
+    img2Size     = 300,
+    textRotation  = 0,            // rotación texto 1
+    text2Rotation = 0,            // rotación texto 2
     overlayOpacity = 0.35,        // Oscuridad sobre el fondo (0–1)
   } = req.body || {};
 
@@ -56,7 +59,7 @@ module.exports = async function handler(req, res) {
     // ── 3. Texto 1 con SVG ───────────────────────────────────────────────────
     if (text.trim()) {
       const svgBuf = Buffer.from(
-        await buildTextSVG(text, textPos, textColor, Number(fontSize), fontWeight, fontName)
+        await buildTextSVG(text, textPos, textColor, Number(fontSize), fontWeight, fontName, Number(textRotation))
       );
       composites.push({ input: svgBuf, top: 0, left: 0 });
     }
@@ -64,7 +67,7 @@ module.exports = async function handler(req, res) {
     // ── 3b. Texto 2 con SVG (opcional) ───────────────────────────────────────
     if (text2 && text2.trim()) {
       const svgBuf2 = Buffer.from(
-        await buildTextSVG(text2, text2Pos, text2Color, Number(text2Size), text2Weight, text2Font)
+        await buildTextSVG(text2, text2Pos, text2Color, Number(text2Size), text2Weight, text2Font, Number(text2Rotation))
       );
       composites.push({ input: svgBuf2, top: 0, left: 0 });
     }
@@ -200,7 +203,7 @@ async function buildFontFaceCSS(fontName) {
   return { css, family: `'${fontName}', DejaVu Sans, sans-serif` };
 }
 
-async function buildTextSVG(rawText, pos, color, fontSize, fontWeight, fontName = 'montserrat') {
+async function buildTextSVG(rawText, pos, color, fontSize, fontWeight, fontName = 'montserrat', rotation = 0) {
   const PAD          = 60;
   const maxWidth     = 1080 - PAD * 2;
   // Montserrat/Poppins son más anchas, Inter más estrecha
@@ -240,15 +243,17 @@ async function buildTextSVG(rawText, pos, color, fontSize, fontWeight, fontName 
     .map((ln, i) => `<tspan x="${x + dx}" ${i > 0 ? `dy="${lineH}"` : ''}>${esc(ln)}</tspan>`)
     .join('');
 
+  const rotAttr = rotation !== 0 ? ` transform="rotate(${rotation}, ${x}, ${y})"` : '';
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080">
   <defs><style>${css}</style></defs>
   <!-- sombra -->
-  <text x="${x + 2}" y="${y + 2}" text-anchor="${ax}"
+  <text x="${x + 2}" y="${y + 2}" text-anchor="${ax}"${rotAttr}
         font-family="${family}"
         font-size="${fontSize}" font-weight="${fontWeight}"
         fill="rgba(0,0,0,0.75)">${mkTspans(2)}</text>
   <!-- texto principal -->
-  <text x="${x}" y="${y}" text-anchor="${ax}"
+  <text x="${x}" y="${y}" text-anchor="${ax}"${rotAttr}
         font-family="${family}"
         font-size="${fontSize}" font-weight="${fontWeight}"
         fill="${esc(color)}">${mkTspans(0)}</text>
