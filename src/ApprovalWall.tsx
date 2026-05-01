@@ -961,7 +961,7 @@ function canvasDrawText(
   });
 }
 
-// ─── Grid de posición 3×3 ─────────────────────────────────────────────────────
+// ─── Grid de posición 5×3 (15 posiciones) ────────────────────────────────────
 // ─── Preview CSS puro — sin canvas, sin CORS ─────────────────────────────────
 type TlPreviewProps = {
   baseImage: string;
@@ -971,21 +971,79 @@ type TlPreviewProps = {
   overlayColor: string; overlayOpacity: number; // 0-100
 };
 
-// Mapea código de posición a estilos CSS absolutos
+// Mapea código de posición (15 posiciones) a estilos CSS absolutos
 function posToCSS(pos: string): React.CSSProperties {
-  const PAD = '5%';
+  const PAD   = '5%';
+  const TIGHT = '1.5%';
   const map: Record<string, React.CSSProperties> = {
-    tl: { top: PAD, left: PAD,   transform: 'none',                    textAlign: 'left'   },
-    tc: { top: PAD, left: '50%', transform: 'translateX(-50%)',         textAlign: 'center' },
-    tr: { top: PAD, right: PAD,  transform: 'none',                    textAlign: 'right'  },
-    ml: { top: '50%', left: PAD,   transform: 'translateY(-50%)',       textAlign: 'left'   },
-    mc: { top: '50%', left: '50%', transform: 'translate(-50%,-50%)',   textAlign: 'center' },
-    mr: { top: '50%', right: PAD,  transform: 'translateY(-50%)',       textAlign: 'right'  },
-    bl: { bottom: PAD, left: PAD,   transform: 'none',                  textAlign: 'left'   },
-    bc: { bottom: PAD, left: '50%', transform: 'translateX(-50%)',      textAlign: 'center' },
-    br: { bottom: PAD, right: PAD,  transform: 'none',                  textAlign: 'right'  },
+    // Fila muy arriba (tight)
+    t2l: { top: TIGHT, left: TIGHT,  transform: 'none',                   textAlign: 'left'   },
+    t2c: { top: TIGHT, left: '50%',  transform: 'translateX(-50%)',        textAlign: 'center' },
+    t2r: { top: TIGHT, right: TIGHT, transform: 'none',                   textAlign: 'right'  },
+    // Fila arriba
+    tl:  { top: PAD,   left: PAD,    transform: 'none',                   textAlign: 'left'   },
+    tc:  { top: PAD,   left: '50%',  transform: 'translateX(-50%)',        textAlign: 'center' },
+    tr:  { top: PAD,   right: PAD,   transform: 'none',                   textAlign: 'right'  },
+    // Fila centro
+    ml:  { top: '50%', left: PAD,    transform: 'translateY(-50%)',        textAlign: 'left'   },
+    mc:  { top: '50%', left: '50%',  transform: 'translate(-50%,-50%)',    textAlign: 'center' },
+    mr:  { top: '50%', right: PAD,   transform: 'translateY(-50%)',        textAlign: 'right'  },
+    // Fila abajo
+    bl:  { bottom: PAD,   left: PAD,   transform: 'none',                 textAlign: 'left'   },
+    bc:  { bottom: PAD,   left: '50%', transform: 'translateX(-50%)',      textAlign: 'center' },
+    br:  { bottom: PAD,   right: PAD,  transform: 'none',                 textAlign: 'right'  },
+    // Fila muy abajo (tight)
+    b2l: { bottom: TIGHT, left: TIGHT,  transform: 'none',                textAlign: 'left'   },
+    b2c: { bottom: TIGHT, left: '50%',  transform: 'translateX(-50%)',     textAlign: 'center' },
+    b2r: { bottom: TIGHT, right: TIGHT, transform: 'none',                textAlign: 'right'  },
   };
   return map[pos] ?? map['bc'];
+}
+
+// Posición del dot en el botón del grid (5×3)
+const DOT_OFFSET: Record<string, React.CSSProperties> = {
+  t2l: { top: 2,     left: 2   },
+  t2c: { top: 2,     left: '50%', transform: 'translateX(-50%)' },
+  t2r: { top: 2,     right: 2  },
+  tl:  { top: '22%', left: 2   },
+  tc:  { top: '22%', left: '50%', transform: 'translateX(-50%)' },
+  tr:  { top: '22%', right: 2  },
+  ml:  { top: '50%', left: 2,  transform: 'translateY(-50%)'   },
+  mc:  { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' },
+  mr:  { top: '50%', right: 2, transform: 'translateY(-50%)'   },
+  bl:  { bottom: '22%', left: 2  },
+  bc:  { bottom: '22%', left: '50%', transform: 'translateX(-50%)' },
+  br:  { bottom: '22%', right: 2 },
+  b2l: { bottom: 2,  left: 2   },
+  b2c: { bottom: 2,  left: '50%', transform: 'translateX(-50%)' },
+  b2r: { bottom: 2,  right: 2  },
+};
+
+const POS_15 = ['t2l','t2c','t2r','tl','tc','tr','ml','mc','mr','bl','bc','br','b2l','b2c','b2r'] as const;
+
+function PosGrid({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {POS_15.map(pos => (
+        <button key={pos} type="button" onClick={() => onChange(pos)}
+          title={pos}
+          className={`relative w-8 h-8 rounded-md border transition-all ${
+            value === pos
+              ? 'bg-violet-600 border-violet-400 shadow-md shadow-violet-900'
+              : 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500'
+          }`}
+        >
+          <div style={{
+            position: 'absolute',
+            width: 5, height: 5,
+            borderRadius: '50%',
+            backgroundColor: value === pos ? '#fff' : '#a78bfa',
+            ...DOT_OFFSET[pos],
+          }} />
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // Añade rotación al transform existente
@@ -1043,8 +1101,8 @@ function TlPreviewCSS({ baseImage, text1, text1Pos, text1Color, text1Size,
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">👁 Preview en vivo</p>
+    <div className="flex flex-col gap-1">
+      <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Preview</p>
       <div className="relative w-full rounded-xl border-2 border-indigo-600 shadow-lg overflow-hidden"
            style={{ aspectRatio: '1' }}>
         {/* Imagen de fondo */}
@@ -1062,25 +1120,6 @@ function TlPreviewCSS({ baseImage, text1, text1Pos, text1Color, text1Size,
         {/* Imagen overlay */}
         {logo && <img src={logo} alt="" style={logoStyle} />}
       </div>
-    </div>
-  );
-}
-
-const POS_CELLS: [string, string][] = [
-  ['tl','↖'],['tc','↑'],['tr','↗'],
-  ['ml','←'],['mc','·'],['mr','→'],
-  ['bl','↙'],['bc','↓'],['br','↘'],
-];
-function PosGrid({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="grid grid-cols-3 gap-0.5">
-      {POS_CELLS.map(([pos, icon]) => (
-        <button key={pos} type="button" onClick={() => onChange(pos)}
-          className={`w-6 h-6 text-[10px] rounded flex items-center justify-center font-bold transition-colors ${
-            value === pos ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-violet-100 hover:text-violet-700'
-          }`}
-        >{icon}</button>
-      ))}
     </div>
   );
 }

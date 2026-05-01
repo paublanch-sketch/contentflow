@@ -1,6 +1,6 @@
 // api/compose-image.js — Vercel Serverless Function
-// Composita: fondo Pollinations + oscuridad + texto + logo PNG + imagen extra
-// Requiere: npm install sharp
+// Composita: fondo + overlay color + texto (canvas, fonts reals) + logo PNG + imagen extra
+// Requiere: npm install sharp @napi-rs/canvas
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,11 +12,11 @@ module.exports = async function handler(req, res) {
   const {
     bgUrl,                        // URL imagen de fondo O base64 data:image/...
     text        = '',             // Texto 1
-    textPos     = 'bc',          // Posición: tl/tc/tr/ml/mc/mr/bl/bc/br
+    textPos     = 'bc',          // Posición: t2l/t2c/t2r/tl/tc/tr/ml/mc/mr/bl/bc/br/b2l/b2c/b2r
     textColor   = '#ffffff',
     fontSize    = 72,
     fontWeight  = 'bold',
-    fontName    = 'montserrat',   // 'montserrat' | 'inter' | 'poppins' | 'sans-serif'
+    fontName    = 'montserrat',   // 'montserrat' | 'inter' | 'poppins'
     text2       = '',             // Texto 2 (opcional)
     text2Pos    = 'tc',
     text2Color  = '#ffffff',
@@ -25,15 +25,15 @@ module.exports = async function handler(req, res) {
     text2Font   = 'montserrat',
     logoUrl      = '',            // URL logo PNG (opcional)
     logoPos      = 'tl',
-    logoSize     = 180,           // px ancho máximo del logo
-    logoRotation = 0,             // grados
-    img2Url      = '',            // Segunda imagen (opcional)
+    logoSize     = 180,
+    logoRotation = 0,
+    img2Url      = '',
     img2Pos      = 'br',
     img2Size     = 300,
-    textRotation  = 0,            // rotación texto 1
-    text2Rotation = 0,            // rotación texto 2
-    overlayOpacity = 0.35,        // Oscuridad sobre el fondo (0–1)
-    overlayColor  = '#000000',    // Color del overlay (hex)
+    textRotation  = 0,
+    text2Rotation = 0,
+    overlayOpacity = 0.35,        // 0–1
+    overlayColor   = '#000000',   // hex color del overlay
   } = req.body || {};
 
   if (!bgUrl) return res.status(400).json({ error: 'bgUrl es obligatorio' });
@@ -47,41 +47,46 @@ module.exports = async function handler(req, res) {
 
     const composites = [];
 
-    // ── 2. Capa de color para legibilidad ────────────────────────────────────
+    // ── 2. Capa de color (overlay) ───────────────────────────────────────────
     if (overlayOpacity > 0) {
       const alpha = Math.min(Math.round(overlayOpacity * 255), 255);
-      // Parsear color hex (#rrggbb)
-      const hex = (overlayColor || '#000000').replace('#', '');
-      const r   = parseInt(hex.slice(0, 2), 16) || 0;
-      const g   = parseInt(hex.slice(2, 4), 16) || 0;
-      const b   = parseInt(hex.slice(4, 6), 16) || 0;
-      const darkBuf = await sharp({
+      const hex   = (overlayColor || '#000000').replace('#', '');
+      const r     = parseInt(hex.slice(0, 2), 16) || 0;
+      const g     = parseInt(hex.slice(2, 4), 16) || 0;
+      const b     = parseInt(hex.slice(4, 6), 16) || 0;
+      const overlayBuf = await sharp({
         create: { width: 1080, height: 1080, channels: 4,
                   background: { r, g, b, alpha } },
       }).png().toBuffer();
-      composites.push({ input: darkBuf, top: 0, left: 0 });
+      composites.push({ input: overlayBuf, top: 0, left: 0 });
     }
 
-    // ── 3. Texto 1 con SVG ───────────────────────────────────────────────────
-    if (text.trim()) {
-      const svgBuf = Buffer.from(
-        await buildTextSVG(text, textPos, textColor, Number(fontSize), fontWeight, fontName, Number(textRotation))
-      );
-      composites.push({ input: svgBuf, top: 0, left: 0 });
+    // ── 3. Texto 1 con @napi-rs/canvas (fonts reals, sin librsvg) ────────────
+    if (text && text.trim()) {
+      try {
+        const textBuf = await buildTextLayer(
+          text, textPos, textColor,
+          Number(fontSize), fontWeight, fontName, Number(textRotation)
+        );
+        composites.push({ input: textBuf, top: 0, left: 0 });
+      } catch (e) { console.warn('[compose-image] text1 error:', e.message); }
     }
 
-    // ── 3b. Texto 2 con SVG (opcional) ───────────────────────────────────────
+    // ── 3b. Texto 2 ──────────────────────────────────────────────────────────
     if (text2 && text2.trim()) {
-      const svgBuf2 = Buffer.from(
-        await buildTextSVG(text2, text2Pos, text2Color, Number(text2Size), text2Weight, text2Font, Number(text2Rotation))
-      );
-      composites.push({ input: svgBuf2, top: 0, left: 0 });
+      try {
+        const textBuf2 = await buildTextLayer(
+          text2, text2Pos, text2Color,
+          Number(text2Size), text2Weight, text2Font, Number(text2Rotation)
+        );
+        composites.push({ input: textBuf2, top: 0, left: 0 });
+      } catch (e) { console.warn('[compose-image] text2 error:', e.message); }
     }
 
     // ── 4. Logo ──────────────────────────────────────────────────────────────
     if (logoUrl) {
       try {
-        const lBuf  = await fetchBuf(logoUrl);
+        const lBuf     = await fetchBuf(logoUrl);
         const lResized = await sharp(lBuf)
           .resize(Number(logoSize), Number(logoSize), { fit: 'inside' })
           .png().toBuffer();
@@ -94,7 +99,7 @@ module.exports = async function handler(req, res) {
     // ── 5. Imagen extra ───────────────────────────────────────────────────────
     if (img2Url) {
       try {
-        const i2Buf = await fetchBuf(img2Url);
+        const i2Buf     = await fetchBuf(img2Url);
         const i2Resized = await sharp(i2Buf)
           .resize(Number(img2Size), Number(img2Size), { fit: 'inside' })
           .png().toBuffer();
@@ -122,10 +127,7 @@ module.exports = async function handler(req, res) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Fetch con retry 429 — acepta URL normal O base64 data:image/...
-// Si es base64 lo decodifica directamente sin llamada de red (fix Pollinations IP)
 async function fetchBuf(url) {
-  // ── base64 enviado desde el cliente (browser ya fetcheó Pollinations) ──
   if (url && url.startsWith('data:')) {
     const comma = url.indexOf(',');
     if (comma !== -1) return Buffer.from(url.slice(comma + 1), 'base64');
@@ -133,33 +135,28 @@ async function fetchBuf(url) {
   }
 
   const MAX_RETRIES = 3;
-  const DELAYS      = [3000, 6000, 10000]; // ms entre intentos
+  const DELAYS      = [3000, 6000, 10000];
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let res;
     try {
-      res = await fetch(url, { signal: AbortSignal.timeout(8000) }); // 8s por intento
+      res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     } catch (e) {
-      // timeout o error de red
-      if (attempt < MAX_RETRIES) {
-        await new Promise(r => setTimeout(r, DELAYS[attempt]));
-        continue;
-      }
+      if (attempt < MAX_RETRIES) { await sleep(DELAYS[attempt]); continue; }
       throw new Error(`Timeout/red fetching image after ${MAX_RETRIES + 1} intentos`);
     }
-
     if (res.status === 429) {
-      if (attempt < MAX_RETRIES) {
-        await new Promise(r => setTimeout(r, DELAYS[attempt]));
-        continue;
-      }
-      throw new Error('Servicio de imágenes ocupado (429). Inténtalo en 30 segundos.');
+      if (attempt < MAX_RETRIES) { await sleep(DELAYS[attempt]); continue; }
+      throw new Error('Servicio de imágenes ocupado (429).');
     }
     if (!res.ok) throw new Error(`HTTP ${res.status} fetching image`);
     return Buffer.from(await res.arrayBuffer());
   }
 }
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ─── calcTL: posición top/left para logos e imágenes (9 posiciones) ──────────
 function calcTL(pos, cW, cH, eW = 0, eH = 0, pad = 40) {
   const half = (total, elem) => Math.max(0, Math.floor((total - elem) / 2));
   const M = {
@@ -177,52 +174,106 @@ function calcTL(pos, cW, cH, eW = 0, eH = 0, pad = 40) {
   return { top: Math.max(0, top), left: Math.max(0, left) };
 }
 
-// ─── Cache de fuentes Google (se cachean en memoria entre invocaciones warm) ──
-const _fontCache = {};
-const GOOGLE_FONTS = {
-  montserrat: 'https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459Wlhyw.woff2',
-  inter:      'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2',
-  poppins:    'https://fonts.gstatic.com/s/poppins/v20/pxiEyp8kv8JHgFVrJJfecg.woff2',
+// ─── Canvas text engine — usa @napi-rs/canvas (fonts reals, sin librsvg) ─────
+// Les fonts es descarreguen un cop i es guarden en memòria (Lambda warm reuse).
+
+const _fontRegistered = new Set();   // noms de família ja registrats
+const _fontBufCache   = {};          // nom → Buffer TTF
+
+const FONT_FAMILIES = {
+  montserrat: 'Montserrat',
+  inter:      'Inter',
+  poppins:    'Poppins',
 };
 
-async function loadFontBase64(name) {
-  if (_fontCache[name]) return _fontCache[name];
+// Descarrega el TTF de Google Fonts usant un UA antic (força format TTF)
+async function downloadTTF(family) {
+  if (_fontBufCache[family]) return _fontBufCache[family];
   try {
-    const url = GOOGLE_FONTS[name];
-    if (!url) return null;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    _fontCache[name] = buf.toString('base64');
-    return _fontCache[name];
-  } catch { return null; }
+    const cssUrl = `https://fonts.googleapis.com/css?family=${family}:400,700`;
+    const cssRes = await fetch(cssUrl, {
+      headers: { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; .NET CLR 1.1.4322)' },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!cssRes.ok) return null;
+    const css = await cssRes.text();
+    // Extreu la URL .ttf del @font-face
+    const match = css.match(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+\.ttf)\)/);
+    if (!match) { console.warn('[canvas] No TTF URL found for', family, css.slice(0, 300)); return null; }
+    const ttfRes = await fetch(match[1], { signal: AbortSignal.timeout(10000) });
+    if (!ttfRes.ok) return null;
+    const buf = Buffer.from(await ttfRes.arrayBuffer());
+    _fontBufCache[family] = buf;
+    return buf;
+  } catch (e) {
+    console.warn('[canvas] downloadTTF failed for', family, e.message);
+    return null;
+  }
 }
 
-// Fuentes soportadas — el cliente puede pasar 'montserrat' | 'inter' | 'poppins' | 'sans-serif'
-async function buildFontFaceCSS(fontName) {
-  const key = fontName?.toLowerCase();
-  if (!GOOGLE_FONTS[key]) return { css: '', family: 'DejaVu Sans, Liberation Sans, sans-serif' };
-  const b64 = await loadFontBase64(key);
-  if (!b64) return { css: '', family: 'DejaVu Sans, Liberation Sans, sans-serif' };
-  const format = key === 'inter' ? 'woff2' : 'woff2';
-  const css = `@font-face { font-family: '${fontName}'; src: url('data:font/woff2;base64,${b64}') format('${format}'); font-weight: 100 900; }`;
-  return { css, family: `'${fontName}', DejaVu Sans, sans-serif` };
+async function ensureFont(fontKey) {
+  const key    = (fontKey || 'montserrat').toLowerCase();
+  const family = FONT_FAMILIES[key];
+  if (!family) return 'sans-serif';
+  if (_fontRegistered.has(family)) return family;
+  try {
+    const { GlobalFonts } = require('@napi-rs/canvas');
+    const buf = await downloadTTF(family);
+    if (buf) {
+      GlobalFonts.register(buf, family);
+      _fontRegistered.add(family);
+      return family;
+    }
+  } catch (e) {
+    console.warn('[canvas] ensureFont error:', e.message);
+  }
+  return 'sans-serif';
 }
 
-async function buildTextSVG(rawText, pos, color, fontSize, fontWeight, fontName = 'montserrat', rotation = 0) {
-  const PAD          = 60;
-  const maxWidth     = 1080 - PAD * 2;
-  // Montserrat/Poppins son más anchas, Inter más estrecha
-  const charW        = fontName === 'inter' ? 0.50 : 0.58;
-  const charsPerLine = Math.max(1, Math.floor(maxWidth / (fontSize * charW)));
+// 15 posicions: t2l/t2c/t2r · tl/tc/tr · ml/mc/mr · bl/bc/br · b2l/b2c/b2r
+function textPosToXY(pos, W, H, fontSize, totalH) {
+  const PAD   = 60;
+  const TIGHT = 15;
+  const half  = (total, elem) => (total - elem) / 2;
+  const map = {
+    t2l: { align: 'left',   x: TIGHT,      y: TIGHT + fontSize           },
+    t2c: { align: 'center', x: W / 2,      y: TIGHT + fontSize           },
+    t2r: { align: 'right',  x: W - TIGHT,  y: TIGHT + fontSize           },
+    tl:  { align: 'left',   x: PAD,        y: PAD + fontSize             },
+    tc:  { align: 'center', x: W / 2,      y: PAD + fontSize             },
+    tr:  { align: 'right',  x: W - PAD,    y: PAD + fontSize             },
+    ml:  { align: 'left',   x: PAD,        y: half(H, totalH) + fontSize },
+    mc:  { align: 'center', x: W / 2,      y: half(H, totalH) + fontSize },
+    mr:  { align: 'right',  x: W - PAD,    y: half(H, totalH) + fontSize },
+    bl:  { align: 'left',   x: PAD,        y: H - PAD   - totalH + fontSize },
+    bc:  { align: 'center', x: W / 2,      y: H - PAD   - totalH + fontSize },
+    br:  { align: 'right',  x: W - PAD,    y: H - PAD   - totalH + fontSize },
+    b2l: { align: 'left',   x: TIGHT,      y: H - TIGHT - totalH + fontSize },
+    b2c: { align: 'center', x: W / 2,      y: H - TIGHT - totalH + fontSize },
+    b2r: { align: 'right',  x: W - TIGHT,  y: H - TIGHT - totalH + fontSize },
+  };
+  return map[pos] ?? map['bc'];
+}
 
-  // Wrap words into lines
-  const words = rawText.split(' ');
+async function buildTextLayer(rawText, pos, color, fontSize, fontWeight, fontName, rotation) {
+  const { createCanvas } = require('@napi-rs/canvas');
+  const family  = await ensureFont(fontName);
+  const W = 1080, H = 1080;
+
+  // Canvas temporal per mesurar text
+  const tmp = createCanvas(W, H);
+  const tmpCtx = tmp.getContext('2d');
+  const weight = (fontWeight === 'bold') ? 'bold' : 'normal';
+  tmpCtx.font = `${weight} ${fontSize}px "${family}", sans-serif`;
+
+  // Word wrap usant measureText (precís!)
+  const maxW = W - 120;
+  const words = String(rawText).split(' ');
   const lines = [];
   let cur = '';
   for (const w of words) {
-    const candidate = cur ? `${cur} ${w}` : w;
-    if (candidate.length <= charsPerLine) { cur = candidate; }
+    const test = cur ? `${cur} ${w}` : w;
+    if (tmpCtx.measureText(test).width <= maxW) { cur = test; }
     else { if (cur) lines.push(cur); cur = w; }
   }
   if (cur) lines.push(cur);
@@ -230,44 +281,33 @@ async function buildTextSVG(rawText, pos, color, fontSize, fontWeight, fontName 
   const lineH  = fontSize * 1.3;
   const totalH = lines.length * lineH;
 
-  const posMap = {
-    tl: { ax: 'start',  x: PAD,         y: PAD + fontSize           },
-    tc: { ax: 'middle', x: 540,          y: PAD + fontSize           },
-    tr: { ax: 'end',    x: 1080 - PAD,   y: PAD + fontSize           },
-    ml: { ax: 'start',  x: PAD,         y: (1080 - totalH) / 2 + fontSize },
-    mc: { ax: 'middle', x: 540,          y: (1080 - totalH) / 2 + fontSize },
-    mr: { ax: 'end',    x: 1080 - PAD,   y: (1080 - totalH) / 2 + fontSize },
-    bl: { ax: 'start',  x: PAD,         y: 1080 - PAD - totalH + fontSize  },
-    bc: { ax: 'middle', x: 540,          y: 1080 - PAD - totalH + fontSize  },
-    br: { ax: 'end',    x: 1080 - PAD,   y: 1080 - PAD - totalH + fontSize  },
-  };
-  const { ax, x, y } = posMap[pos] ?? posMap.bc;
+  // Canvas final transparent
+  const canvas = createCanvas(W, H);
+  const ctx    = canvas.getContext('2d');
+  ctx.font     = `${weight} ${fontSize}px "${family}", sans-serif`;
 
-  const { css, family } = await buildFontFaceCSS(fontName);
+  const { align, x, y } = textPosToXY(pos, W, H, fontSize, totalH);
+  ctx.textAlign = align;
 
-  const mkTspans = (dx) => lines
-    .map((ln, i) => `<tspan x="${x + dx}" ${i > 0 ? `dy="${lineH}"` : ''}>${esc(ln)}</tspan>`)
-    .join('');
+  // Rotació al voltant del punt d'ancoratge
+  if (rotation !== 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-x, -y);
+  }
 
-  const rotAttr = rotation !== 0 ? ` transform="rotate(${rotation}, ${x}, ${y})"` : '';
+  lines.forEach((ln, i) => {
+    const ly = y + i * lineH;
+    // Ombra
+    ctx.fillStyle = 'rgba(0,0,0,0.70)';
+    ctx.fillText(ln, x + 2, ly + 2);
+    // Text principal
+    ctx.fillStyle = color;
+    ctx.fillText(ln, x, ly);
+  });
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080">
-  <defs><style>${css}</style></defs>
-  <!-- sombra -->
-  <text x="${x + 2}" y="${y + 2}" text-anchor="${ax}"${rotAttr}
-        font-family="${family}"
-        font-size="${fontSize}" font-weight="${fontWeight}"
-        fill="rgba(0,0,0,0.75)">${mkTspans(2)}</text>
-  <!-- texto principal -->
-  <text x="${x}" y="${y}" text-anchor="${ax}"${rotAttr}
-        font-family="${family}"
-        font-size="${fontSize}" font-weight="${fontWeight}"
-        fill="${esc(color)}">${mkTspans(0)}</text>
-</svg>`;
-}
+  if (rotation !== 0) ctx.restore();
 
-function esc(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return canvas.encode('png');
 }
