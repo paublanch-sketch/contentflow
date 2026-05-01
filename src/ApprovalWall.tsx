@@ -1033,6 +1033,7 @@ function PostCard({
   const [composeImg2Pos, setComposeImg2Pos]     = useState('br');
   const [composeImg2Size, setComposeImg2Size]   = useState(300);
   const [composeDark, setComposeDark]           = useState(35);
+  const [composeFontName, setComposeFontName]   = useState('montserrat');
   const [composeLoading, setComposeLoading]     = useState(false);
   const [hashtagsLoading, setHashtagsLoading]   = useState(false);
 
@@ -1251,29 +1252,39 @@ function PostCard({
   // Limpiar polling al desmontar
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  // ── Helper: Compose (fondo Pollinations + texto + logo + img, server-side) ──
+  // ── Helper: Compose (fondo Pollinations + texto + img overlay, server-side) ──
   const handleCompose = async () => {
     if (!composeBg.trim() || composeLoading) return;
     setComposeLoading(true);
     try {
       const seed      = Math.floor(Math.random() * 999999);
       const bgEncoded = encodeURIComponent(composeBg.trim() + ', no text, no watermark, photorealistic, 8k');
-      const bgUrl     = `https://image.pollinations.ai/prompt/${bgEncoded}?width=1080&height=1080&nologo=true&seed=${seed}`;
-      showToast('⏳ Generando fondo IA... (puede tardar ~40s)', 'ok');
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${bgEncoded}?width=1080&height=1080&nologo=true&seed=${seed}`;
 
+      // ── Fetch el fondo en el BROWSER (IP del usuario, evita rate-limit en servidor) ──
+      showToast('⏳ Descargando fondo IA...', 'ok');
+      const bgRes = await fetch(pollinationsUrl);
+      if (!bgRes.ok) throw new Error(`Pollinations ${bgRes.status}`);
+      const bgBlob   = await bgRes.blob();
+      const bgBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(bgBlob);
+      });
+
+      showToast('⏳ Componiendo imagen...', 'ok');
       const res = await fetch('/api/compose-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bgUrl,
+          bgUrl:          bgBase64,           // base64 — el servidor no llama a Pollinations
           text:           composeText,
           textPos:        composeTextPos,
           textColor:      composeTextColor,
           fontSize:       composeTextSize,
           fontWeight:     composeTextBold ? 'bold' : 'normal',
-          logoUrl:        composeLogo,
-          logoPos:        composeLogoPos,
-          logoSize:       composeLogoSize,
+          fontName:       composeFontName,
           img2Url:        composeImg2,
           img2Pos:        composeImg2Pos,
           img2Size:       composeImg2Size,
@@ -2012,110 +2023,104 @@ function PostCard({
         </div>
       )}
 
-      {/* ── Panel Compose: fondo IA + texto + logo + img extra ── */}
+      {/* ── Panel Compose: fondo IA + texto + imagen overlay ── */}
       {showCompose && (isAdmin || canClientEdit) && !isScheduled && (
-        <div className="mx-4 mb-3 p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-xl flex flex-col gap-3 text-[11px]">
-          <span className="text-[10px] font-black text-fuchsia-700 uppercase tracking-widest">✍️ Texto + fondo IA</span>
-
-          {/* Fondo */}
-          <div className="flex flex-col gap-1">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🖼️ Descripción del fondo (IA)</p>
-            <textarea rows={2} value={composeBg} onChange={e => setComposeBg(e.target.value)}
-              placeholder="ej: luxury sailing yacht at sunset in Barcelona, cinematic, 8k"
-              className="w-full text-xs border border-fuchsia-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white placeholder-fuchsia-300 text-gray-700" />
+        <div className="mx-4 mb-3 p-4 bg-fuchsia-50 border border-fuchsia-200 rounded-xl flex flex-col gap-4 text-[11px]">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-fuchsia-700 uppercase tracking-widest">✍️ Fondo IA + Texto + Imagen</span>
+            <button onClick={() => setShowCompose(false)} className="text-gray-400 hover:text-gray-600 text-sm font-black">✕</button>
           </div>
 
-          {/* Texto principal */}
+          {/* ── Fondo IA ── */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">📝 Texto principal</p>
+            <p className="text-[9px] font-black text-fuchsia-600 uppercase tracking-widest">🎨 Fondo generado por IA</p>
+            <textarea rows={2} value={composeBg} onChange={e => setComposeBg(e.target.value)}
+              placeholder="ej: luxury sailing yacht at sunset, cinematic, 8k"
+              className="w-full text-xs border border-fuchsia-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white placeholder-fuchsia-300 text-gray-700" />
+          </div>
+
+          {/* ── Texto overlay ── */}
+          <div className="flex flex-col gap-2">
+            <p className="text-[9px] font-black text-fuchsia-600 uppercase tracking-widest">📝 Texto sobre la imagen</p>
             <input value={composeText} onChange={e => setComposeText(e.target.value)}
               placeholder="ej: BARCELONASAIL"
-              className="w-full text-xs border border-fuchsia-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white text-gray-700" />
-            <div className="flex gap-2 items-start flex-wrap">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
-                <PosGrid value={composeTextPos} onChange={setComposeTextPos} />
+              className="w-full text-xs border border-fuchsia-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white text-gray-700 font-bold" />
+
+            {/* Fuente + color + tamaño + negrita */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[8px] text-gray-400 font-black uppercase">Fuente</label>
+                <select value={composeFontName} onChange={e => setComposeFontName(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-300">
+                  <option value="montserrat">Montserrat</option>
+                  <option value="poppins">Poppins</option>
+                  <option value="inter">Inter</option>
+                </select>
               </div>
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-                <div className="flex gap-2 items-center">
-                  <label className="text-[8px] text-gray-400 font-bold uppercase">Color</label>
-                  <input type="color" value={composeTextColor} onChange={e => setComposeTextColor(e.target.value)}
-                    className="w-7 h-7 rounded cursor-pointer border border-gray-200" />
-                  <label className="text-[8px] text-gray-400 font-bold uppercase ml-2">Tamaño</label>
-                  <input type="number" value={composeTextSize} onChange={e => setComposeTextSize(Number(e.target.value))}
-                    min={20} max={200} step={4}
-                    className="w-14 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
-                </div>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={composeTextBold} onChange={e => setComposeTextBold(e.target.checked)}
-                    className="rounded" />
-                  <span className="text-[9px] text-gray-500 font-bold uppercase">Negrita</span>
-                </label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[8px] text-gray-400 font-black uppercase">Tamaño px</label>
+                <input type="number" value={composeTextSize} onChange={e => setComposeTextSize(Number(e.target.value))}
+                  min={20} max={200} step={4}
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-center bg-white" />
               </div>
+            </div>
+
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-[8px] text-gray-400 font-black uppercase">Color</label>
+                <input type="color" value={composeTextColor} onChange={e => setComposeTextColor(e.target.value)}
+                  className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200" />
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={composeTextBold} onChange={e => setComposeTextBold(e.target.checked)} className="rounded" />
+                <span className="text-[9px] text-gray-600 font-black uppercase">Negrita</span>
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[8px] text-gray-400 font-black uppercase">Posición del texto</p>
+              <PosGrid value={composeTextPos} onChange={setComposeTextPos} />
             </div>
           </div>
 
-          {/* Logo */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🏷️ Logo PNG (URL pública, opcional)</p>
-            <input value={composeLogo} onChange={e => setComposeLogo(e.target.value)}
-              placeholder="https://tudominio.com/logo.png"
-              className="w-full text-xs border border-fuchsia-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white text-gray-700" />
-            <div className="flex gap-2 items-start flex-wrap">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
-                <PosGrid value={composeLogoPos} onChange={setComposeLogoPos} />
-              </div>
-              <div className="flex flex-col gap-1 justify-center mt-4">
-                <label className="text-[8px] text-gray-400 font-bold uppercase">Ancho px</label>
-                <input type="number" value={composeLogoSize} onChange={e => setComposeLogoSize(Number(e.target.value))}
-                  min={40} max={600} step={10}
-                  className="w-20 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
-              </div>
-            </div>
-          </div>
-
-          {/* Imagen extra */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">🖼️ Imagen extra (URL, opcional)</p>
+          {/* ── Imagen overlay (opcional) ── */}
+          <div className="flex flex-col gap-2">
+            <p className="text-[9px] font-black text-fuchsia-600 uppercase tracking-widest">🖼️ Imagen encima (URL, opcional)</p>
             <input value={composeImg2} onChange={e => setComposeImg2(e.target.value)}
               placeholder="https://... .png/.jpg"
-              className="w-full text-xs border border-fuchsia-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white text-gray-700" />
-            <div className="flex gap-2 items-start flex-wrap">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-[8px] text-gray-400 font-bold uppercase">Posición</p>
-                <PosGrid value={composeImg2Pos} onChange={setComposeImg2Pos} />
+              className="w-full text-xs border border-fuchsia-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white text-gray-700" />
+            {composeImg2 && (
+              <div className="flex gap-3 items-start">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[8px] text-gray-400 font-black uppercase">Posición</p>
+                  <PosGrid value={composeImg2Pos} onChange={setComposeImg2Pos} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[8px] text-gray-400 font-black uppercase">Ancho px</label>
+                  <input type="number" value={composeImg2Size} onChange={e => setComposeImg2Size(Number(e.target.value))}
+                    min={40} max={800} step={20}
+                    className="w-20 text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-center bg-white" />
+                </div>
               </div>
-              <div className="flex flex-col gap-1 justify-center mt-4">
-                <label className="text-[8px] text-gray-400 font-bold uppercase">Ancho px</label>
-                <input type="number" value={composeImg2Size} onChange={e => setComposeImg2Size(Number(e.target.value))}
-                  min={40} max={800} step={20}
-                  className="w-20 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-center" />
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Oscuridad */}
-          <div className="flex items-center gap-2">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Oscuridad fondo</p>
+          {/* ── Oscuridad ── */}
+          <div className="flex items-center gap-3">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest shrink-0">Oscuridad</p>
             <input type="range" min={0} max={80} step={5} value={composeDark} onChange={e => setComposeDark(Number(e.target.value))}
               className="flex-1 accent-fuchsia-600" />
-            <span className="text-[9px] text-gray-500 font-bold w-8 text-right">{composeDark}%</span>
+            <span className="text-xs text-fuchsia-700 font-black w-8 text-right">{composeDark}%</span>
           </div>
 
-          {/* Botones */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleCompose}
-              disabled={!composeBg.trim() || composeLoading}
-              className="flex-1 py-1.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white rounded-lg text-[11px] font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              {composeLoading ? <><span className="animate-spin">⏳</span> Generando...</> : '✍️ Generar imagen'}
-            </button>
-            <button onClick={() => setShowCompose(false)}
-              className="px-3 py-1.5 text-gray-400 hover:text-gray-600 text-[11px] font-bold border border-gray-200 rounded-lg"
-            >Cancelar</button>
-          </div>
+          {/* ── Botón generar ── */}
+          <button
+            onClick={handleCompose}
+            disabled={!composeBg.trim() || composeLoading}
+            className="w-full py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 shadow-md transition-all"
+          >
+            {composeLoading ? <><span className="animate-spin inline-block">⏳</span> Generando...</> : '✍️ Generar imagen'}
+          </button>
         </div>
       )}
 
@@ -2171,17 +2176,26 @@ function PostCard({
                   onClick={async () => {
                     setAIImgLoading(true);
                     try {
-                      // Guardar URL directamente en el post (img tag la renderiza bien)
-                      const ts = Date.now();
-                      const urlWithTs = `${aiImgPreviewUrl}&_ts=${ts}`;
-                      const updatedUrls = imageUrls.length > 0 ? [...imageUrls, urlWithTs] : [urlWithTs];
-                      await onUpdatePost(post.id, { image_url: updatedUrls.length === 1 ? urlWithTs : JSON.stringify(updatedUrls) });
+                      // ── Fetch en el browser (IP del usuario, no del servidor) ──
+                      // luego subimos a Supabase → URL permanente, sin depender de Pollinations
+                      showToast('⏳ Descargando imagen...', 'ok');
+                      const res = await fetch(aiImgPreviewUrl);
+                      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                      const blob = await res.blob();
+                      const fileName = `ai/${post.client_id}/${post.id}-${Date.now()}.jpg`;
+                      const { data: upData, error: upErr } = await supabase.storage
+                        .from('post-images')
+                        .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
+                      if (upErr) throw new Error(upErr.message);
+                      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(fileName);
+                      const updatedUrls = imageUrls.length > 0 ? [...imageUrls, publicUrl] : [publicUrl];
+                      await onUpdatePost(post.id, { image_url: updatedUrls.length === 1 ? publicUrl : JSON.stringify(updatedUrls) });
                       setShowAIImg(false);
                       setAIImgPrompt('');
                       setAiImgPreviewUrl('');
-                      showToast('✅ Imagen guardada en el post', 'ok');
+                      showToast('✅ Imagen guardada en Supabase', 'ok');
                     } catch (e) {
-                      showToast(`❌ ${String(e).slice(0, 60)}`, 'err');
+                      showToast(`❌ ${String(e).slice(0, 80)}`, 'err');
                     } finally {
                       setAIImgLoading(false);
                     }
