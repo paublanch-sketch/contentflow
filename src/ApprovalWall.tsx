@@ -2319,10 +2319,12 @@ function PostCard({
           {(isAdmin || canClientEdit) && editingTags ? (
             <div className="flex flex-col gap-2">
               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Hashtags (con # separados por espacios)</p>
-              <input
-                className="w-full text-[11px] border border-[#52b788] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#52b788]/40"
+              <textarea
+                rows={3}
+                className="w-full text-sm text-gray-900 bg-white border-2 border-[#52b788] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#52b788]/40 resize-none placeholder-gray-400 leading-relaxed"
                 value={tagsDraft}
                 onChange={e => setTagsDraft(e.target.value)}
+                placeholder="#marketing #instagram #ejemplo"
                 autoFocus
               />
               <div className="flex gap-2 flex-wrap">
