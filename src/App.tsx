@@ -287,28 +287,28 @@ export default function App() {
 
       {/* ── Navbar admin ── */}
       {isAdmin ? (
-        <nav className="bg-[#1a1d27] border-b border-gray-800 p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
-          <div className="flex items-center gap-3">
-            <h1 className="font-black text-[#52b788] tracking-tighter uppercase text-lg shrink-0">
+        <nav className="bg-[#1a1d27] border-b border-gray-800 px-5 py-3.5 flex justify-between items-center sticky top-0 z-50 shadow-lg">
+          <div className="flex items-center gap-4">
+            <h1 className="font-black text-[#52b788] tracking-tighter uppercase text-xl shrink-0">
               ContentFlow
             </h1>
 
             {/* ── Buscador de cliente ── */}
             <div ref={searchRef} className="relative">
-              <div className="flex items-center border border-gray-700 rounded-lg overflow-hidden focus-within:border-[#52b788] bg-[#252836]">
-                <span className="pl-2.5 text-gray-500 text-sm">🔍</span>
+              <div className="flex items-center border border-gray-700 rounded-xl overflow-hidden focus-within:border-[#52b788] bg-[#252836]">
+                <span className="pl-3 text-gray-500 text-base">🔍</span>
                 <input
                   type="text"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
                   onFocus={() => setShowDrop(true)}
                   placeholder="Buscar cliente..."
-                  className="p-1.5 text-sm font-bold outline-none w-64 bg-[#252836] placeholder-gray-500 text-gray-100"
+                  className="p-2 text-sm font-bold outline-none w-72 bg-[#252836] placeholder-gray-500 text-gray-100"
                 />
                 {search && (
                   <button
                     onClick={() => { setSearch(''); setShowDrop(true); }}
-                    className="pr-2.5 text-gray-300 hover:text-gray-500 text-xs font-black"
+                    className="pr-3 text-gray-300 hover:text-gray-500 text-sm font-black"
                   >✕</button>
                 )}
               </div>
@@ -343,7 +343,7 @@ export default function App() {
             </div>
 
             {activeClient && (
-              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0 ${
+              <span className={`text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shrink-0 ${
                 activeClient.platform === 'LI'
                   ? 'bg-blue-100 text-blue-700'
                   : 'bg-pink-100 text-pink-700'
@@ -354,7 +354,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3">
             {posts.length > 0 && (
-              <div className="flex gap-3 text-[10px] font-bold uppercase tracking-widest">
+              <div className="flex gap-3 text-xs font-bold uppercase tracking-widest">
                 <span className="text-green-400">{scheduledCount}/12 publicados</span>
                 {approvedCount > 0 && (
                   <span className="text-amber-400">{approvedCount} listos para publicar</span>
@@ -367,7 +367,7 @@ export default function App() {
               <button
                 onClick={() => handleCreatePost('admin')}
                 disabled={creatingPost}
-                className="text-[10px] font-bold bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                className="text-xs font-bold bg-[#52b788] text-black px-4 py-2 rounded-lg hover:bg-[#40916c] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shrink-0"
               >
                 {creatingPost ? '...' : '＋ Crear post'}
               </button>
@@ -376,7 +376,7 @@ export default function App() {
             {activeClient && !shareMode && (
               <button
                 onClick={() => { setShareMode(true); setSelectedPosts(new Set()); }}
-                className="text-[10px] font-bold text-[#52b788] border border-[#52b788] px-2 py-0.5 rounded hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest hidden md:block"
+                className="text-xs font-bold text-[#52b788] border border-[#52b788] px-3 py-1.5 rounded-lg hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest hidden md:block"
               >
                 🔗 Enviar al cliente
               </button>
@@ -392,7 +392,7 @@ export default function App() {
                   setEmailBody(`Hola ${contactName},\n\nte envío el enlace para aprobar los posts:\n\n`);
                   setShowEmailModal(true);
                 }}
-                className="text-[10px] font-bold text-amber-400 border border-amber-700 px-2 py-0.5 rounded hover:bg-amber-900 hover:text-amber-200 transition-colors uppercase tracking-widest hidden md:block"
+                className="text-xs font-bold text-amber-400 border border-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-900 hover:text-amber-200 transition-colors uppercase tracking-widest hidden md:block"
               >
                 ✉️ Email cliente
               </button>
@@ -401,7 +401,7 @@ export default function App() {
             {/* ── Modo selección: generar enlace con posts elegidos ── */}
             {shareMode && activeClient && (
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">
+                <span className="text-xs text-amber-400 font-bold uppercase tracking-widest">
                   {selectedPosts.size === 0 ? 'Selecciona posts' : `${selectedPosts.size} seleccionados`}
                 </span>
                 <button
@@ -415,7 +415,7 @@ export default function App() {
                     setTimeout(() => setCopiedLink(false), 2500);
                   }}
                   disabled={selectedPosts.size === 0}
-                  className="text-[10px] font-bold bg-[#52b788] text-black px-2 py-0.5 rounded hover:bg-[#40916c] disabled:opacity-40 uppercase tracking-widest"
+                  className="text-xs font-bold bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] disabled:opacity-40 uppercase tracking-widest"
                 >
                   {copiedLink ? '✅ Copiado' : '📋 Copiar link'}
                 </button>
@@ -432,7 +432,7 @@ export default function App() {
                       setSelectedPosts(new Set(selectableNums));
                     }
                   }}
-                  className="text-[10px] font-bold text-gray-300 border border-gray-600 px-2 py-0.5 rounded hover:bg-gray-800 uppercase tracking-widest"
+                  className="text-xs font-bold text-gray-300 border border-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-800 uppercase tracking-widest"
                 >
                   {posts.filter(p => p.status !== 'approved' && p.status !== 'scheduled')
                        .every(p => selectedPosts.has(p.post_number))
@@ -440,7 +440,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => { setShareMode(false); setSelectedPosts(new Set()); }}
-                  className="text-[10px] font-bold text-gray-400 border border-gray-700 px-2 py-0.5 rounded hover:bg-gray-800 uppercase tracking-widest"
+                  className="text-xs font-bold text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-800 uppercase tracking-widest"
                 >✕ Cancelar</button>
               </div>
             )}
@@ -456,13 +456,13 @@ export default function App() {
               <button
                 onClick={() => setShowMcSettings(true)}
                 title="Ajustes Metricool"
-                className="text-[10px] font-bold text-purple-400 border border-purple-800 px-2 py-0.5 rounded hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
+                className="text-xs font-bold text-purple-400 border border-purple-800 px-3 py-1.5 rounded-lg hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
               >
                 📊 Metricool
               </button>
             )}
 
-            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest hidden md:block">
+            <span className="text-xs font-bold text-gray-600 uppercase tracking-widest hidden md:block">
               Interactivos
             </span>
           </div>
@@ -503,52 +503,61 @@ export default function App() {
               </p>
             </div>
             {isAdmin && (
-              <div className="text-right text-xs text-gray-400 leading-relaxed shrink-0 flex flex-col items-end gap-1">
-                {/* Contacto */}
-                {activeClient.contact && activeClient.contact !== '-' && (
-                  <div className="font-bold text-gray-400 text-[11px]">{activeClient.contact}</div>
-                )}
+              <div className="text-right text-sm text-gray-400 leading-relaxed shrink-0 flex flex-col items-end gap-1.5">
                 {/* Teléfono (campo notes si contiene número) */}
                 {activeClient.notes && activeClient.notes !== '-' && /\d{6,}/.test(activeClient.notes) && (
-                  <a href={`tel:${activeClient.notes.replace(/\s/g,'')}`} className="text-amber-400 hover:text-amber-300 font-bold">
+                  <a href={`tel:${activeClient.notes.replace(/\s/g,'')}`} className="text-amber-400 hover:text-amber-300 font-bold text-xs">
                     📞 {activeClient.notes}
                   </a>
                 )}
                 {/* Email */}
                 {activeClient.email && activeClient.email !== '-' && (
-                  <a href={`mailto:${activeClient.email}`} className="hover:text-[#2d6a4f] block">
+                  <a href={`mailto:${activeClient.email}`} className="hover:text-[#52b788] block text-xs">
                     ✉️ {activeClient.email}
                   </a>
                 )}
 
                 {/* ── Acceso portal cliente ── */}
-                <div className="mt-1 flex flex-col items-end gap-1 bg-[#252836] rounded-xl px-3 py-2 border border-gray-700">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Acceso cliente</span>
-                  {/* URL portal */}
-                  <button
-                    onClick={() => {
-                      const url = `https://contentflow-4wos.vercel.app/p/${activeClient.id}`;
-                      navigator.clipboard.writeText(url);
-                    }}
-                    title="Copiar URL del portal"
-                    className="text-[10px] text-blue-400 hover:text-blue-300 font-mono truncate max-w-[220px] text-right"
-                  >
-                    🔗 /p/{activeClient.id}
-                  </button>
+                <div className="mt-1 flex flex-col items-end gap-1.5 bg-[#252836] rounded-xl px-3 py-2.5 border border-gray-700">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Acceso cliente</span>
+                  {/* Nombre del contacto prominente */}
+                  {activeClient.contact && activeClient.contact !== '-' && (
+                    <span className="text-lg font-black text-white leading-tight">{activeClient.contact}</span>
+                  )}
+                  {/* URL portal — abre en nueva pestaña + botón copiar */}
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={`https://contentflow-4wos.vercel.app/p/${activeClient.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-400 hover:text-blue-300 font-mono underline underline-offset-2 truncate max-w-[200px] text-right"
+                    >
+                      🔗 /p/{activeClient.id}
+                    </a>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://contentflow-4wos.vercel.app/p/${activeClient.id}`);
+                      }}
+                      title="Copiar enlace"
+                      className="text-gray-500 hover:text-gray-300 transition-colors text-xs px-1"
+                    >
+                      📋
+                    </button>
+                  </div>
                   {/* Instagram @ usuario */}
                   {igUsername && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-gray-500">👤</span>
-                      <span className="text-[11px] text-pink-400 font-black">@{igUsername}</span>
+                      <span className="text-xs text-gray-500">👤</span>
+                      <span className="text-xs text-pink-400 font-black">@{igUsername}</span>
                     </div>
                   )}
                   {/* Contraseña IG */}
                   {igPassword && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-gray-500">🔒</span>
+                      <span className="text-xs text-gray-500">🔒</span>
                       <button
                         onClick={() => setShowIgPassword(p => !p)}
-                        className="text-[10px] font-mono text-amber-300 hover:text-amber-200"
+                        className="text-xs font-mono text-amber-300 hover:text-amber-200"
                         title="Mostrar/ocultar contraseña"
                       >
                         {showIgPassword ? igPassword : '••••••••'}
@@ -557,11 +566,21 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Perfil externo */}
+                {/* Perfil externo — botón destacado Instagram / LinkedIn */}
                 {activeClient.profile_url && activeClient.profile_url !== '-' && (
-                  <a href={activeClient.profile_url} target="_blank" rel="noopener noreferrer"
-                     className="text-blue-500 hover:underline text-[10px]">
-                    Ver perfil →
+                  <a
+                    href={activeClient.profile_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`mt-1 flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md hover:scale-105 active:scale-95 ${
+                      activeClient.platform === 'IG'
+                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white hover:from-purple-500 hover:via-pink-500 hover:to-orange-400'
+                        : 'bg-blue-600 text-white hover:bg-blue-500'
+                    }`}
+                  >
+                    {activeClient.platform === 'IG' ? '📸' : '💼'}
+                    Ver perfil de {activeClient.platform === 'IG' ? 'Instagram' : 'LinkedIn'}
+                    <span className="opacity-75">→</span>
                   </a>
                 )}
               </div>

@@ -278,7 +278,7 @@ En Clínicas FAMED te hacemos una valoración personalizada para saber si eres c
     post_number: 11,
     platform: 'IG',
     headline_visual: '¿ENTRENAS PERO ALGO NO FUNCIONA BIEN?',
-    visual_prompt: '',
+    visual_prompt: 'https://www.canva.com/d/vOXwY5hfh5UT-zs',
     copy: `Empiezas la temporada de deporte con todo… y a las pocas semanas, el cuerpo dice stop. ⚠️
 
 La rodilla que molesta. El isquio que tira. El pie que duele después de correr.
@@ -305,7 +305,7 @@ Porque el mejor tratamiento es el que evita que llegues a lesionarte.
     post_number: 12,
     platform: 'IG',
     headline_visual: 'TU SALUD, NUESTRA PRIORIDAD — Pide tu cita hoy',
-    visual_prompt: '',
+    visual_prompt: 'https://www.canva.com/d/8gVNONCr2v2HGYJ',
     copy: `En Clínicas FAMED no esperamos a que el problema sea grande para ayudarte. 💙
 
 Estamos aquí desde el principio: para escucharte, diagnosticarte y diseñar el tratamiento que realmente necesitas.
