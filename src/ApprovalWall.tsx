@@ -1124,6 +1124,83 @@ function TlPreviewCSS({ baseImage, text1, text1Pos, text1Color, text1Size,
   );
 }
 
+// ─── Composició client-side: text + overlay sobre imatge ─────────────────────
+// Usem el Canvas del browser (API nativa del navegador, gratuïta).
+// Les imatges es carreguen via blob → objectURL per evitar CORS taint.
+// Les fonts vénen de Google Fonts (ja carregades a index.html).
+function drawTextOnCtx(
+  ctx: CanvasRenderingContext2D,
+  text: string, pos: string, color: string, fontSize: number,
+  bold: boolean, fontName: string, rotation: number
+) {
+  const W = 1080, H = 1080, PAD = 60, TIGHT = 15;
+  const weight = bold ? 'bold' : 'normal';
+  ctx.font = `${weight} ${fontSize}px ${FONT_CSS[fontName] ?? FONT_CSS.system}`;
+  ctx.textBaseline = 'top';
+
+  // Word wrap precís via measureText
+  const maxW = W - PAD * 2;
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of text.split(' ')) {
+    const test = cur ? `${cur} ${w}` : w;
+    if (ctx.measureText(test).width <= maxW) { cur = test; }
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+
+  const lineH  = fontSize * 1.3;
+  const totalH = lines.length * lineH;
+  const half   = (a: number, b: number) => (a - b) / 2;
+
+  const posMap: Record<string, [CanvasTextAlign, number, number]> = {
+    t2l: ['left',   TIGHT,   TIGHT],
+    t2c: ['center', W/2,     TIGHT],
+    t2r: ['right',  W-TIGHT, TIGHT],
+    tl:  ['left',   PAD,     PAD],
+    tc:  ['center', W/2,     PAD],
+    tr:  ['right',  W-PAD,   PAD],
+    ml:  ['left',   PAD,     half(H, totalH)],
+    mc:  ['center', W/2,     half(H, totalH)],
+    mr:  ['right',  W-PAD,   half(H, totalH)],
+    bl:  ['left',   PAD,     H - PAD - totalH],
+    bc:  ['center', W/2,     H - PAD - totalH],
+    br:  ['right',  W-PAD,   H - PAD - totalH],
+    b2l: ['left',   TIGHT,   H - TIGHT - totalH],
+    b2c: ['center', W/2,     H - TIGHT - totalH],
+    b2r: ['right',  W-TIGHT, H - TIGHT - totalH],
+  };
+  const [align, x, y] = posMap[pos] ?? posMap['bc'];
+  ctx.textAlign = align;
+
+  if (rotation !== 0) {
+    ctx.save();
+    ctx.translate(x, y + totalH / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-x, -(y + totalH / 2));
+  }
+  lines.forEach((ln, i) => {
+    const ly = y + i * lineH;
+    ctx.fillStyle = 'rgba(0,0,0,0.70)';
+    ctx.fillText(ln, x + 2, ly + 2);
+    ctx.fillStyle = color;
+    ctx.fillText(ln, x, ly);
+  });
+  if (rotation !== 0) ctx.restore();
+}
+
+async function loadImgFromUrl(url: string): Promise<HTMLImageElement> {
+  const resp    = await fetch(url);
+  const blob    = await resp.blob();
+  const objUrl  = URL.createObjectURL(blob);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload  = () => { URL.revokeObjectURL(objUrl); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('Image load failed')); };
+    img.src = objUrl;
+  });
+}
+
 // ─── Tarjeta de post ──────────────────────────────────────────────────────────
 function PostCard({
   post, allPosts, clientId, clientName, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
@@ -1464,67 +1541,82 @@ function PostCard({
     }
   };
 
-  // ── Helper: Texto + Logo sobre imagen existente (solo admin) ────────────────
+  // ── Composició client-side: text + overlay sobre imatge existent ────────────
+  // Tot al browser: cap servidor, cap libreria externa, fonts de Google Fonts.
   const handleTextLogo = async () => {
     const srcUrl = imageUrls[safeIdx];
     if (!srcUrl || tlLoading) return;
     setTlLoading(true);
     try {
-      showToast('⏳ Componiendo texto + logo...', 'ok');
-      // Quitar solo cache-busters (?v= y &_ts=), mantener params de Pollinations
-      let cleanUrl = srcUrl;
-      try {
-        const u = new URL(srcUrl);
-        u.searchParams.delete('v');
-        u.searchParams.delete('_ts');
-        cleanUrl = u.toString();
-      } catch { cleanUrl = srcUrl; }
-      const res = await fetch('/api/compose-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bgUrl:        cleanUrl,
-          text:         tlMode === 'text' ? tlText1 : '',
-          textPos:      tlText1Pos,
-          textColor:    tlText1Color,
-          fontSize:     tlText1Size,
-          fontWeight:   tlText1Bold ? 'bold' : 'normal',
-          fontName:     tlText1Font === 'system' ? 'montserrat' : tlText1Font,
-          textRotation: tlText1Rot,
-          text2:        tlMode === 'text' ? tlText2 : '',
-          text2Pos:     tlText2Pos,
-          text2Color:   tlText2Color,
-          text2Size:    tlText2Size,
-          text2Weight:  tlText2Bold ? 'bold' : 'normal',
-          text2Font:    tlText1Font === 'system' ? 'montserrat' : tlText1Font,
-          text2Rotation: tlText2Rot,
-          logoUrl:      tlMode === 'image' ? tlLogo : '',
-          logoPos:      tlLogoPos,
-          logoSize:     tlLogoSize,
-          logoRotation: tlLogoRot,
-          overlayOpacity: tlDark / 100,
-          overlayColor:   tlOverlayColor,
-          img2Url:      '',
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
+      showToast('⏳ Preparant imatge...', 'ok');
+
+      // 1. Carrega imatge de fons com blob (evita CORS taint al canvas)
+      const bgImg = await loadImgFromUrl(srcUrl);
+
+      // 2. Canvas 1080×1080 (API nativa del browser, gratuïta)
+      const cv  = document.createElement('canvas');
+      cv.width  = 1080;
+      cv.height = 1080;
+      const ctx = cv.getContext('2d')!;
+
+      // 3. Fons
+      ctx.drawImage(bgImg, 0, 0, 1080, 1080);
+
+      // 4. Overlay de color
+      if (tlDark > 0) {
+        ctx.fillStyle = hexToRgba(tlOverlayColor, tlDark);
+        ctx.fillRect(0, 0, 1080, 1080);
       }
-      const blob     = await res.blob();
+
+      // 5. Text (mode text)
+      if (tlMode === 'text' && tlText1.trim()) {
+        drawTextOnCtx(ctx, tlText1, tlText1Pos, tlText1Color, tlText1Size, tlText1Bold, tlText1Font, tlText1Rot);
+      }
+
+      // 6. Logo / Imatge overlay (mode image)
+      if (tlMode === 'image' && tlLogo) {
+        const logoImg = await loadImgFromUrl(tlLogo);
+        const scale   = Math.min(tlLogoSize / logoImg.width, tlLogoSize / logoImg.height);
+        const dW = logoImg.width  * scale;
+        const dH = logoImg.height * scale;
+        const PAD = 40, W = 1080, H = 1080;
+        const lp: Record<string, [number, number]> = {
+          tl:[PAD,PAD], tc:[(W-dW)/2,PAD], tr:[W-dW-PAD,PAD],
+          ml:[PAD,(H-dH)/2], mc:[(W-dW)/2,(H-dH)/2], mr:[W-dW-PAD,(H-dH)/2],
+          bl:[PAD,H-dH-PAD], bc:[(W-dW)/2,H-dH-PAD], br:[W-dW-PAD,H-dH-PAD],
+        };
+        const [lx, ly] = lp[tlLogoPos] ?? [PAD, PAD];
+        if (tlLogoRot !== 0) {
+          ctx.save();
+          ctx.translate(lx + dW/2, ly + dH/2);
+          ctx.rotate((tlLogoRot * Math.PI) / 180);
+          ctx.drawImage(logoImg, -dW/2, -dH/2, dW, dH);
+          ctx.restore();
+        } else {
+          ctx.drawImage(logoImg, lx, ly, dW, dH);
+        }
+      }
+
+      // 7. Exportar PNG
+      const pngBlob = await new Promise<Blob>((res, rej) =>
+        cv.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
+      );
+
+      // 8. Upload a Supabase
       const ts       = Date.now();
       const fileName = `${clientId}/${post.id}_tl_${ts}.png`;
       const { error } = await supabase.storage
         .from('post-images')
-        .upload(fileName, blob, { upsert: true, contentType: 'image/png' });
+        .upload(fileName, pngBlob, { upsert: true, contentType: 'image/png' });
       if (error) throw error;
+
       const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
       const newUrl   = `${data.publicUrl}?v=${ts}`;
       const updated  = [...imageUrls];
-      updated[safeIdx] = newUrl;           // reemplaza el slide actual
+      updated[safeIdx] = newUrl;
       await onUpdatePost(post.id, { image_url: serializeImageUrls(updated) });
       setShowTextLogo(false);
-      showToast('✅ Imagen guardada con texto y logo', 'ok');
+      showToast('✅ Imatge guardada!', 'ok');
     } catch (e) {
       showToast(`❌ Error: ${String(e).slice(0, 80)}`, 'err');
     } finally {
