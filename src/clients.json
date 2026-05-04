@@ -494,19 +494,6 @@
     "notes": "Pablo dice que el cliente ha llamado porque no se publica y que es muy majo"
   },
   {
-    "id": "pinturas-muse",
-    "name": "HUGO SAIZ SALAMANCA",
-    "platform": "LI",
-    "estado": "Aprobado",
-    "stage": "12 Post hechos para J2",
-    "tecnico": "Daniel",
-    "contact": "Hugo",
-    "email": "info@musebikes.com",
-    "profile_url": "https://www.linkedin.com/company/pinturas-muse/posts",
-    "folder": "HUGO SAIZ SALAMANCA",
-    "notes": "Posts J2 insertados via script. Ver hugo-saiz-salamanca para referencia."
-  },
-  {
     "id": "indisi-group-sl",
     "name": "INDISI GROUP SL",
     "platform": "IG",
