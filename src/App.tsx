@@ -1,5 +1,6 @@
 // ARCHIVO: src/App.tsx
 import { useState, useEffect, useRef } from 'react';
+import logoInteractivos from './assets/logo-interactivos.png';
 import ApprovalWall, { MetricoolSettingsModal } from './ApprovalWall';
 import AdminLogin from './AdminLogin';
 import IgCallback from './IgCallback';
@@ -731,9 +732,7 @@ export default function App() {
       {isAdmin ? (
         <nav className="bg-[#1a1d27] border-b border-gray-800 px-5 py-3.5 flex justify-between items-center sticky top-0 z-50 shadow-lg">
           <div className="flex items-center gap-4">
-            <h1 className="font-black text-[#52b788] tracking-tighter uppercase text-xl shrink-0">
-              ContentFlow
-            </h1>
+            <img src={logoInteractivos} alt="Interactivos" className="h-7 w-auto shrink-0 object-contain" />
 
             {/* ── Buscador de cliente ── */}
             <div ref={searchRef} className="relative">
@@ -912,17 +911,17 @@ export default function App() {
               </button>
             )}
 
-            <span className="text-xs font-bold text-gray-600 uppercase tracking-widest hidden md:block">
-              Interactivos
-            </span>
           </div>
         </nav>
       ) : (
         /* ── Navbar cliente ── */
         <nav className="bg-white border-b p-4 flex items-center justify-between sticky top-0 z-50 shadow-sm px-6">
-          <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-xl italic">
-            Portal de Aprobación
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src={logoInteractivos} alt="Interactivos" className="h-10 w-auto object-contain" />
+            <h1 className="font-black text-[#2d6a4f] tracking-tighter uppercase text-xl italic">
+              Portal de Aprobación
+            </h1>
+          </div>
           {isClientPortal && clientId && (
             <button
               onClick={() => handleCreatePost('client')}
