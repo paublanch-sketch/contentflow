@@ -1847,7 +1847,7 @@ function PostCard({
 
       {/* Imagen / Carrusel */}
       <div className="flex flex-col border-b border-gray-100">
-        <div className="aspect-square bg-gray-50 flex items-center justify-center relative group">
+        <div className={`${post.platform === 'IG' ? 'aspect-[4/5]' : 'aspect-square'} bg-gray-50 flex items-center justify-center relative group`}>
           {uploadingId === post.id
             ? <Loader2 className="animate-spin text-[#2d6a4f]" />
             : currentImage
@@ -2912,11 +2912,19 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isC
   return (
     <div className="space-y-12">
       {/* Posts activos */}
-      {activePosts.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
-          {activePosts.map(post => <PostCard {...cardProps(post)} />)}
-        </div>
-      )}
+      {activePosts.length > 0 && (() => {
+        const primaryPlatform = activePosts[0]?.platform ?? 'IG';
+        const gridCols = primaryPlatform === 'FB'
+          ? 'grid-cols-1 md:grid-cols-2'
+          : primaryPlatform === 'LI'
+          ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+          : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+        return (
+          <div className={`grid ${gridCols} gap-8 text-left`}>
+            {activePosts.map(post => <PostCard {...cardProps(post)} />)}
+          </div>
+        );
+      })()}
 
       {/* Sección Publicados */}
       {publishedPosts.length > 0 && (
@@ -2931,7 +2939,7 @@ export default function ApprovalWall({ posts, clientId, clientName, isAdmin, isC
             </div>
             <div className="flex-1 h-px bg-green-200" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left opacity-80">
+          <div className={`grid ${(publishedPosts[0]?.platform === 'FB') ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'} gap-8 text-left opacity-80`}>
             {publishedPosts.map(post => <PostCard {...cardProps(post)} />)}
           </div>
         </div>

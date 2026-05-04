@@ -730,11 +730,13 @@ export default function App() {
 
       {/* ── Navbar admin ── */}
       {isAdmin ? (
-        <nav className="bg-[#1a1d27] border-b border-gray-800 px-5 py-3.5 flex justify-between items-center sticky top-0 z-50 shadow-lg">
+        <nav className="bg-[#1a1d27] border-b border-gray-800 px-5 py-2.5 flex flex-col gap-2 sticky top-0 z-50 shadow-lg">
+
+          {/* ── Fila 1: Logo + Buscador + Badges plataforma ── */}
           <div className="flex items-center gap-4">
             <img src={logoInteractivos} alt="Interactivos" className="h-7 w-auto shrink-0 object-contain" />
 
-            {/* ── Buscador de cliente ── */}
+            {/* Buscador */}
             <div ref={searchRef} className="relative">
               <div className="flex items-center border border-gray-700 rounded-xl overflow-hidden focus-within:border-[#52b788] bg-[#252836]">
                 <span className="pl-3 text-gray-500 text-base">🔍</span>
@@ -744,7 +746,7 @@ export default function App() {
                   onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
                   onFocus={() => setShowDrop(true)}
                   placeholder="Buscar cliente..."
-                  className="p-2 text-sm font-bold outline-none w-72 bg-[#252836] placeholder-gray-500 text-gray-100"
+                  className="p-2 text-sm font-bold outline-none w-64 bg-[#252836] placeholder-gray-500 text-gray-100"
                 />
                 {search && (
                   <button
@@ -772,7 +774,6 @@ export default function App() {
                     >
                       <PlatformBadge p={c.platform} small />
                       <span className="text-sm font-bold truncate">{c.name}</span>
-                      {/* Indicar plataformas extra */}
                       {(platformsExtra[c.id] ?? []).map((ep, i) => (
                         <PlatformBadge key={i} p={ep} small />
                       ))}
@@ -785,132 +786,152 @@ export default function App() {
               )}
             </div>
 
-            {/* Badges de plataforma del cliente activo */}
+            {/* Badges plataforma del cliente activo */}
             {activeClient && clientPlatforms.map((p, i) => (
               <PlatformBadge key={i} p={p} />
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            {posts.length > 0 && (
-              <div className="flex gap-3 text-xs font-bold uppercase tracking-widest">
-                <span className="text-green-400">{scheduledCount}/12 publicados</span>
-                {approvedCount > 0 && (
-                  <span className="text-amber-400">{approvedCount} listos para publicar</span>
-                )}
-              </div>
-            )}
+          {/* ── Fila 2: Stats + Botones de acción ── */}
+          <div className="flex items-center justify-between gap-2">
 
-            {/* ── Botón Añadir Cliente ── */}
-            {isAdmin && (
-              <button
-                onClick={() => setShowAddClientModal(true)}
-                className="text-xs font-bold text-[#52b788] border border-[#52b788] px-3 py-1.5 rounded-lg hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest shrink-0"
-              >
-                ＋ Cliente
-              </button>
-            )}
+            {/* Stats publicación */}
+            <div className="flex items-center gap-3">
+              {posts.length > 0 && (
+                <>
+                  <span className="text-xs font-bold uppercase tracking-widest text-green-400">
+                    {scheduledCount}/12 publicados
+                  </span>
+                  {approvedCount > 0 && (
+                    <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
+                      {approvedCount} listos
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
 
-            {/* ── Botón Crear post ── */}
-            {isAdmin && clientId && (
-              <button
-                onClick={() => handleCreatePost('admin')}
-                disabled={creatingPost}
-                className="text-xs font-bold bg-[#52b788] text-black px-4 py-2 rounded-lg hover:bg-[#40916c] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shrink-0"
-              >
-                {creatingPost ? '...' : '＋ Crear post'}
-              </button>
-            )}
+            {/* Botones */}
+            <div className="flex items-center gap-2">
 
-            {activeClient && !shareMode && (
-              <button
-                onClick={() => { setShareMode(true); setSelectedPosts(new Set()); }}
-                className="text-xs font-bold text-[#52b788] border border-[#52b788] px-3 py-1.5 rounded-lg hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest hidden md:block"
-              >
-                🔗 Enviar al cliente
-              </button>
-            )}
+              {/* Modo selección activo */}
+              {shareMode && activeClient ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-amber-400 font-bold uppercase tracking-widest">
+                    {selectedPosts.size === 0 ? 'Selecciona posts' : `${selectedPosts.size} seleccionados`}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const base = `https://contentflow-4wos.vercel.app/p/${activeClient.id}`;
+                      const url = selectedPosts.size > 0
+                        ? `${base}?show=${[...selectedPosts].sort((a,b)=>a-b).join(',')}`
+                        : base;
+                      navigator.clipboard.writeText(url);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2500);
+                    }}
+                    disabled={selectedPosts.size === 0}
+                    className="text-xs font-bold bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] disabled:opacity-40 uppercase tracking-widest"
+                  >
+                    {copiedLink ? '✅ Copiado' : '📋 Copiar link'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const selectableNums = posts
+                        .filter(p => p.status !== 'approved' && p.status !== 'scheduled')
+                        .map(p => p.post_number);
+                      const allSelected = selectableNums.every(n => selectedPosts.has(n));
+                      if (allSelected) setSelectedPosts(new Set());
+                      else setSelectedPosts(new Set(selectableNums));
+                    }}
+                    className="text-xs font-bold text-gray-300 border border-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-800 uppercase tracking-widest"
+                  >
+                    {posts.filter(p => p.status !== 'approved' && p.status !== 'scheduled')
+                         .every(p => selectedPosts.has(p.post_number))
+                      ? '☐ Deselec. todos' : '☑ Selec. todos'}
+                  </button>
+                  <button
+                    onClick={() => { setShareMode(false); setSelectedPosts(new Set()); }}
+                    className="text-xs font-bold text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-800 uppercase tracking-widest"
+                  >✕ Cancelar</button>
+                </div>
+              ) : (
+                <>
+                  {/* ＋ Cliente */}
+                  <button
+                    onClick={() => setShowAddClientModal(true)}
+                    className="text-xs font-bold text-[#52b788] border border-[#52b788] px-3 py-1.5 rounded-lg hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest shrink-0"
+                  >
+                    ＋ Cliente
+                  </button>
 
-            {activeClient && activeClient.email && activeClient.email !== '-' && (
-              <button
-                onClick={() => {
-                  setEmailSubject(`Revisión de posts – ${activeClient.name}`);
-                  const contactName = (activeClient.contact && activeClient.contact !== '-')
-                    ? activeClient.contact
-                    : activeClient.name;
-                  setEmailBody(`Hola ${contactName},\n\nte envío el enlace para aprobar los posts:\n\n`);
-                  setShowEmailModal(true);
-                }}
-                className="text-xs font-bold text-amber-400 border border-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-900 hover:text-amber-200 transition-colors uppercase tracking-widest hidden md:block"
-              >
-                ✉️ Email cliente
-              </button>
-            )}
+                  {/* ＋ Crear post */}
+                  {clientId && (
+                    <button
+                      onClick={() => handleCreatePost('admin')}
+                      disabled={creatingPost}
+                      className="text-xs font-bold bg-[#52b788] text-black px-4 py-1.5 rounded-lg hover:bg-[#40916c] transition-colors uppercase tracking-widest disabled:opacity-50 shrink-0"
+                    >
+                      {creatingPost ? '...' : '＋ Crear post'}
+                    </button>
+                  )}
 
-            {/* ── Modo selección ── */}
-            {shareMode && activeClient && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-amber-400 font-bold uppercase tracking-widest">
-                  {selectedPosts.size === 0 ? 'Selecciona posts' : `${selectedPosts.size} seleccionados`}
-                </span>
-                <button
-                  onClick={() => {
-                    const base = `https://contentflow-4wos.vercel.app/p/${activeClient.id}`;
-                    const url = selectedPosts.size > 0
-                      ? `${base}?show=${[...selectedPosts].sort((a,b)=>a-b).join(',')}`
-                      : base;
-                    navigator.clipboard.writeText(url);
-                    setCopiedLink(true);
-                    setTimeout(() => setCopiedLink(false), 2500);
-                  }}
-                  disabled={selectedPosts.size === 0}
-                  className="text-xs font-bold bg-[#52b788] text-black px-3 py-1.5 rounded-lg hover:bg-[#40916c] disabled:opacity-40 uppercase tracking-widest"
-                >
-                  {copiedLink ? '✅ Copiado' : '📋 Copiar link'}
-                </button>
-                <button
-                  onClick={() => {
-                    const selectableNums = posts
-                      .filter(p => p.status !== 'approved' && p.status !== 'scheduled')
-                      .map(p => p.post_number);
-                    const allSelected = selectableNums.every(n => selectedPosts.has(n));
-                    if (allSelected) {
-                      setSelectedPosts(new Set());
-                    } else {
-                      setSelectedPosts(new Set(selectableNums));
-                    }
-                  }}
-                  className="text-xs font-bold text-gray-300 border border-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-800 uppercase tracking-widest"
-                >
-                  {posts.filter(p => p.status !== 'approved' && p.status !== 'scheduled')
-                       .every(p => selectedPosts.has(p.post_number))
-                    ? '☐ Deseleccionar todos' : '☑ Seleccionar todos'}
-                </button>
-                <button
-                  onClick={() => { setShareMode(false); setSelectedPosts(new Set()); }}
-                  className="text-xs font-bold text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-800 uppercase tracking-widest"
-                >✕ Cancelar</button>
-              </div>
-            )}
+                  {/* 🔗 Compartir (abre modo selección) */}
+                  {activeClient && (
+                    <button
+                      onClick={() => { setShareMode(true); setSelectedPosts(new Set()); }}
+                      className="text-xs font-bold text-[#52b788] border border-[#52b788] px-3 py-1.5 rounded-lg hover:bg-[#52b788] hover:text-black transition-colors uppercase tracking-widest shrink-0"
+                    >
+                      🔗 Compartir
+                    </button>
+                  )}
 
-            {/* ── Instagram / Metricool ── */}
-            {activeClient?.platform === 'IG' ? (
-              <ConnectInstagram
-                clientId={activeClient.id}
-                clientName={activeClient.name}
-                onUsernameChange={setIgUsername}
-                onAccountTypeChange={setIgAccountType}
-              />
-            ) : (
-              <button
-                onClick={() => setShowMcSettings(true)}
-                title="Ajustes Metricool"
-                className="text-xs font-bold text-purple-400 border border-purple-800 px-3 py-1.5 rounded-lg hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest hidden md:flex items-center gap-1"
-              >
-                📊 Metricool
-              </button>
-            )}
+                  {/* ✉️ Email cliente */}
+                  {activeClient?.email && activeClient.email !== '-' && (
+                    <button
+                      onClick={() => {
+                        setEmailSubject(`Revisión de posts – ${activeClient.name}`);
+                        const contactName = (activeClient.contact && activeClient.contact !== '-')
+                          ? activeClient.contact
+                          : activeClient.name;
+                        setEmailBody(`Hola ${contactName},\n\nte envío el enlace para aprobar los posts:\n\n`);
+                        setShowEmailModal(true);
+                      }}
+                      className="text-xs font-bold text-amber-400 border border-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-900 hover:text-amber-200 transition-colors uppercase tracking-widest shrink-0"
+                    >
+                      ✉️ Email
+                    </button>
+                  )}
 
+                  {/* Instagram / Facebook / Metricool */}
+                  {activeClient?.platform === 'IG' ? (
+                    <ConnectInstagram
+                      clientId={activeClient.id}
+                      clientName={activeClient.name}
+                      onUsernameChange={setIgUsername}
+                      onAccountTypeChange={setIgAccountType}
+                    />
+                  ) : activeClient?.platform === 'FB' ? (
+                    <a
+                      href={activeClient.profile_url && activeClient.profile_url !== '-' ? activeClient.profile_url : 'https://www.facebook.com'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-blue-400 border border-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-900 hover:text-blue-200 transition-colors uppercase tracking-widest flex items-center gap-1 shrink-0"
+                    >
+                      📘 Facebook
+                    </a>
+                  ) : activeClient ? (
+                    <button
+                      onClick={() => setShowMcSettings(true)}
+                      title="Ajustes Metricool"
+                      className="text-xs font-bold text-purple-400 border border-purple-800 px-3 py-1.5 rounded-lg hover:bg-purple-900 hover:text-purple-200 transition-colors uppercase tracking-widest flex items-center gap-1 shrink-0"
+                    >
+                      📊 Metricool
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </div>
           </div>
         </nav>
       ) : (
@@ -946,7 +967,7 @@ export default function App() {
               </h2>
               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
                 {isAdmin
-                  ? <>Fase J2 — Kit Digital{' · '}{activeClient.platform === 'LI' ? 'LinkedIn' : 'Instagram'}{activeClient.stage ? ` · ${activeClient.stage}` : ''}</>
+                  ? <>Fase J2 — Kit Digital{' · '}{activeClient.platform === 'LI' ? 'LinkedIn' : activeClient.platform === 'FB' ? 'Facebook' : 'Instagram'}{activeClient.stage ? ` · ${activeClient.stage}` : ''}</>
                   : 'Kit Digital'
                 }
               </p>
@@ -1038,11 +1059,13 @@ export default function App() {
                     className={`mt-1 flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md hover:scale-105 active:scale-95 ${
                       activeClient.platform === 'IG'
                         ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white hover:from-purple-500 hover:via-pink-500 hover:to-orange-400'
+                        : activeClient.platform === 'FB'
+                        ? 'bg-[#1877F2] text-white hover:bg-[#166FE5]'
                         : 'bg-blue-600 text-white hover:bg-blue-500'
                     }`}
                   >
-                    {activeClient.platform === 'IG' ? '📸' : '💼'}
-                    Ver perfil de {activeClient.platform === 'IG' ? 'Instagram' : 'LinkedIn'}
+                    {activeClient.platform === 'IG' ? '📸' : activeClient.platform === 'FB' ? '📘' : '💼'}
+                    Ver perfil de {activeClient.platform === 'IG' ? 'Instagram' : activeClient.platform === 'FB' ? 'Facebook' : 'LinkedIn'}
                     <span className="opacity-75">→</span>
                   </a>
                 )}
