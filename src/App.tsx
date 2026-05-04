@@ -1110,6 +1110,7 @@ export default function App() {
             posts={posts}
             clientId={clientId}
             clientName={activeClient?.name ?? clientId}
+            clientPlatform={activeClient?.platform}
             isAdmin={isAdmin}
             isClientPortal={isClientPortal}
             igAccountType={igAccountType}
