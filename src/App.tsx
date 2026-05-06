@@ -469,6 +469,7 @@ export default function App() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailSubject, setEmailSubject]   = useState('');
   const [emailBody, setEmailBody]         = useState('');
+  const [showScheduledModal, setShowScheduledModal] = useState(false);
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // ── Nuevos clientes añadidos dinámicamente (persistidos en localStorage) ──
@@ -903,6 +904,19 @@ export default function App() {
                     </button>
                   )}
 
+                  {/* 📅 Enviar Programados */}
+                  {activeClient?.email && activeClient.email !== '-' && scheduledCount > 0 && (
+                    <button
+                      onClick={() => setShowScheduledModal(true)}
+                      className="text-xs font-bold text-green-400 border border-green-700 px-3 py-1.5 rounded-lg hover:bg-green-900 hover:text-green-200 transition-colors uppercase tracking-widest shrink-0 flex items-center gap-1"
+                    >
+                      📅 Enviar programados
+                      <span className="bg-green-700 text-green-100 text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                        {scheduledCount}
+                      </span>
+                    </button>
+                  )}
+
                   {/* Instagram / Facebook / Metricool */}
                   {activeClient?.platform === 'IG' ? (
                     <ConnectInstagram
@@ -1191,6 +1205,120 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ── Modal Enviar Programados ── */}
+      {showScheduledModal && activeClient && (() => {
+        const scheduledPosts = posts.filter(p => p.status === 'scheduled');
+        const contactName    = (activeClient.contact && activeClient.contact !== '-')
+          ? activeClient.contact : activeClient.name;
+
+        // Genera el cuerpo del email con la lista de posts
+        const buildBody = () => {
+          const lines = scheduledPosts.map(p => {
+            const titulo = p.headline_visual?.trim() || `Post #${p.post_number}`;
+            const copySnippet = p.copy?.trim().slice(0, 80) || '—';
+            return `📌 Post ${p.post_number}: ${titulo}\n   ${copySnippet}${p.copy?.length > 80 ? '…' : ''}`;
+          }).join('\n\n');
+          return (
+            `Hola ${contactName},\n\n` +
+            `Te informamos que los siguientes posts ya están programados y listos en redes sociales:\n\n` +
+            `${lines}\n\n` +
+            `Total: ${scheduledPosts.length} post${scheduledPosts.length !== 1 ? 's' : ''} programado${scheduledPosts.length !== 1 ? 's' : ''}.\n\n` +
+            `Puedes revisar todos los posts aquí:\n` +
+            `https://contentflow-4wos.vercel.app/p/${activeClient.id}\n\n` +
+            `Un saludo,\nInteractivos.net`
+          );
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="bg-[#1a1d27] border border-green-900 rounded-2xl p-6 w-full max-w-xl shadow-2xl max-h-[90vh] flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4 shrink-0">
+                <div>
+                  <h3 className="font-bold text-green-500 text-xs uppercase tracking-widest">📅 Posts programados</h3>
+                  <p className="text-white text-xl font-black mt-1 leading-tight">{activeClient.name}</p>
+                  <p className="text-green-400 text-xs font-bold mt-0.5">{activeClient.email}</p>
+                </div>
+                <button onClick={() => setShowScheduledModal(false)} className="text-gray-500 hover:text-gray-300 text-xl font-black">✕</button>
+              </div>
+
+              {/* Lista de posts programados */}
+              <div className="mb-4 overflow-y-auto flex-1 space-y-2">
+                {scheduledPosts.length === 0 ? (
+                  <p className="text-gray-500 text-sm text-center py-6">No hay posts programados aún</p>
+                ) : scheduledPosts.map(p => (
+                  <div key={p.id} className="flex items-start gap-3 bg-[#252836] rounded-xl px-3 py-2.5 border border-green-900/40">
+                    <span className="text-green-400 font-black text-xs shrink-0 mt-0.5">#{p.post_number}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-bold truncate">
+                        {p.headline_visual?.trim() || `Post #${p.post_number}`}
+                      </p>
+                      {p.copy && (
+                        <p className="text-gray-400 text-xs mt-0.5 line-clamp-2 leading-relaxed">
+                          {p.copy.trim().slice(0, 100)}{p.copy.length > 100 ? '…' : ''}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-black bg-green-900 text-green-300 px-2 py-0.5 rounded-full shrink-0">
+                      ✓ programado
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Botones de envío */}
+              <div className="shrink-0 space-y-2 pt-2 border-t border-gray-800">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                  Enviar notificación a {contactName}
+                </p>
+                <div className="flex gap-2">
+                  {/* Gmail */}
+                  <button
+                    onClick={() => {
+                      const subject = encodeURIComponent(`Posts programados – ${activeClient.name}`);
+                      const emailBodyEncoded = encodeURIComponent(buildBody());
+                      const to = encodeURIComponent(activeClient.email);
+                      window.open(
+                        `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${emailBodyEncoded}`,
+                        '_blank'
+                      );
+                    }}
+                    className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-colors"
+                  >
+                    ✉️ Abrir en Gmail
+                  </button>
+
+                  {/* mailto fallback */}
+                  <button
+                    onClick={() => {
+                      const subject = encodeURIComponent(`Posts programados – ${activeClient.name}`);
+                      const emailBodyEncoded = encodeURIComponent(buildBody());
+                      window.open(
+                        `mailto:${activeClient.email}?subject=${subject}&body=${emailBodyEncoded}`,
+                        '_blank'
+                      );
+                    }}
+                    className="px-4 py-2.5 text-gray-300 hover:text-white text-xs font-bold uppercase tracking-widest border border-gray-700 hover:border-gray-500 rounded-xl transition-colors"
+                  >
+                    📧 mailto
+                  </button>
+
+                  <button
+                    onClick={() => setShowScheduledModal(false)}
+                    className="px-4 py-2.5 text-gray-500 hover:text-gray-300 text-xs font-bold uppercase tracking-widest border border-gray-700 rounded-xl"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-600 text-center">
+                  Abre Gmail con los {scheduledPosts.length} posts programados listos para enviar
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Modal Añadir Cliente ── */}
       {showAddClientModal && (
