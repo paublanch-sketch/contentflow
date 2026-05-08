@@ -504,6 +504,7 @@ export default function App() {
   // ── Modales ──
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [showAddSocialModal, setShowAddSocialModal] = useState(false);
+  const [confirmDeleteClient, setConfirmDeleteClient] = useState(false);
 
   // ── Lista completa de clientes (estáticos + dinámicos) ──
   const ALL_CLIENTS: Client[] = [...CLIENTS, ...dynamicClients];
@@ -753,6 +754,22 @@ export default function App() {
     setShowAddSocialModal(false);
   };
 
+  // ── Borrar cliente dinámico ──
+  const handleDeleteClient = async () => {
+    if (!clientId) return;
+    // Borrar de Supabase (solo si existe allí)
+    await supabase.from('clients').delete().eq('id', clientId);
+    // Borrar de estado local + localStorage
+    const updated = dynamicClients.filter(c => c.id !== clientId);
+    setDynamicClients(updated);
+    try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updated)); } catch {}
+    // Seleccionar el primer cliente disponible
+    const remaining = [...CLIENTS, ...updated];
+    const next = remaining[0];
+    if (next) selectClient(next.id); else setClientId('');
+    setConfirmDeleteClient(false);
+  };
+
   const activeClient   = ALL_CLIENTS.find(c => c.id === clientId);
   const clientPlatforms = activeClient
     ? [activeClient.platform, ...(platformsExtra[clientId] ?? [])]
@@ -905,6 +922,33 @@ export default function App() {
                   >
                     ＋ Cliente
                   </button>
+
+                  {/* 🗑 Borrar cliente */}
+                  {activeClient && !confirmDeleteClient && (
+                    <button
+                      onClick={() => setConfirmDeleteClient(true)}
+                      className="text-xs font-bold text-red-400 border border-red-800 px-3 py-1.5 rounded-lg hover:bg-red-900 hover:text-red-200 transition-colors uppercase tracking-widest shrink-0"
+                    >
+                      🗑 Borrar
+                    </button>
+                  )}
+                  {confirmDeleteClient && (
+                    <div className="flex items-center gap-2 bg-red-950 border border-red-700 rounded-lg px-3 py-1.5 shrink-0">
+                      <span className="text-red-300 text-xs font-bold uppercase tracking-widest">¿Seguro?</span>
+                      <button
+                        onClick={handleDeleteClient}
+                        className="text-xs font-black text-white bg-red-600 hover:bg-red-500 px-2 py-0.5 rounded transition-colors uppercase"
+                      >
+                        Sí, borrar
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteClient(false)}
+                        className="text-xs font-bold text-gray-400 hover:text-white transition-colors uppercase"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
 
                   {/* ＋ Crear post */}
                   {clientId && (
