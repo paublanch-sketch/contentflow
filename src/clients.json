@@ -494,6 +494,19 @@
     "notes": "Pablo dice que el cliente ha llamado porque no se publica y que es muy majo"
   },
   {
+    "id": "interactivos",
+    "name": "INTERACTIVOS",
+    "platform": "IG",
+    "estado": "Aprobado",
+    "stage": "-",
+    "tecnico": "Pau",
+    "contact": "Pau",
+    "email": "pau.blanch@interactivos.net",
+    "profile_url": "-",
+    "folder": "INTERACTIVOS",
+    "notes": "-"
+  },
+  {
     "id": "indisi-group-sl",
     "name": "INDISI GROUP SL",
     "platform": "IG",

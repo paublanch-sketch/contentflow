@@ -471,10 +471,30 @@ export default function App() {
   const [emailBody, setEmailBody]         = useState('');
   const searchRef                   = useRef<HTMLDivElement>(null);
 
-  // ── Nuevos clientes añadidos dinámicamente (persistidos en localStorage) ──
+  // ── Nuevos clientes añadidos dinámicamente (Supabase + localStorage fallback) ──
   const [dynamicClients, setDynamicClients] = useState<Client[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_DYNAMIC_CLIENTS) || '[]'); } catch { return []; }
   });
+
+  // ── Cargar clientes dinámicos desde Supabase al montar ──
+  useEffect(() => {
+    supabase
+      .from('clients')
+      .select('*')
+      .then(({ data, error }) => {
+        if (error || !data) return; // tabla no existe aún → sin problema
+        const staticIds = new Set((clientsData as Client[]).map(c => c.id));
+        const remoteOnly = (data as Client[]).filter(c => !staticIds.has(c.id));
+        if (remoteOnly.length === 0) return;
+        setDynamicClients(prev => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const merged = [...prev, ...remoteOnly.filter(c => !existingIds.has(c.id))];
+          try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(merged)); } catch {}
+          return merged;
+        });
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Plataformas extra por cliente (e.g. { 'marta-bayona-mas': ['FB'] }) ──
   const [platformsExtra, setPlatformsExtra] = useState<Record<string, string[]>>(() => {
@@ -677,7 +697,28 @@ export default function App() {
   };
 
   // ── Añadir cliente dinámico ──
-  const handleAddClient = (newClient: Client, extraPlatforms: string[]) => {
+  const handleAddClient = async (newClient: Client, extraPlatforms: string[]) => {
+    // 1. Guardar en Supabase para que todos lo vean
+    const { error } = await supabase.from('clients').upsert({
+      id:          newClient.id,
+      name:        newClient.name,
+      platform:    newClient.platform,
+      estado:      newClient.estado,
+      stage:       newClient.stage,
+      tecnico:     newClient.tecnico,
+      contact:     newClient.contact,
+      email:       newClient.email,
+      profile_url: newClient.profile_url,
+      folder:      newClient.folder,
+      notes:       newClient.notes,
+    }, { onConflict: 'id' });
+
+    if (error) {
+      console.warn('Supabase clients insert error:', error.message);
+      // Si falla (tabla no existe), seguimos igual con localStorage
+    }
+
+    // 2. Actualizar estado local + localStorage como fallback
     const updated = [...dynamicClients, newClient];
     setDynamicClients(updated);
     try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updated)); } catch {}
