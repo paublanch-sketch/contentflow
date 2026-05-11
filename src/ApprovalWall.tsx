@@ -1262,6 +1262,10 @@ function PostCard({
   // ── AI Img: preview antes de guardar ──
   const [aiImgPreviewUrl, setAiImgPreviewUrl]   = useState('');
 
+  // ── Comentario del administrador ──────────────────────────────────────────
+  const [editingAdminComment, setEditingAdminComment] = useState(false);
+  const [adminCommentDraft,   setAdminCommentDraft]   = useState(post.admin_comment ?? '');
+
   // ── Añadir texto o imagen sobre imagen existente (solo admin) ──────────────
   const [showTextLogo,    setShowTextLogo]    = useState(false);
   const [tlText1,         setTlText1]         = useState('');
@@ -2699,6 +2703,82 @@ function PostCard({
           )}
         </div>
       </div>
+
+      {/* ── Comentario del administrador ─────────────────────────────────── */}
+      {isAdmin ? (
+        <div className="px-6 pb-5">
+          {editingAdminComment ? (
+            <div className="flex flex-col gap-2">
+              <label className="text-[9px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5">
+                💬 Comentario para el cliente
+              </label>
+              <textarea
+                className="w-full text-xs text-gray-800 border-2 border-amber-300 rounded-xl p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-amber-200 min-h-[70px] bg-amber-50 placeholder-amber-300"
+                value={adminCommentDraft}
+                onChange={e => setAdminCommentDraft(e.target.value)}
+                placeholder="Escribe un comentario que verá el cliente en su portal..."
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    await onUpdatePost(post.id, { admin_comment: adminCommentDraft });
+                    setEditingAdminComment(false);
+                    showToast('Comentario guardado', 'ok');
+                  }}
+                  className="flex-1 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+                >✅ Guardar</button>
+                <button
+                  onClick={async () => {
+                    await onUpdatePost(post.id, { admin_comment: '' });
+                    setAdminCommentDraft('');
+                    setEditingAdminComment(false);
+                    showToast('Comentario eliminado', 'ok');
+                  }}
+                  className="px-3 py-1.5 border border-red-200 text-red-400 rounded-lg text-[10px] font-black uppercase hover:bg-red-50 transition-colors"
+                >🗑</button>
+                <button
+                  onClick={() => { setAdminCommentDraft(post.admin_comment ?? ''); setEditingAdminComment(false); }}
+                  className="flex-1 py-1.5 border border-gray-200 text-gray-400 rounded-lg text-[10px] font-black uppercase hover:bg-gray-50 transition-colors"
+                >Cancelar</button>
+              </div>
+            </div>
+          ) : post.admin_comment ? (
+            <div className="relative group/acomment flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-3">
+              <span className="text-amber-400 text-base shrink-0 mt-0.5">💬</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 block mb-1">Comentario admin → cliente</span>
+                <p className="text-xs text-amber-900 leading-relaxed italic">{post.admin_comment}</p>
+              </div>
+              <button
+                onClick={() => { setAdminCommentDraft(post.admin_comment ?? ''); setEditingAdminComment(true); }}
+                className="opacity-0 group-hover/acomment:opacity-100 transition-opacity shrink-0 text-amber-400 hover:text-amber-600 text-[10px] font-bold px-1.5 py-0.5 rounded hover:bg-amber-100"
+              >✏️</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setAdminCommentDraft(''); setEditingAdminComment(true); }}
+              className="w-full py-2 border border-dashed border-amber-200 text-amber-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-amber-50 hover:border-amber-300 transition-colors flex items-center justify-center gap-1.5"
+            >
+              💬 Añadir comentario para el cliente
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Portal cliente: solo lectura */
+        post.admin_comment ? (
+          <div className="mx-6 mb-5 flex items-start gap-3 bg-[#f0f7ff] border border-blue-200 rounded-2xl px-4 py-3.5 shadow-sm">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-[#2d6a4f] flex items-center justify-center text-white text-sm font-black shadow-sm">A</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#2d6a4f]">Administrador</span>
+                <span className="text-[9px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold uppercase">Solo lectura</span>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">{post.admin_comment}</p>
+            </div>
+          </div>
+        ) : null
+      )}
 
       {/* Acciones */}
       <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2 mt-auto">
