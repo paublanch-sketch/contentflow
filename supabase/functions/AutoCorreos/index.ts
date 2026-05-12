@@ -12,19 +12,17 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { type, client_name, post_number, platform, portal_url, feedback } = await req.json();
+    const { type, client_name, portal_url, feedback } = await req.json();
 
-    const subject = `FlowAPP · ${type} — ${client_name}`;
+    // Sin emojis ni caracteres especiales para evitar quoted-printable
+    const typeClean = type.includes('Aprobado') ? 'Aprobado' : 'Cambios solicitados';
+    const subject   = `FlowAPP - ${typeClean} - ${client_name}`;
 
     const lines = [
-      `${type}`,
-      ``,
-      `Cliente: ${client_name}`,
-      `Post: #${post_number} · ${platform}`,
-      feedback ? `Feedback: ${feedback}` : null,
-      ``,
+      `${typeClean} - ${client_name}`,
+      feedback ? `Feedback: ${feedback}` : '',
       `Ver post: ${portal_url}`,
-    ].filter(l => l !== null).join('\n');
+    ].filter(Boolean).join('\n');
 
     const client = new SMTPClient({
       connection: {
@@ -49,7 +47,6 @@ Deno.serve(async (req) => {
     });
 
   } catch (err: any) {
-    console.error('AutoCorreos error:', err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
