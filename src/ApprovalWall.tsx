@@ -856,31 +856,26 @@ function useVideoUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   return { uploadingVideoId, handleVideoFile };
 }
 
-// ─── Notificaciones email vía EmailJS ────────────────────────────────────────
-const EMAILJS_SERVICE_ID  = 'service_9hv3bd4';
-const EMAILJS_TEMPLATE_ID = 'template_laumpek';
-const EMAILJS_PUBLIC_KEY  = 'PnA_k4lRMrrGR5XJP';
-const NOTIFY_EMAIL        = 'pau.blanch@interactivos.net';
+// ─── Notificaciones email vía Supabase Edge Function + Resend ────────────────
+const SUPABASE_FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
+const SUPABASE_ANON_KEY      = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmYnVzc2FtZnpxZnZvenJ5Y3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0MjI5MjUsImV4cCI6MjA1ODk5ODkyNX0.2l8ioWd7D8YoMT9IzEFdKpKJQfSj8VqgjSsqSF6kGXc';
 
-async function sendEmailNotification(templateParams: Record<string, string>) {
-  if (EMAILJS_TEMPLATE_ID === 'PENDING_TEMPLATE') return;
+async function sendEmailNotification(params: Record<string, string>) {
   try {
-    await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    await fetch(`${SUPABASE_FUNCTIONS_URL}/send-notification`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id:      EMAILJS_SERVICE_ID,
-        template_id:     EMAILJS_TEMPLATE_ID,
-        user_id:         EMAILJS_PUBLIC_KEY,
-        template_params: templateParams,
-      }),
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey':        SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(params),
     });
   } catch { /* silencioso */ }
 }
 
 async function notifyApproval(post: Post, clientName: string) {
   await sendEmailNotification({
-    to_email:     NOTIFY_EMAIL,
     type:         'Aprobado ✅',
     client_name:  clientName,
     post_number:  String(post.post_number),
@@ -893,7 +888,6 @@ async function notifyApproval(post: Post, clientName: string) {
 
 async function notifyChangesRequested(post: Post, clientName: string, feedback: string) {
   await sendEmailNotification({
-    to_email:     NOTIFY_EMAIL,
     type:         'Cambios solicitados ⚠️',
     client_name:  clientName,
     post_number:  String(post.post_number),
