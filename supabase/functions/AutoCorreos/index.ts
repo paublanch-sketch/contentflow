@@ -1,13 +1,10 @@
 // supabase/functions/AutoCorreos/index.ts
-// Envía emails via Gmail SMTP con denomailer (librería Deno nativa, estable)
-// Secrets en Supabase → Edge Functions → Secrets:
-//   GMAIL_USER         = pau.blanch@interactivos.net
-//   GMAIL_APP_PASSWORD = lhdq hsse ayjr tjmb
+// Envía emails via Resend API (3000/mes gratis, sin librerías SMTP)
+// Secret en Supabase → Edge Functions → Secrets:
+//   RESEND_API_KEY = re_xxxxxxxxxxxxxxxxxxxx
 
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
-
-const GMAIL_USER         = Deno.env.get('GMAIL_USER')!;
-const GMAIL_APP_PASSWORD = Deno.env.get('GMAIL_APP_PASSWORD')!;
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
+const NOTIFY_EMAIL   = 'pau.blanch@interactivos.net';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,29 +67,25 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: "smtp.gmail.com",
-        port: 465,
-        tls: true,
-        auth: {
-          username: GMAIL_USER,
-          password: GMAIL_APP_PASSWORD,
-        },
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type':  'application/json',
       },
+      body: JSON.stringify({
+        from:    'FlowAPP <onboarding@resend.dev>',
+        to:      [NOTIFY_EMAIL],
+        subject,
+        html,
+      }),
     });
 
-    await client.send({
-      from:    GMAIL_USER,
-      to:      GMAIL_USER,
-      subject,
-      html,
-    });
-
-    await client.close();
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Resend error: ${JSON.stringify(data)}`);
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, id: data.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
