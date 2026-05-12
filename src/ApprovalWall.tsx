@@ -858,11 +858,11 @@ function useVideoUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
 
 // ─── Notificaciones email vía Supabase Edge Function + Resend ────────────────
 const SUPABASE_FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
-const SUPABASE_ANON_KEY      = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmYnVzc2FtZnpxZnZvenJ5Y3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0MjI5MjUsImV4cCI6MjA1ODk5ODkyNX0.2l8ioWd7D8YoMT9IzEFdKpKJQfSj8VqgjSsqSF6kGXc';
+const SUPABASE_ANON_KEY      = 'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg';
 
 async function sendEmailNotification(params: Record<string, string>) {
   try {
-    await fetch(`${SUPABASE_FUNCTIONS_URL}/send-notification`, {
+    await fetch(`${SUPABASE_FUNCTIONS_URL}/AutoCorreos`, {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',

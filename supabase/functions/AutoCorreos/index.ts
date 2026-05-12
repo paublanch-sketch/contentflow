@@ -1,10 +1,10 @@
-// supabase/functions/send-notification/index.ts
-// Envía emails via Gmail SMTP (App Password) usando librería nativa Deno
+// supabase/functions/AutoCorreos/index.ts
+// Envía emails via Gmail SMTP con denomailer (librería Deno nativa, estable)
 // Secrets en Supabase → Edge Functions → Secrets:
 //   GMAIL_USER         = pau.blanch@interactivos.net
 //   GMAIL_APP_PASSWORD = lhdq hsse ayjr tjmb
 
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const GMAIL_USER         = Deno.env.get('GMAIL_USER')!;
 const GMAIL_APP_PASSWORD = Deno.env.get('GMAIL_APP_PASSWORD')!;
@@ -31,8 +31,7 @@ Deno.serve(async (req) => {
     const isApproval = type?.includes('Aprobado');
     const subject    = `FlowAPP · ${type} — ${client_name} Post #${post_number}`;
 
-    const html = `
-<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"></head>
 <body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px">
@@ -55,17 +54,13 @@ Deno.serve(async (req) => {
           <td style="padding:8px 0;color:#6b7280;vertical-align:top">Copy</td>
           <td style="padding:8px 0;color:#374151;font-style:italic">"${copy_preview}"</td>
         </tr>
-        ${feedback ? `
-        <tr style="background:#fef3c7">
+        ${feedback ? `<tr style="background:#fef3c7">
           <td style="padding:8px 6px;color:#92400e;vertical-align:top">Feedback</td>
           <td style="padding:8px 6px;color:#78350f">${feedback}</td>
         </tr>` : ''}
       </table>
       <div style="margin-top:24px;text-align:center">
-        <a href="${portal_url}"
-           style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;font-size:15px">
-          Ver en FlowAPP →
-        </a>
+        <a href="${portal_url}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;font-size:15px">Ver en FlowAPP →</a>
       </div>
     </div>
     <div style="background:#f9fafb;padding:12px 24px;border-top:1px solid #e5e7eb;text-align:center">
@@ -75,20 +70,25 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    const client = new SmtpClient();
-    await client.connectTLS({
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: GMAIL_USER,
-      password: GMAIL_APP_PASSWORD,
+    const client = new SMTPClient({
+      connection: {
+        hostname: "smtp.gmail.com",
+        port: 465,
+        tls: true,
+        auth: {
+          username: GMAIL_USER,
+          password: GMAIL_APP_PASSWORD,
+        },
+      },
     });
+
     await client.send({
       from:    GMAIL_USER,
       to:      GMAIL_USER,
       subject,
-      content: `${type} — ${client_name} Post #${post_number}`,
       html,
     });
+
     await client.close();
 
     return new Response(
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (err: any) {
-    console.error('send-notification error:', err.message);
+    console.error('AutoCorreos error:', err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
