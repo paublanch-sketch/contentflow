@@ -445,6 +445,92 @@ function AddSocialModal({
   );
 }
 
+// ─── Política de Privacidad (ruta pública /p/privacy) ────────────────────────
+function PrivacyPage() {
+  return (
+    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 760, margin: '0 auto', padding: '40px 20px 80px', color: '#1a1a1a', lineHeight: 1.7 }}>
+      <div style={{ borderBottom: '2px solid #e5e5e5', marginBottom: 48, paddingBottom: 24 }}>
+        <div style={{ display:'inline-block', background:'#f0fdf4', border:'1px solid #86efac', color:'#166534', fontSize:13, fontWeight:600, padding:'4px 12px', borderRadius:999, marginBottom:16 }}>
+          Última actualización: Mayo 2025
+        </div>
+        <h1 style={{ fontSize:28, fontWeight:800, marginBottom:8 }}>Política de Privacidad</h1>
+        <p style={{ color:'#666', fontSize:14 }}>ContentFlow — Desarrollado por <strong>Interactivos Digital S.L.</strong></p>
+      </div>
+
+      {[
+        { title: '1. Información general', content: (
+          <>
+            <p>ContentFlow es una herramienta interna de gestión y publicación de contenido en redes sociales desarrollada por <strong>Interactivos Digital S.L.</strong>, agencia adherida al programa <strong>Kit Digital</strong> del Gobierno de España.</p>
+            <p>ContentFlow se utiliza exclusivamente por Interactivos Digital S.L. para gestionar y publicar contenido en las redes sociales de sus clientes empresariales dentro del marco del servicio de <em>Gestión de Redes Sociales</em> del Kit Digital. Los clientes autorizan expresamente a Interactivos a publicar en su nombre al contratar el servicio.</p>
+          </>
+        )},
+        { title: '2. Datos que recopilamos', content: (
+          <>
+            <p>ContentFlow recopila únicamente los datos estrictamente necesarios:</p>
+            <ul style={{ marginLeft:24, marginBottom:14 }}>
+              <li><strong>Token de acceso de Instagram:</strong> almacenado de forma segura para publicar en tu nombre.</li>
+              <li><strong>Nombre de usuario de Instagram:</strong> para identificar la cuenta conectada.</li>
+              <li><strong>ID de usuario de Instagram:</strong> identificador técnico para las llamadas a la API.</li>
+              <li><strong>Contenido de publicaciones:</strong> textos, imágenes y hashtags introducidos en la plataforma.</li>
+            </ul>
+            <p><strong>No recopilamos</strong> contraseñas, datos bancarios ni documentos de identidad.</p>
+          </>
+        )},
+        { title: '3. Finalidad del tratamiento', content: (
+          <ul style={{ marginLeft:24, marginBottom:14 }}>
+            <li>Publicar o programar contenido en Instagram mediante la API oficial de Meta.</li>
+            <li>Identificar qué cuenta de Instagram está asociada a cada cliente en ContentFlow.</li>
+            <li>Renovar el token de acceso cuando esté próximo a caducar.</li>
+          </ul>
+        )},
+        { title: '4. Compartición de datos con terceros', content: (
+          <>
+            <ul style={{ marginLeft:24, marginBottom:14 }}>
+              <li><strong>Meta (Instagram Graph API):</strong> autenticación y publicación. Sujeto a la <a href="https://www.facebook.com/policy.php" style={{ color:'#2d6a4f' }}>Política de Meta</a>.</li>
+              <li><strong>Supabase:</strong> base de datos cifrada donde se almacenan los tokens. <a href="https://supabase.com/privacy" style={{ color:'#2d6a4f' }}>Política de Supabase</a>.</li>
+              <li><strong>Vercel:</strong> hosting de la aplicación. <a href="https://vercel.com/legal/privacy-policy" style={{ color:'#2d6a4f' }}>Política de Vercel</a>.</li>
+            </ul>
+            <p>No vendemos ni compartimos tus datos con ninguna otra empresa.</p>
+          </>
+        )},
+        { title: '5. Almacenamiento y seguridad', content: (
+          <p>Los tokens se almacenan en una base de datos cifrada con acceso restringido exclusivamente al servidor. Los tokens caducan cada 60 días. Toda la comunicación se realiza mediante HTTPS.</p>
+        )},
+        { title: '6. Permisos de Instagram utilizados', content: (
+          <ul style={{ marginLeft:24, marginBottom:14 }}>
+            <li><strong>instagram_basic:</strong> leer información básica del perfil.</li>
+            <li><strong>instagram_content_publish:</strong> publicar fotos y vídeos en Instagram.</li>
+            <li><strong>pages_show_list / pages_read_engagement:</strong> acceder a páginas de Facebook vinculadas.</li>
+            <li><strong>business_management:</strong> gestión de activos Business de Meta.</li>
+          </ul>
+        )},
+        { title: '7. Derechos del usuario y eliminación de datos', content: (
+          <>
+            <p>Puedes solicitar acceso, rectificación o eliminación de tus datos enviando un correo a <a href="mailto:hola@interactivos.net" style={{ color:'#2d6a4f' }}>hola@interactivos.net</a> con el asunto <em>"Eliminación de datos ContentFlow"</em>. Respondemos en un máximo de 30 días.</p>
+            <p>También puedes revocar los permisos desde Instagram: <strong>Configuración → Seguridad → Aplicaciones y sitios web</strong>.</p>
+          </>
+        )},
+        { title: '8. Contacto', content: (
+          <ul style={{ marginLeft:24, marginBottom:14 }}>
+            <li><strong>Empresa:</strong> Interactivos Digital S.L.</li>
+            <li><strong>Email:</strong> <a href="mailto:hola@interactivos.net" style={{ color:'#2d6a4f' }}>hola@interactivos.net</a></li>
+            <li><strong>Web:</strong> <a href="https://www.interactivos.net" style={{ color:'#2d6a4f' }}>www.interactivos.net</a></li>
+          </ul>
+        )},
+      ].map(({ title, content }) => (
+        <div key={title}>
+          <h2 style={{ fontSize:18, fontWeight:700, marginTop:40, marginBottom:12, paddingLeft:14, borderLeft:'4px solid #52b788' }}>{title}</h2>
+          {content}
+        </div>
+      ))}
+
+      <div style={{ marginTop:60, paddingTop:24, borderTop:'1px solid #e5e5e5', fontSize:13, color:'#888' }}>
+        © 2025 Interactivos Digital S.L. · ContentFlow · Todos los derechos reservados.
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function App() {
   const [clientId, setClientId]     = useState<string>('');
@@ -453,6 +539,7 @@ export default function App() {
   const [isAdmin, setIsAdmin]       = useState(true);
   const [isClientPortal, setIsClientPortal] = useState(false);
   const [isIgCallback, setIsIgCallback] = useState(false);
+  const [isPrivacyPage, setIsPrivacyPage] = useState(false);
   const [adminAuth, setAdminAuth]   = useState<boolean>(
     () => sessionStorage.getItem('cf_admin_auth') === '1'
   );
@@ -542,6 +629,11 @@ export default function App() {
 
     if (path === '/ig-callback') {
       setIsIgCallback(true);
+      return;
+    }
+
+    if (path === '/p/privacy' || path === '/privacy') {
+      setIsPrivacyPage(true);
       return;
     }
 
@@ -780,6 +872,7 @@ export default function App() {
 
   // ── Guards ──
   if (isIgCallback) return <IgCallback />;
+  if (isPrivacyPage) return <PrivacyPage />;
   if (showMcSettings) return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
   if (!isClientPortal && !adminAuth) return <AdminLogin onLogin={() => setAdminAuth(true)} />;
 

@@ -6,30 +6,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// Facebook Graph API → Instagram Business (mismo que Metricool)
-const META_APP_ID  = '1124977686473073';
+// Instagram Login API (pantalla de Instagram directamente)
+const IG_APP_ID    = '972574845424224';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
-const OAUTH_URL = (clientId: string) => {
-  const scope = [
-    'instagram_basic',
-    'instagram_content_publish',
-    'pages_show_list',
-    'pages_read_engagement',
-    'business_management',
-  ].join(',');
-  return (
-    `https://www.facebook.com/dialog/oauth` +
-    `?client_id=${META_APP_ID}` +
-    `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-    `&scope=${encodeURIComponent(scope)}` +
-    `&response_type=code` +
-    `&state=${encodeURIComponent(clientId)}`
-  );
-};
+const OAUTH_URL = (clientId: string) =>
+  `https://www.instagram.com/oauth/authorize` +
+  `?client_id=${IG_APP_ID}` +
+  `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+  `&scope=${encodeURIComponent('instagram_basic,instagram_content_publish')}` +
+  `&response_type=code` +
+  `&state=${encodeURIComponent(clientId)}`;
 
-// Navega directamente (no popup) → más fiable, evita ERR_ADDRESS_INVALID
+// Navega directamente (no popup) → más fiable
 const startOAuth = (clientId: string) => {
-  // Guardar URL actual para volver después del callback
   sessionStorage.setItem('ig_oauth_return_url', window.location.href);
   sessionStorage.setItem('ig_oauth_client_id', clientId);
   window.location.href = OAUTH_URL(clientId);
