@@ -6,8 +6,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// Instagram Login API — pantalla de Instagram directa (sin necesitar página de Facebook)
-const IG_APP_ID    = '972574845424224';
+// Instagram Login API — client_id = app principal (1124977686473073)
+const IG_APP_ID    = '1124977686473073';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
