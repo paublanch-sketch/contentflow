@@ -31,8 +31,10 @@ export default function IgCallback() {
           headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
           body: JSON.stringify({ code, client_id: clientId, redirect_uri: `${window.location.origin}/ig-callback` }),
         });
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error || 'Error desconocido');
+        const rawText = await res.text();
+        let data: any = {};
+        try { data = JSON.parse(rawText); } catch { data = { error: rawText }; }
+        if (!res.ok || data.error) throw new Error(data.error || data.message || `HTTP ${res.status}: ${rawText}`);
 
         setStatus('success');
         setMessage(`✅ Instagram conectado: @${data.ig_username}\n\nYa puedes publicar desde ContentFlow sin ningún servidor local.`);
