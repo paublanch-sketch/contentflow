@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 
 const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 export default function IgCallback() {
   const [status,  setStatus]  = useState<'loading' | 'success' | 'error'>('loading');
@@ -27,7 +28,7 @@ export default function IgCallback() {
         // Llamar a Edge Function que hace el exchange (protege App Secret)
         const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/ig-oauth-callback`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
           body: JSON.stringify({ code, client_id: clientId, redirect_uri: `${window.location.origin}/ig-callback` }),
         });
         const data = await res.json();
