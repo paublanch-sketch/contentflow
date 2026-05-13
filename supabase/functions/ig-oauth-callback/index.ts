@@ -5,8 +5,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const IG_APP_ID     = Deno.env.get('META_APP_ID') || '1124977686473073';
-const IG_APP_SECRET = Deno.env.get('META_APP_SECRET')!;
+const META_APP_ID     = Deno.env.get('META_APP_ID')!;
+const META_APP_SECRET = Deno.env.get('META_APP_SECRET')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
@@ -19,15 +19,15 @@ Deno.serve(async (req) => {
   try {
     const { code, client_id, redirect_uri } = await req.json();
     console.log('[START]', { client_id, redirect_uri: redirect_uri, code: code?.slice(0,20)+'...' });
-    console.log('IG_APP_ID:', IG_APP_ID, '| SECRET present:', !!IG_APP_SECRET);
+    console.log('META_APP_ID:', META_APP_ID, '| SECRET present:', !!META_APP_SECRET);
     if (!code || !client_id) throw new Error('code y client_id requeridos');
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     // ── 1. code → short-lived token (1h) ────────────────────────────────────────
     const body = new URLSearchParams({
-      client_id:     IG_APP_ID,
-      client_secret: IG_APP_SECRET,
+      client_id:     META_APP_ID,
+      client_secret: META_APP_SECRET,
       grant_type:    'authorization_code',
       redirect_uri,
       code,
@@ -54,8 +54,8 @@ Deno.serve(async (req) => {
     const longRes = await fetch(
       `https://graph.instagram.com/access_token` +
       `?grant_type=ig_exchange_token` +
-      `&client_id=${IG_APP_ID}` +
-      `&client_secret=${IG_APP_SECRET}` +
+      `&client_id=${META_APP_ID}` +
+      `&client_secret=${META_APP_SECRET}` +
       `&access_token=${shortToken}`
     );
     const longRaw = await longRes.text();
