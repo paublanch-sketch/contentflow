@@ -8,7 +8,7 @@ import { supabase } from './lib/supabase';
 
 // Instagram Login (API moderna — no requiere Facebook Pages)
 const IG_APP_ID    = '972574845424224';
-const REDIRECT_URI = `${window.location.origin}/ig-callback`;
+const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
   `?client_id=${IG_APP_ID}` +

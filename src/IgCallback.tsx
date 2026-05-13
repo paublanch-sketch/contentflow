@@ -29,7 +29,7 @@ export default function IgCallback() {
         const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/ig-oauth-callback`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ code, client_id: clientId, redirect_uri: `${window.location.origin}/ig-callback` }),
+          body: JSON.stringify({ code, client_id: clientId, redirect_uri: 'https://contentflow-4wos.vercel.app/ig-callback' }),
         });
         const rawText = await res.text();
         let data: any = {};
