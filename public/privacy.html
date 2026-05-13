@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidad – ContentFlow by Interactivos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a1a;
+      background: #ffffff;
+      padding: 40px 20px 80px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+    header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 2px solid #e5e5e5; }
+    header h1 { font-size: 28px; font-weight: 800; color: #111; margin-bottom: 8px; }
+    header p { color: #666; font-size: 14px; }
+    h2 {
+      font-size: 18px; font-weight: 700; color: #111;
+      margin-top: 40px; margin-bottom: 12px;
+      padding-left: 14px;
+      border-left: 4px solid #52b788;
+    }
+    p { margin-bottom: 14px; color: #333; }
+    ul { margin: 10px 0 14px 24px; color: #333; }
+    ul li { margin-bottom: 6px; }
+    a { color: #2d6a4f; text-decoration: underline; }
+    .badge {
+      display: inline-block;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #166534;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+    }
+    footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e5e5;
+      font-size: 13px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="badge">Última actualización: Mayo 2025</div>
+      <h1>Política de Privacidad</h1>
+      <p>ContentFlow — Desarrollado por <strong>Interactivos Digital S.L.</strong></p>
+    </header>
+
+    <h2>1. Información general</h2>
+    <p>
+      ContentFlow es una herramienta interna de gestión y publicación de contenido en redes sociales
+      desarrollada por <strong>Interactivos Digital S.L.</strong> (en adelante, "nosotros" o "la empresa"),
+      agencia adherida al programa <strong>Kit Digital</strong> del Gobierno de España, con domicilio en España.
+    </p>
+    <p>
+      ContentFlow se utiliza exclusivamente por Interactivos Digital S.L. para gestionar y publicar contenido
+      en las redes sociales de sus clientes empresariales dentro del marco del servicio de
+      <em>Gestión de Redes Sociales</em> del Kit Digital. Los clientes finales autorizan expresamente
+      a Interactivos a publicar en su nombre al contratar el servicio.
+    </p>
+    <p>
+      Esta política describe qué datos recopilamos, cómo los usamos y cómo los protegemos.
+    </p>
+
+    <h2>2. Datos que recopilamos</h2>
+    <p>ContentFlow recopila únicamente los datos estrictamente necesarios para su funcionamiento:</p>
+    <ul>
+      <li><strong>Token de acceso de Instagram/Facebook:</strong> se almacena de forma segura para poder publicar contenido en tu nombre.</li>
+      <li><strong>Nombre de usuario de Instagram:</strong> para identificar la cuenta conectada dentro de la aplicación.</li>
+      <li><strong>ID de usuario de Instagram/Facebook:</strong> identificador técnico necesario para las llamadas a la API.</li>
+      <li><strong>Contenido de publicaciones:</strong> textos, imágenes y hashtags que tú o tu gestor introducís en la plataforma para su publicación.</li>
+    </ul>
+    <p>
+      <strong>No recopilamos</strong> contraseñas, datos bancarios, documentos de identidad ni ningún otro dato
+      personal sensible.
+    </p>
+
+    <h2>3. Finalidad del tratamiento</h2>
+    <p>Los datos se utilizan exclusivamente para:</p>
+    <ul>
+      <li>Publicar o programar contenido en tu cuenta de Instagram mediante la API oficial de Meta.</li>
+      <li>Identificar qué cuenta de Instagram está asociada a cada cliente dentro de ContentFlow.</li>
+      <li>Renovar el token de acceso cuando esté próximo a caducar, para mantener el servicio activo.</li>
+    </ul>
+    <p>
+      Los datos <strong>no se usan</strong> para publicidad, análisis de comportamiento, venta a terceros
+      ni ninguna finalidad distinta de la indicada.
+    </p>
+
+    <h2>4. Compartición de datos con terceros</h2>
+    <p>
+      ContentFlow utiliza los siguientes servicios de terceros para su funcionamiento:
+    </p>
+    <ul>
+      <li><strong>Meta (Instagram / Facebook Graph API):</strong> para autenticación y publicación de contenido. Sujeto a la <a href="https://www.facebook.com/policy.php" target="_blank" rel="noopener">Política de Privacidad de Meta</a>.</li>
+      <li><strong>Supabase:</strong> base de datos en la nube donde se almacenan los tokens de acceso de forma cifrada. Sujeto a la <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Política de Privacidad de Supabase</a>.</li>
+      <li><strong>Vercel:</strong> plataforma de hosting de la aplicación. Sujeto a la <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Política de Privacidad de Vercel</a>.</li>
+    </ul>
+    <p>
+      No vendemos, alquilamos ni compartimos tus datos personales con ninguna otra empresa o persona física.
+    </p>
+
+    <h2>5. Almacenamiento y seguridad</h2>
+    <p>
+      Los tokens de acceso se almacenan en una base de datos cifrada (Supabase) con acceso restringido
+      exclusivamente al servidor de la aplicación. Nunca se exponen en el frontend ni se transmiten
+      por canales no seguros.
+    </p>
+    <p>
+      Los tokens tienen una caducidad máxima de 60 días, tras la cual es necesario reconectar la cuenta.
+      Toda la comunicación entre la aplicación y los servidores de Meta se realiza mediante HTTPS.
+    </p>
+
+    <h2>6. Derechos del usuario</h2>
+    <p>Tienes derecho a:</p>
+    <ul>
+      <li><strong>Acceder</strong> a los datos que tenemos sobre ti.</li>
+      <li><strong>Rectificar</strong> datos incorrectos.</li>
+      <li><strong>Eliminar</strong> tus datos en cualquier momento, incluyendo el token de acceso almacenado.</li>
+      <li><strong>Revocar el acceso</strong> a tu cuenta de Instagram directamente desde la configuración de tu cuenta de Instagram o Facebook, en el apartado "Aplicaciones y sitios web".</li>
+    </ul>
+    <p>
+      Para ejercer cualquiera de estos derechos, contáctanos en:
+      <a href="mailto:hola@interactivos.net">hola@interactivos.net</a>
+    </p>
+
+    <h2>7. Eliminación de datos</h2>
+    <p>
+      Puedes solicitar la eliminación completa de todos tus datos (token de acceso, nombre de usuario e
+      historial de publicaciones) enviando un correo a <a href="mailto:hola@interactivos.net">hola@interactivos.net</a>
+      con el asunto <em>"Eliminación de datos ContentFlow"</em>.
+    </p>
+    <p>
+      Procesaremos tu solicitud en un plazo máximo de 30 días.
+    </p>
+    <p>
+      También puedes revocar los permisos concedidos a la aplicación directamente desde Instagram:
+      <strong>Configuración → Seguridad → Aplicaciones y sitios web</strong>.
+    </p>
+
+    <h2>8. Permisos de Instagram / Facebook utilizados</h2>
+    <p>ContentFlow solicita únicamente los siguientes permisos de la API de Meta:</p>
+    <ul>
+      <li><strong>instagram_basic:</strong> leer información básica del perfil (nombre de usuario, ID).</li>
+      <li><strong>instagram_content_publish:</strong> publicar fotos y vídeos en tu cuenta de Instagram.</li>
+      <li><strong>pages_show_list</strong> y <strong>pages_read_engagement:</strong> acceder a las páginas de Facebook asociadas para identificar la cuenta de Instagram Business.</li>
+      <li><strong>business_management:</strong> gestión de activos vinculados a la cuenta Business de Meta.</li>
+    </ul>
+    <p>
+      Estos permisos se usan exclusivamente para la publicación de contenido que el usuario o su gestor
+      ha creado y aprobado dentro de ContentFlow.
+    </p>
+
+    <h2>9. Cambios en esta política</h2>
+    <p>
+      Nos reservamos el derecho a actualizar esta política de privacidad. Cualquier cambio significativo
+      será comunicado a los usuarios a través del correo electrónico registrado con al menos 15 días
+      de antelación.
+    </p>
+    <p>
+      La fecha de última actualización siempre estará visible en la parte superior de este documento.
+    </p>
+
+    <h2>10. Contacto</h2>
+    <p>
+      Para cualquier consulta relacionada con la privacidad de tus datos, puedes contactarnos en:
+    </p>
+    <ul>
+      <li><strong>Empresa:</strong> Interactivos Digital S.L.</li>
+      <li><strong>Email:</strong> <a href="mailto:hola@interactivos.net">hola@interactivos.net</a></li>
+      <li><strong>Web:</strong> <a href="https://www.interactivos.net" target="_blank" rel="noopener">www.interactivos.net</a></li>
+    </ul>
+
+    <footer>
+      <p>© 2025 Interactivos Digital S.L. · ContentFlow · Todos los derechos reservados.</p>
+    </footer>
+
+  </div>
+</body>
+</html>
