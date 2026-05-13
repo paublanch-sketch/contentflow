@@ -6,14 +6,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// Instagram Login API (pantalla de Instagram directamente)
-const IG_APP_ID    = '972574845424224';
+// Facebook Graph API → Instagram Business (app 1124977686473073)
+const META_APP_ID  = '1124977686473073';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
-  `https://www.instagram.com/oauth/authorize` +
-  `?client_id=${IG_APP_ID}` +
+  `https://www.facebook.com/dialog/oauth` +
+  `?client_id=${META_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=${encodeURIComponent('instagram_basic,instagram_content_publish')}` +
+  `&scope=${encodeURIComponent('instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement')}` +
   `&response_type=code` +
   `&state=${encodeURIComponent(clientId)}`;
 
