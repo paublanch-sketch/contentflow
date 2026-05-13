@@ -13,7 +13,7 @@ const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
   `?client_id=${IG_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments,instagram_business_manage_messages` +
+  `&scope=instagram_business_basic,instagram_business_content_publish` +
   `&response_type=code` +
   `&state=${clientId}`;
 
