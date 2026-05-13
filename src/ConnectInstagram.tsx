@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
 // Instagram Login (API moderna — no requiere Facebook Pages)
-const IG_APP_ID    = '1124977686473073';
+const IG_APP_ID    = '972574845424224';
 const REDIRECT_URI = `${window.location.origin}/ig-callback`;
 const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
