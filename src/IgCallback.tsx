@@ -38,10 +38,13 @@ export default function IgCallback() {
 
         setStatus('success');
         setMessage(`✅ Instagram conectado: @${data.ig_username}\n\nYa puedes publicar desde ContentFlow sin ningún servidor local.`);
-        sessionStorage.removeItem('ig_oauth_client_id');
 
-        // Redirigir al home después de 3s
-        setTimeout(() => { window.location.href = '/'; }, 3000);
+        // Volver a la página donde estaba (o home si no hay)
+        const returnUrl = sessionStorage.getItem('ig_oauth_return_url') || '/';
+        sessionStorage.removeItem('ig_oauth_client_id');
+        sessionStorage.removeItem('ig_oauth_return_url');
+
+        setTimeout(() => { window.location.href = returnUrl; }, 2500);
 
       } catch (err: any) {
         setStatus('error');
@@ -66,7 +69,7 @@ export default function IgCallback() {
         <p className="text-sm text-gray-600 whitespace-pre-line">{message}</p>
 
         {status === 'success' && (
-          <p className="text-xs text-gray-400">Redirigiendo en 3 segundos...</p>
+          <p className="text-xs text-gray-400">Volviendo a ContentFlow en 3 segundos...</p>
         )}
         {status === 'error' && (
           <button

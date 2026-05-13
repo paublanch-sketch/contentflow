@@ -9,13 +9,31 @@ import { supabase } from './lib/supabase';
 // Facebook Graph API → Instagram Business (mismo que Metricool)
 const META_APP_ID  = '1124977686473073';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
-const OAUTH_URL = (clientId: string) =>
-  `https://www.facebook.com/dialog/oauth` +
-  `?client_id=${META_APP_ID}` +
-  `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management` +
-  `&response_type=code` +
-  `&state=${clientId}`;
+const OAUTH_URL = (clientId: string) => {
+  const scope = [
+    'instagram_basic',
+    'instagram_content_publish',
+    'pages_show_list',
+    'pages_read_engagement',
+    'business_management',
+  ].join(',');
+  return (
+    `https://www.facebook.com/dialog/oauth` +
+    `?client_id=${META_APP_ID}` +
+    `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+    `&scope=${encodeURIComponent(scope)}` +
+    `&response_type=code` +
+    `&state=${encodeURIComponent(clientId)}`
+  );
+};
+
+// Navega directamente (no popup) → más fiable, evita ERR_ADDRESS_INVALID
+const startOAuth = (clientId: string) => {
+  // Guardar URL actual para volver después del callback
+  sessionStorage.setItem('ig_oauth_return_url', window.location.href);
+  sessionStorage.setItem('ig_oauth_client_id', clientId);
+  window.location.href = OAUTH_URL(clientId);
+};
 
 interface Props {
   clientId:             string;
@@ -175,7 +193,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
 
         {/* Opción Business / Creator */}
         <button
-          onClick={() => { setShowMenu(false); window.open(OAUTH_URL(clientId), '_blank', 'width=600,height=700'); }}
+          onClick={() => { setShowMenu(false); startOAuth(clientId); }}
           className="w-full mb-3 p-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white rounded-xl transition-opacity text-left"
         >
           <div className="flex items-center gap-3">
