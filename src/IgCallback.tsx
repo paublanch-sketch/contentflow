@@ -4,8 +4,8 @@
 
 import { useEffect, useState } from 'react';
 
-const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const SUPABASE_FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
+const SUPABASE_ANON_KEY = 'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg';
 
 export default function IgCallback() {
   const [status,  setStatus]  = useState<'loading' | 'success' | 'error'>('loading');
