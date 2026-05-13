@@ -36,7 +36,11 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    tokenBody,
     });
-    const shortData = await shortRes.json();
+    const shortRawText = await shortRes.text();
+    console.log('IG token response:', shortRes.status, shortRawText);
+    console.log('Params used - client_id:', IG_APP_ID, 'redirect_uri:', redirect_uri);
+    let shortData: any;
+    try { shortData = JSON.parse(shortRawText); } catch { throw new Error(`Instagram: ${shortRawText}`); }
     if (shortData.error_type || shortData.error) {
       throw new Error(`Token corto IG: ${shortData.error_message || shortData.error?.message || JSON.stringify(shortData)}`);
     }

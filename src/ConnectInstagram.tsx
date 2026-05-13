@@ -91,7 +91,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     setSaving(true); setError('');
     const { error: err } = await supabase.from('ig_credentials').upsert({
       client_id:   clientId,
-      ig_username: userInput.trim(),
+      ig_username: userInput.trim().replace(/^@/, ''),
       ig_password: passInput.trim(),
       updated_at:  new Date().toISOString(),
     });
@@ -226,7 +226,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     <div className="flex items-center gap-2">
       <div className="flex flex-col items-end">
         <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">Business · API ✓</span>
-        <span className="text-xs font-black text-green-400">📸 @{igUsername}</span>
+        <span className="text-xs font-black text-green-400">📸 @{igUsername.replace(/^@/, '')}</span>
       </div>
       <button onClick={() => setShowMenu(true)} title="Cambiar cuenta"
         className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-0.5 rounded-lg transition-colors font-bold">✏️</button>
@@ -240,7 +240,7 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     <div className="flex items-center gap-2">
       <div className="flex flex-col items-end">
         <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Personal · Playwright</span>
-        <span className="text-xs font-black text-green-400">📸 @{igUsername}</span>
+        <span className="text-xs font-black text-green-400">📸 @{igUsername.replace(/^@/, '')}</span>
       </div>
       <button onClick={() => { setUserInput(igUsername); setShowForm(true); }} title="Editar"
         className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-0.5 rounded-lg transition-colors font-bold">✏️</button>
