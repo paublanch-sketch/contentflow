@@ -6,14 +6,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// Facebook Graph API OAuth → Instagram Business
+// Instagram Login API OAuth → Instagram Business/Creator (sin necesidad de Facebook)
 const META_APP_ID  = '1124977686473073';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
-  `https://www.facebook.com/dialog/oauth` +
+  `https://www.instagram.com/oauth/authorize` +
   `?client_id=${META_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=${encodeURIComponent('instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement')}` +
+  `&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish,instagram_business_manage_messages,instagram_business_manage_comments')}` +
   `&response_type=code` +
   `&state=${encodeURIComponent(clientId)}`;
 
@@ -256,11 +256,4 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     </div>
   );
 
-  // ── Sin cuenta ───────────────────────────────────────────────────────────────
-  return (
-    <button onClick={() => setShowMenu(true)}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest transition-opacity">
-      📸 Conectar Instagram
-    </button>
-  );
-}
+  // ── Sin cuenta ───────────────────────────────────────────────�
