@@ -1,5 +1,5 @@
 // supabase/functions/ig-oauth-callback/index.ts
-// Instagram Login API: code → short token → long token → username → ig_tokens
+// Instagram Login API (sub-app 972574845424224): code → short token → long token → username
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -18,13 +18,13 @@ Deno.serve(async (req) => {
 
   try {
     const { code, client_id, redirect_uri } = await req.json();
-    console.log('[START]', { client_id, redirect_uri: redirect_uri, code: code?.slice(0,20)+'...' });
+    console.log('[START]', { client_id, code: code?.slice(0,20)+'...' });
     console.log('META_APP_ID:', META_APP_ID, '| SECRET present:', !!META_APP_SECRET);
     if (!code || !client_id) throw new Error('code y client_id requeridos');
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // ── 1. code → short-lived token (1h) ────────────────────────────────────────
+    // ── 1. code → short-lived token (1h) via Instagram Login API ────────────────
     const body = new URLSearchParams({
       client_id:     META_APP_ID,
       client_secret: META_APP_SECRET,
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const igUserId   = String(shortData.user_id);
     console.log('[Step 1] ✓ user_id:', igUserId);
 
-    // ── 2. short token → long-lived token (60 días) ──────────────────────────────
+    // ── 2. short → long-lived token (60 días) ───────────────────────────────────
     const longRes = await fetch(
       `https://graph.instagram.com/access_token` +
       `?grant_type=ig_exchange_token` +

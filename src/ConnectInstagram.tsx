@@ -6,17 +6,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// Instagram Login API OAuth → Instagram Business/Creator (sin necesidad de Facebook)
+// Instagram Login API → Instagram Business/Creator (main app ID)
 const META_APP_ID  = '1124977686473073';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
   `?client_id=${META_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=${encodeURIComponent('instagram_basic,instagram_content_publish,user_profile,user_media')}` +
+  `&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish,instagram_business_manage_messages,instagram_business_manage_comments')}` +
   `&response_type=code` +
-  `&enable_fb_login=0` +
-  `&force_authentication=true` +
   `&state=${encodeURIComponent(clientId)}`;
 
 // Navega directamente (no popup) → más fiable
@@ -258,4 +256,11 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     </div>
   );
 
-  // ── Sin cuenta ─────────────────────────────────────────────────�
+  // ── Sin cuenta ───────────────────────────────────────────────────────────────
+  return (
+    <button onClick={() => setShowMenu(true)}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest transition-opacity">
+      📸 Conectar Instagram
+    </button>
+  );
+}
