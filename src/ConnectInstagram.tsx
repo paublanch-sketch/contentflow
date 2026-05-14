@@ -256,4 +256,11 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     </div>
   );
 
-  // ── Sin cuenta ───────────────────────────────────────────────�
+  // ── Sin cuenta ───────────────────────────────────────────────────────────────
+  return (
+    <button onClick={() => setShowMenu(true)}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest transition-opacity">
+      📸 Conectar Instagram
+    </button>
+  );
+}

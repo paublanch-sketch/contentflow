@@ -74,4 +74,31 @@ Deno.serve(async (req) => {
     );
     const userData = await userRes.json();
     console.log('[Step 3] user:', JSON.stringify(userData));
-    if (userData.error) throw new Error(userData.erro
+    if (userData.error) throw new Error(userData.error.message);
+    const igUsername = userData.username || userData.name || igUserId;
+
+    // ── 4. Guardar en Supabase ───────────────────────────────────────────────────
+    const { error: upsertErr } = await sb.from('ig_tokens').upsert({
+      client_id,
+      ig_user_id:   igUserId,
+      ig_username:  igUsername,
+      access_token: longToken,
+      expires_at:   new Date(Date.now() + expiresInMs).toISOString(),
+      updated_at:   new Date().toISOString(),
+    });
+    if (upsertErr) throw new Error(`BD: ${upsertErr.message}`);
+
+    console.log('[SUCCESS]', igUsername);
+    return new Response(
+      JSON.stringify({ success: true, ig_username: igUsername, ig_user_id: igUserId }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (err: any) {
+    console.error('[ERROR]', err.message);
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
