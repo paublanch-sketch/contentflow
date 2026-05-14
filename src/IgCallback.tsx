@@ -37,14 +37,16 @@ export default function IgCallback() {
         if (!res.ok || data.error) throw new Error(data.error || data.message || `HTTP ${res.status}: ${rawText}`);
 
         setStatus('success');
-        setMessage(`✅ Instagram conectado: @${data.ig_username}\n\nYa puedes publicar desde ContentFlow sin ningún servidor local.`);
+        setMessage(`✅ Instagram conectado: @${data.ig_username}\n\nVolviendo a ContentFlow...`);
 
-        // Volver a la página donde estaba (o home si no hay)
-        const returnUrl = sessionStorage.getItem('ig_oauth_return_url') || '/';
+        // Volver a la página donde estaba (o home si no hay) forzando recarga
+        const rawReturn = sessionStorage.getItem('ig_oauth_return_url') || '/';
         sessionStorage.removeItem('ig_oauth_client_id');
         sessionStorage.removeItem('ig_oauth_return_url');
 
-        setTimeout(() => { window.location.href = returnUrl; }, 2500);
+        // Añadir ?ig_connected=1 para que la app sepa que acaba de conectar
+        const returnUrl = rawReturn.split('?')[0] + '?ig_connected=1';
+        setTimeout(() => { window.location.replace(returnUrl); }, 1500);
 
       } catch (err: any) {
         setStatus('error');

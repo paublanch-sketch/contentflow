@@ -557,7 +557,20 @@ export default function App() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailSubject, setEmailSubject]   = useState('');
   const [emailBody, setEmailBody]         = useState('');
+  const [igJustConnected, setIgJustConnected] = useState(false);
   const searchRef                   = useRef<HTMLDivElement>(null);
+
+  // ── Detectar retorno de OAuth IG ──────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ig_connected') === '1') {
+      setIgJustConnected(true);
+      // Limpiar URL sin recargar
+      window.history.replaceState({}, '', window.location.pathname);
+      // Limpiar banner tras 4s
+      setTimeout(() => setIgJustConnected(false), 4000);
+    }
+  }, []);
 
   // ── Nuevos clientes añadidos dinámicamente (Supabase + localStorage fallback) ──
   const [dynamicClients, setDynamicClients] = useState<Client[]>(() => {
@@ -1133,6 +1146,15 @@ export default function App() {
             </button>
           )}
         </nav>
+      )}
+
+      {/* ── Banner Instagram conectado ── */}
+      {igJustConnected && (
+        <div className="bg-green-600 text-white px-5 py-3 flex items-center gap-3 text-sm font-bold animate-pulse">
+          <span className="text-lg">📸</span>
+          ¡Instagram conectado correctamente! Ya puedes publicar desde ContentFlow.
+          <button onClick={() => setIgJustConnected(false)} className="ml-auto text-green-200 hover:text-white">✕</button>
+        </div>
       )}
 
       {/* ── Contenido ── */}

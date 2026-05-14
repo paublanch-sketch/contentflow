@@ -11,8 +11,7 @@ const META_APP_ID  = '972574845424224';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
-  `?force_reauth=true` +
-  `&client_id=${META_APP_ID}` +
+  `?client_id=${META_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
   `&response_type=code` +
   `&scope=${encodeURIComponent('instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_publish,instagram_business_manage_insights')}` +
