@@ -18,6 +18,72 @@ const OAUTH_URL = (clientId: string) =>
   `&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish')}` +
   `&state=${encodeURIComponent(clientId)}`;
 
+// Abre ventana emergente con credenciales y luego redirige
+const startOAuthWithCreds = (clientId: string, user?: string, pass?: string) => {
+  if (user || pass) {
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Credenciales Instagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f1117; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; gap: 20px; }
+  h2 { font-size: 18px; font-weight: 900; letter-spacing: .05em; text-align: center; }
+  p.sub { font-size: 11px; color: #6b7280; text-align: center; line-height: 1.5; }
+  .card { background: #1a1d27; border: 1px solid #374151; border-radius: 14px; padding: 20px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; flex-direction: column; gap: 4px; }
+  .label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: #6b7280; }
+  .value { font-family: monospace; font-size: 15px; color: #f3f4f6; background: #252836; border-radius: 8px; padding: 10px 12px; word-break: break-all; }
+  .value.pass { color: #fbbf24; }
+  button { width: 100%; padding: 11px; border: none; border-radius: 10px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; transition: opacity .15s; }
+  button:hover { opacity: .85; }
+  .btn-user { background: #7c3aed; color: #fff; }
+  .btn-pass { background: #d97706; color: #000; }
+  .toast { font-size: 11px; font-weight: 700; color: #4ade80; text-align: center; height: 16px; }
+  .note { font-size: 10px; color: #374151; text-align: center; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <h2>🔑 Credenciales Instagram</h2>
+  <p class="sub">Copia usuario y contraseña antes<br>de iniciar sesión en Instagram.</p>
+  <div class="card">
+    ${user ? `
+    <div class="row">
+      <span class="label">Usuario</span>
+      <div class="value">${user}</div>
+      <button class="btn-user" onclick="copyText('${user.replace(/'/g,"\\'")}','btn-u')">📋 Copiar usuario</button>
+      <div class="toast" id="btn-u"></div>
+    </div>` : ''}
+    ${pass ? `
+    <div class="row">
+      <span class="label">Contraseña</span>
+      <div class="value pass">${pass}</div>
+      <button class="btn-pass" onclick="copyText('${pass.replace(/'/g,"\\'")}','btn-p')">📋 Copiar contraseña</button>
+      <div class="toast" id="btn-p"></div>
+    </div>` : ''}
+  </div>
+  <p class="note">Puedes cerrar esta ventana<br>cuando hayas terminado.</p>
+  <script>
+    function copyText(text, id) {
+      navigator.clipboard.writeText(text).then(() => {
+        const el = document.getElementById(id);
+        el.textContent = '✅ Copiado al portapapeles';
+        setTimeout(() => el.textContent = '', 2500);
+      });
+    }
+  </script>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, 'ig_creds', 'width=380,height=480,top=80,left=80,resizable=yes');
+  }
+  sessionStorage.setItem('ig_oauth_return_url', window.location.href);
+  sessionStorage.setItem('ig_oauth_client_id', clientId);
+  window.location.href = OAUTH_URL(clientId);
+};
+
 // Navega directamente (no popup) → más fiable
 const startOAuth = (clientId: string) => {
   sessionStorage.setItem('ig_oauth_return_url', window.location.href);
@@ -37,23 +103,15 @@ interface Props {
 type Mode = 'none' | 'business' | 'personal';
 
 export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsernameChange, onAccountTypeChange }: Props) {
-  const [loading,      setLoading]      = useState(true);
-  const [mode,         setMode]         = useState<Mode>('none');
-  const [igUsername,   setIgUsername]   = useState('');
-  const [showMenu,     setShowMenu]     = useState(false);
-  const [showForm,     setShowForm]     = useState(false);
-  const [showCredPre,  setShowCredPre]  = useState(false);
-  const [copiedField,  setCopiedField]  = useState<'user'|'pass'|null>(null);
-  const [userInput,    setUserInput]    = useState('');
-  const [passInput,    setPassInput]    = useState('');
-  const [saving,       setSaving]       = useState(false);
-  const [error,        setError]        = useState('');
-
-  const copy = (text: string, field: 'user'|'pass') => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
+  const [loading,    setLoading]    = useState(true);
+  const [mode,       setMode]       = useState<Mode>('none');
+  const [igUsername, setIgUsername] = useState('');
+  const [showMenu,   setShowMenu]   = useState(false);
+  const [showForm,   setShowForm]   = useState(false);
+  const [userInput,  setUserInput]  = useState('');
+  const [passInput,  setPassInput]  = useState('');
+  const [saving,     setSaving]     = useState(false);
+  const [error,      setError]      = useState('');
 
   // ── Cargar estado al montar ──────────────────────────────────────────────────
   useEffect(() => {
@@ -181,65 +239,6 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
     </div>
   );
 
-  // ── Modal previo al OAuth: muestra credenciales para copiar antes de redirigir
-  if (showCredPre) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#1a1d27] border border-purple-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <div className="text-center mb-5">
-          <span className="text-3xl">🔑</span>
-          <h3 className="font-black text-white text-base mt-2">Credenciales de acceso</h3>
-          <p className="text-gray-400 text-xs mt-1">{clientName}</p>
-          <p className="text-gray-500 text-[10px] mt-2 leading-relaxed">
-            Copia usuario y contraseña <strong className="text-amber-400">antes</strong> de continuar.<br/>
-            Instagram te pedirá que inicies sesión.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2 mb-5">
-          {igUser && (
-            <div className="flex items-center gap-2 bg-[#252836] rounded-xl px-3 py-2.5">
-              <span className="text-[10px] text-gray-500 w-14 shrink-0 uppercase font-black">Usuario</span>
-              <span className="text-xs font-mono text-gray-200 flex-1 truncate">{igUser}</span>
-              <button
-                onClick={() => copy(igUser, 'user')}
-                className="text-[10px] font-black uppercase tracking-widest shrink-0 px-2 py-1 rounded-lg transition-colors"
-                style={{ color: copiedField === 'user' ? '#4ade80' : '#a78bfa' }}
-              >
-                {copiedField === 'user' ? '✅ Copiado' : '📋 Copiar'}
-              </button>
-            </div>
-          )}
-          {igPass && (
-            <div className="flex items-center gap-2 bg-[#252836] rounded-xl px-3 py-2.5">
-              <span className="text-[10px] text-gray-500 w-14 shrink-0 uppercase font-black">Contraseña</span>
-              <span className="text-xs font-mono text-amber-300 flex-1">{igPass}</span>
-              <button
-                onClick={() => copy(igPass, 'pass')}
-                className="text-[10px] font-black uppercase tracking-widest shrink-0 px-2 py-1 rounded-lg transition-colors"
-                style={{ color: copiedField === 'pass' ? '#4ade80' : '#a78bfa' }}
-              >
-                {copiedField === 'pass' ? '✅ Copiada' : '📋 Copiar'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => { setShowCredPre(false); startOAuth(clientId); }}
-          className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-black text-sm uppercase tracking-widest rounded-xl transition-opacity"
-        >
-          Ya he copiado — Continuar →
-        </button>
-        <button
-          onClick={() => { setShowCredPre(false); setShowMenu(true); }}
-          className="w-full mt-2 py-2 text-gray-500 hover:text-gray-300 text-xs font-bold uppercase tracking-widest"
-        >
-          Volver
-        </button>
-      </div>
-    </div>
-  );
-
   // ── Menú selector de tipo de cuenta ─────────────────────────────────────────
   if (showMenu) return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -252,14 +251,7 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
 
         {/* Opción Business / Creator */}
         <button
-          onClick={() => {
-            setShowMenu(false);
-            if (igUser || igPass) {
-              setShowCredPre(true);
-            } else {
-              startOAuth(clientId);
-            }
-          }}
+          onClick={() => { setShowMenu(false); startOAuthWithCreds(clientId, igUser, igPass); }}
           className="w-full mb-3 p-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white rounded-xl transition-opacity text-left"
         >
           <div className="flex items-center gap-3">
