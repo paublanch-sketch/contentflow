@@ -5,6 +5,7 @@ import ApprovalWall, { MetricoolSettingsModal } from './ApprovalWall';
 import AdminLogin from './AdminLogin';
 import IgCallback from './IgCallback';
 import { ConnectInstagram } from './ConnectInstagram';
+import IgCredentialTest from './IgCredentialTest';
 import { supabase } from './lib/supabase';
 import clientsData from './clients.json';
 
@@ -933,6 +934,7 @@ export default function App() {
 
   // ── Guards ──
   if (isIgCallback) return <IgCallback />;
+  if (window.location.pathname === '/ig-test') return <IgCredentialTest />;
   if (isPrivacyPage) return <PrivacyPage />;
   if (showMcSettings) return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
   if (!isClientPortal && !adminAuth) return <AdminLogin onLogin={() => setAdminAuth(true)} />;
