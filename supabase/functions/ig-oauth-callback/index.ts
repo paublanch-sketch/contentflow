@@ -76,11 +76,14 @@ Deno.serve(async (req) => {
     console.log('[Step 3] user:', JSON.stringify(userData));
     if (userData.error) throw new Error(userData.error.message);
     const igUsername = userData.username || userData.name || igUserId;
+    // userData.id es el IG User ID real necesario para Content Publishing API
+    const igUserIdReal = userData.id ? String(userData.id) : igUserId;
+    console.log('[Step 3] ✓ real ig_user_id:', igUserIdReal, 'username:', igUsername);
 
     // ── 4. Guardar en Supabase ───────────────────────────────────────────────────
     const { error: upsertErr } = await sb.from('ig_tokens').upsert({
       client_id,
-      ig_user_id:   igUserId,
+      ig_user_id:   igUserIdReal,
       ig_username:  igUsername,
       access_token: longToken,
       expires_at:   new Date(Date.now() + expiresInMs).toISOString(),
