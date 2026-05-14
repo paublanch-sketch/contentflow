@@ -13,7 +13,7 @@ const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
   `?client_id=${META_APP_ID}` +
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-  `&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish,instagram_business_manage_messages,instagram_business_manage_comments')}` +
+  `&scope=${encodeURIComponent('instagram_basic,instagram_content_publish,user_profile,user_media')}` +
   `&response_type=code` +
   `&enable_fb_login=0` +
   `&force_authentication=true` +
@@ -258,11 +258,4 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
     </div>
   );
 
-  // ── Sin cuenta ───────────────────────────────────────────────────────────────
-  return (
-    <button onClick={() => setShowMenu(true)}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest transition-opacity">
-      📸 Conectar Instagram
-    </button>
-  );
-}
+  // ── Sin cuenta ─────────────────────────────────────────────────�
