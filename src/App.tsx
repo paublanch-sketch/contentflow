@@ -41,6 +41,12 @@ export type Client = {
   profile_url: string;
   folder: string;
   notes: string;
+  ig_username?: string;
+  ig_password?: string;
+  fb_username?: string;
+  fb_password?: string;
+  li_username?: string;
+  li_password?: string;
 };
 
 // ─── Fuente de verdad de clientes (generado por generate_clients_json.py) ─────
@@ -88,6 +94,48 @@ function PlatformBadge({ p, small = false }: { p: string; small?: boolean }) {
 }
 
 // ─── Modal: Añadir Cliente ────────────────────────────────────────────────────
+
+// ─── CredRow: muestra usuario + contraseña con click = revelar + copiar ───────
+function CredRow({ icon, label, user, pass }: { icon: string; label: string; user: string; pass: string }) {
+  const [show, setShow] = useState(false);
+  const [copied, setCopied] = useState<'user' | 'pass' | null>(null);
+
+  const copyUser = () => {
+    navigator.clipboard.writeText(user);
+    setCopied('user');
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const copyPass = () => {
+    navigator.clipboard.writeText(pass);
+    setShow(true);
+    setCopied('pass');
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 w-full relative">
+      <span className="text-[10px] text-gray-500 w-4">{icon}</span>
+      <span className="text-[9px] font-black text-gray-600 uppercase w-4">{label}</span>
+      <button
+        onClick={copyUser}
+        title="Copiar usuario"
+        className="text-[10px] font-mono text-gray-300 hover:text-white truncate max-w-[100px]"
+      >{copied === 'user' ? <span className="text-green-400">✅ copiado</span> : user}</button>
+      <span className="text-gray-700 text-[10px]">/</span>
+      <button
+        onClick={copyPass}
+        title="Click: revelar y copiar contrasena"
+        className="text-[10px] font-mono text-amber-400 hover:text-amber-200"
+      >
+        {copied === 'pass'
+          ? <span className="text-green-400">✅ copiada!</span>
+          : show ? pass : '••••••'}
+      </button>
+    </div>
+  );
+}
+
 function AddClientModal({
   onClose,
   onAdd,
@@ -1101,6 +1149,8 @@ export default function App() {
                     <ConnectInstagram
                       clientId={activeClient.id}
                       clientName={activeClient.name}
+                      igUser={activeClient.ig_username}
+                      igPass={activeClient.ig_password}
                       onUsernameChange={setIgUsername}
                       onAccountTypeChange={setIgAccountType}
                     />
@@ -1249,6 +1299,21 @@ export default function App() {
                       >
                         {showIgPassword ? igPassword : '••••••••'}
                       </button>
+                    </div>
+                  )}
+                  {/* ── Credenciales del Excel (siempre visibles para admin) ── */}
+                  {(activeClient?.ig_username || activeClient?.fb_username || activeClient?.li_username) && (
+                    <div className="w-full border-t border-gray-700 mt-1 pt-1.5 flex flex-col gap-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">Credenciales</span>
+                      {activeClient?.ig_username && (
+                        <CredRow icon="📸" label="IG" user={activeClient.ig_username} pass={activeClient.ig_password || ''} />
+                      )}
+                      {activeClient?.fb_username && (
+                        <CredRow icon="📘" label="FB" user={activeClient.fb_username} pass={activeClient.fb_password || ''} />
+                      )}
+                      {activeClient?.li_username && (
+                        <CredRow icon="💼" label="LI" user={activeClient.li_username} pass={activeClient.li_password || ''} />
+                      )}
                     </div>
                   )}
                 </div>
