@@ -232,28 +232,38 @@ export function ConnectInstagram({ clientId, clientName, onUsernameChange, onAcc
   // ── Conectado: Business ──────────────────────────────────────────────────────
   if (mode === 'business') return (
     <div className="flex items-center gap-2">
-      <div className="flex flex-col items-end">
-        <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">Business · API ✓</span>
-        <span className="text-xs font-black text-green-400">📸 @{igUsername.replace(/^@/, '')}</span>
+      <div className="flex items-center gap-2 bg-green-950 border border-green-700 rounded-xl px-3 py-1.5">
+        <span className="text-green-400 text-base">✅</span>
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">Cuenta conectada · API</span>
+          <span className="text-xs font-black text-white">📸 @{igUsername.replace(/^@/, '')}</span>
+        </div>
       </div>
       <button onClick={() => setShowMenu(true)} title="Cambiar cuenta"
-        className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-0.5 rounded-lg transition-colors font-bold">✏️</button>
+        className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-1 rounded-lg transition-colors font-bold">✏️</button>
       <button onClick={handleDisconnect} title="Desconectar"
-        className="text-[10px] text-gray-600 hover:text-red-400 border border-gray-700 hover:border-red-500 px-2 py-0.5 rounded-lg transition-colors font-bold">✕</button>
+        className="text-[10px] text-gray-500 hover:text-red-400 border border-gray-700 hover:border-red-500 px-2 py-1 rounded-lg transition-colors font-bold uppercase tracking-widest">
+        Desconectar
+      </button>
     </div>
   );
 
   // ── Conectado: Personal ──────────────────────────────────────────────────────
   if (mode === 'personal') return (
     <div className="flex items-center gap-2">
-      <div className="flex flex-col items-end">
-        <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Personal · Playwright</span>
-        <span className="text-xs font-black text-green-400">📸 @{igUsername.replace(/^@/, '')}</span>
+      <div className="flex items-center gap-2 bg-orange-950 border border-orange-700 rounded-xl px-3 py-1.5">
+        <span className="text-orange-400 text-base">✅</span>
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">Cuenta conectada · Local</span>
+          <span className="text-xs font-black text-white">📸 @{igUsername.replace(/^@/, '')}</span>
+        </div>
       </div>
       <button onClick={() => { setUserInput(igUsername); setShowForm(true); }} title="Editar"
-        className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-0.5 rounded-lg transition-colors font-bold">✏️</button>
+        className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-1 rounded-lg transition-colors font-bold">✏️</button>
       <button onClick={handleDisconnect} title="Desconectar"
-        className="text-[10px] text-gray-600 hover:text-red-400 border border-gray-700 hover:border-red-500 px-2 py-0.5 rounded-lg transition-colors font-bold">✕</button>
+        className="text-[10px] text-gray-500 hover:text-red-400 border border-gray-700 hover:border-red-500 px-2 py-1 rounded-lg transition-colors font-bold uppercase tracking-widest">
+        Desconectar
+      </button>
     </div>
   );
 
