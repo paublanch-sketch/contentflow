@@ -15,6 +15,8 @@ const OAUTH_URL = (clientId: string) =>
   `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
   `&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish,instagram_business_manage_messages,instagram_business_manage_comments')}` +
   `&response_type=code` +
+  `&enable_fb_login=0` +
+  `&force_authentication=true` +
   `&state=${encodeURIComponent(clientId)}`;
 
 // Navega directamente (no popup) → más fiable
