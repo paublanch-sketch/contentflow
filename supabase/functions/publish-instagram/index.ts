@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
         body.published             = false;
         body.scheduled_publish_time = schedUnix;
       }
-      const res  = await fetch(`https://graph.facebook.com/v21.0/${ig_user_id}/media`, {
+      const res  = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       // Carrusel: hijos primero
       const childIds: string[] = [];
       for (const url of imageUrls) {
-        const res  = await fetch(`https://graph.facebook.com/v21.0/${ig_user_id}/media`, {
+        const res  = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token }),
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         carouselBody.published              = false;
         carouselBody.scheduled_publish_time = schedUnix;
       }
-      const res  = await fetch(`https://graph.facebook.com/v21.0/${ig_user_id}/media`, {
+      const res  = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(carouselBody),
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     for (let i = 0; i < 10; i++) {
       await new Promise(r => setTimeout(r, 3000));
       const sr = await fetch(
-        `https://graph.facebook.com/v21.0/${creationId}?fields=status_code&access_token=${access_token}`
+        `https://graph.instagram.com/v21.0/${creationId}?fields=status_code&access_token=${access_token}`
       );
       const statusData = await sr.json();
       console.log(`[publish-ig] Container status check ${i+1}:`, statusData.status_code);
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const publishRes = await fetch(`https://graph.facebook.com/v21.0/${ig_user_id}/media_publish`, {
+    const publishRes = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media_publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creation_id: creationId, access_token }),

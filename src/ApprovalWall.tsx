@@ -1387,14 +1387,18 @@ function PostCard({
     setPublishJobId('_api');
 
     // ── RUTA 1: Instagram Graph API (sin servidor local) ─────────────────────
-    const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+    const FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
+    const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmYnVzc2FtZnpxZnZvenJ5Y3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjY1NjAsImV4cCI6MjA5MjM0MjU2MH0.G6r1ONLs2NaLcO0T2oBiQVBLhkTsSjZr375PQX9zgnw';
     try {
       const apiRes = await fetch(`${FUNCTIONS_URL}/publish-instagram`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
         body: JSON.stringify({ post_id: post.id }),
       });
-      const apiData = await apiRes.json();
+      const rawText = await apiRes.text();
+      let apiData: any = {};
+      try { apiData = JSON.parse(rawText); } catch { apiData = { error: rawText }; }
+      console.log('[publish-ig] Edge function response:', apiRes.status, rawText.slice(0, 300));
       if (apiRes.ok && apiData.success) {
         setPublishStatus('success');
         setPublishMessage('✅ Publicado en Instagram via API oficial.');
@@ -1407,12 +1411,12 @@ function PostCard({
       } else {
         // Error real de la API (imagen inválida, token caducado, etc.)
         setPublishStatus('error');
-        setPublishMessage(apiData.error || 'Error publicando via API');
+        setPublishMessage(apiData.error || `Error HTTP ${apiRes.status}: ${rawText.slice(0, 200)}`);
         return;
       }
-    } catch {
+    } catch (fetchErr: any) {
       // Edge Function no disponible → intentar servidor local
-      console.log('Edge Function no responde → intentando servidor local...');
+      console.log('Edge Function no responde → intentando servidor local...', fetchErr?.message);
     }
 
     // ── RUTA 2: Servidor local publisher_server.py (fallback) ────────────────
