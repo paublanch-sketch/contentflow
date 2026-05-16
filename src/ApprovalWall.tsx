@@ -2786,19 +2786,19 @@ function PostCard({
           <div className="flex flex-col gap-2">
             {post.platform === 'IG' ? (
               <>
-                {/* Botón 1: Instagram API (Business) o publisher.py (Personal) */}
-                <button
-                  onClick={() => setShowIgScheduler(true)}
-                  className={`w-full py-3 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
-                    igAccountType === 'business'
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90'
-                      : igAccountType === 'personal'
-                        ? 'bg-gradient-to-br from-orange-500 to-rose-500 hover:opacity-90'
-                        : 'bg-gradient-to-br from-slate-700 to-slate-800 hover:opacity-90'
-                  }`}
-                >
-                  📸 {igAccountType === 'business' ? 'Instagram API' : igAccountType === 'personal' ? 'Instagram (Publisher)' : 'Publicar Instagram'}
-                </button>
+                {/* Botón 1: Instagram — solo visible si hay cuenta conectada */}
+                {igAccountType !== 'none' && (
+                  <button
+                    onClick={() => setShowIgScheduler(true)}
+                    className={`w-full py-3 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
+                      igAccountType === 'business'
+                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90'
+                        : 'bg-gradient-to-br from-orange-500 to-rose-500 hover:opacity-90'
+                    }`}
+                  >
+                    📸 {igAccountType === 'business' ? 'Instagram API' : 'Instagram (Publisher)'}
+                  </button>
+                )}
                 {/* Botón 2: Metricool (siempre visible) */}
                 <button
                   onClick={() => setShowMcModal(true)}
