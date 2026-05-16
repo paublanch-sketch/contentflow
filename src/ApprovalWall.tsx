@@ -2786,19 +2786,25 @@ function PostCard({
           <div className="flex flex-col gap-2">
             {post.platform === 'IG' ? (
               <>
-                {/* Botón 1: Instagram — solo visible si hay cuenta conectada */}
-                {igAccountType !== 'none' && (
-                  <button
-                    onClick={() => setShowIgScheduler(true)}
-                    className={`w-full py-3 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
-                      igAccountType === 'business'
-                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90'
-                        : 'bg-gradient-to-br from-orange-500 to-rose-500 hover:opacity-90'
-                    }`}
-                  >
-                    📸 {igAccountType === 'business' ? 'Instagram API' : 'Instagram (Publisher)'}
-                  </button>
-                )}
+                {/* Botón 1: Instagram — si no hay cuenta conectada, redirige al botón de conexión en la navbar */}
+                <button
+                  onClick={() => {
+                    if (igAccountType === 'none') {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                      setShowIgScheduler(true);
+                    }
+                  }}
+                  className={`w-full py-3 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
+                    igAccountType === 'business'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90'
+                      : igAccountType === 'personal'
+                        ? 'bg-gradient-to-br from-orange-500 to-rose-500 hover:opacity-90'
+                        : 'bg-gradient-to-br from-slate-500 to-slate-600 hover:opacity-90'
+                  }`}
+                >
+                  📸 {igAccountType === 'business' ? 'Instagram API' : igAccountType === 'personal' ? 'Instagram (Publisher)' : 'Conectar Instagram ↑'}
+                </button>
                 {/* Botón 2: Metricool (siempre visible) */}
                 <button
                   onClick={() => setShowMcModal(true)}
