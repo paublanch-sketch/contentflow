@@ -56,6 +56,7 @@ const CLIENTS: Client[] = clientsData as Client[];
 const LS_KEY             = 'cf_last_client';
 const LS_DYNAMIC_CLIENTS = 'cf_dynamic_clients';
 const LS_PLATFORMS_EXTRA = 'cf_platforms_extra';
+const LS_DELETED_CLIENTS = 'cf_deleted_clients';
 
 // ─── Helper: texto → slug kebab-case ─────────────────────────────────────────
 function toSlug(str: string): string {
@@ -626,6 +627,11 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem(LS_DYNAMIC_CLIENTS) || '[]'); } catch { return []; }
   });
 
+  // ── IDs de clientes eliminados (para ocultar también los estáticos del JSON) ──
+  const [deletedClientIds, setDeletedClientIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(LS_DELETED_CLIENTS) || '[]')); } catch { return new Set(); }
+  });
+
   // ── Cargar clientes dinámicos desde Supabase al montar ──
   useEffect(() => {
     supabase
@@ -656,8 +662,8 @@ export default function App() {
   const [showAddSocialModal, setShowAddSocialModal] = useState(false);
   const [confirmDeleteClient, setConfirmDeleteClient] = useState(false);
 
-  // ── Lista completa de clientes (estáticos + dinámicos) ──
-  const ALL_CLIENTS: Client[] = [...CLIENTS, ...dynamicClients];
+  // ── Lista completa de clientes (estáticos + dinámicos, sin los eliminados) ──
+  const ALL_CLIENTS: Client[] = [...CLIENTS, ...dynamicClients].filter(c => !deletedClientIds.has(c.id));
 
   // ── Cerrar dropdown al hacer click fuera ──
   useEffect(() => {
@@ -909,17 +915,27 @@ export default function App() {
     setShowAddSocialModal(false);
   };
 
-  // ── Borrar cliente dinámico ──
+  // ── Borrar cliente (estático o dinámico) ──
   const handleDeleteClient = async () => {
     if (!clientId) return;
+    const deletedId = clientId;
+
     // Borrar de Supabase (solo si existe allí)
-    await supabase.from('clients').delete().eq('id', clientId);
-    // Borrar de estado local + localStorage
-    const updated = dynamicClients.filter(c => c.id !== clientId);
-    setDynamicClients(updated);
-    try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updated)); } catch {}
+    await supabase.from('clients').delete().eq('id', deletedId);
+
+    // Borrar de estado local + localStorage (clientes dinámicos)
+    const updatedDynamic = dynamicClients.filter(c => c.id !== deletedId);
+    setDynamicClients(updatedDynamic);
+    try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updatedDynamic)); } catch {}
+
+    // Registrar el ID como eliminado (cubre también clientes estáticos del JSON)
+    const updatedDeleted = new Set(deletedClientIds);
+    updatedDeleted.add(deletedId);
+    setDeletedClientIds(updatedDeleted);
+    try { localStorage.setItem(LS_DELETED_CLIENTS, JSON.stringify([...updatedDeleted])); } catch {}
+
     // Seleccionar el primer cliente disponible
-    const remaining = [...CLIENTS, ...updated];
+    const remaining = [...CLIENTS, ...updatedDynamic].filter(c => !updatedDeleted.has(c.id));
     const next = remaining[0];
     if (next) selectClient(next.id); else setClientId('');
     setConfirmDeleteClient(false);
