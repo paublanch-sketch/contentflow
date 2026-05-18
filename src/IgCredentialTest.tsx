@@ -26,7 +26,7 @@ export default function IgCredentialTest() {
   });
   const [running, setRunning]     = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const [delay, setDelay]         = useState(2000);
+  const [delay, setDelay]         = useState(4000);
   const stopRef                   = useRef(false);
 
   // Persistir
