@@ -608,6 +608,7 @@ export default function App() {
   const [emailSubject, setEmailSubject]   = useState('');
   const [emailBody, setEmailBody]         = useState('');
   const [igJustConnected, setIgJustConnected] = useState(false);
+  const [igRefreshKey,   setIgRefreshKey]     = useState(0);
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // ── Detectar retorno de OAuth IG ──────────────────────────────────────────
@@ -615,6 +616,8 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('ig_connected') === '1') {
       setIgJustConnected(true);
+      // Forzar re-fetch de ig_tokens y re-mount de ConnectInstagram
+      setIgRefreshKey(k => k + 1);
       // Limpiar URL sin recargar
       window.history.replaceState({}, '', window.location.pathname);
       // Limpiar banner tras 4s
@@ -736,7 +739,7 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Cargar ig_username y tipo de cuenta cuando cambia el cliente ──
+  // ── Cargar ig_username y tipo de cuenta cuando cambia el cliente o vuelve de OAuth ──
   useEffect(() => {
     if (!clientId) return;
     setIgUsername('');
@@ -779,7 +782,7 @@ export default function App() {
         setIgAccountType('personal');
       }
     })();
-  }, [clientId]);
+  }, [clientId, igRefreshKey]);
 
   // ── Cargar posts desde Supabase cuando cambia el cliente ──
   useEffect(() => {
@@ -1174,6 +1177,7 @@ export default function App() {
                   {/* Instagram / Facebook / Metricool */}
                   {activeClient?.platform === 'IG' ? (
                     <ConnectInstagram
+                      key={`${activeClient.id}-${igRefreshKey}`}
                       clientId={activeClient.id}
                       clientName={activeClient.name}
                       igUser={activeClient.ig_username}
