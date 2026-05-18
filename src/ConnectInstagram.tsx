@@ -271,7 +271,7 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
 
         {/* Opción Personal */}
         <button
-          onClick={() => { setShowMenu(false); setShowForm(true); }}
+          onClick={() => { setShowMenu(false); setUserInput(igUser || ''); setPassInput(igPass || ''); setShowForm(true); }}
           className="w-full p-4 bg-[#252836] hover:bg-[#2d3144] border border-gray-700 text-white rounded-xl transition-colors text-left"
         >
           <div className="flex items-center gap-3">
