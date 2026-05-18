@@ -108,10 +108,12 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
   const [igUsername, setIgUsername] = useState('');
   const [showMenu,   setShowMenu]   = useState(false);
   const [showForm,   setShowForm]   = useState(false);
+  const [showCreds,  setShowCreds]  = useState(false);
   const [userInput,  setUserInput]  = useState('');
   const [passInput,  setPassInput]  = useState('');
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState('');
+  const [copied,     setCopied]     = useState<string>('');
 
   // ── Cargar estado al montar ──────────────────────────────────────────────────
   useEffect(() => {
@@ -200,6 +202,54 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
     </span>
   );
 
+  // ── Modal credenciales antes de OAuth ───────────────────────────────────────
+  if (showCreds) return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-[#1a1d27] border border-gray-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="text-center mb-5">
+          <span className="text-3xl">🔑</span>
+          <h3 className="font-black text-white text-base mt-2">Credenciales Instagram</h3>
+          <p className="text-gray-500 text-xs mt-1">{clientName}</p>
+          <p className="text-gray-400 text-[11px] mt-2">Copia usuario y contraseña antes de iniciar sesión en Instagram.</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          {igUser && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Usuario</span>
+              <div className="flex items-center gap-2">
+                <span className="flex-1 font-mono text-sm text-white bg-[#252836] rounded-xl px-3 py-2 break-all">{igUser}</span>
+                <button onClick={() => { navigator.clipboard.writeText(igUser); setCopied('user'); setTimeout(() => setCopied(''), 2000); }}
+                  className="px-3 py-2 bg-purple-700 hover:opacity-90 text-white text-xs font-black rounded-xl shrink-0">
+                  {copied === 'user' ? '✅' : '📋'}
+                </button>
+              </div>
+            </div>
+          )}
+          {igPass && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Contraseña</span>
+              <div className="flex items-center gap-2">
+                <span className="flex-1 font-mono text-sm text-amber-400 bg-[#252836] rounded-xl px-3 py-2 break-all">{igPass}</span>
+                <button onClick={() => { navigator.clipboard.writeText(igPass); setCopied('pass'); setTimeout(() => setCopied(''), 2000); }}
+                  className="px-3 py-2 bg-amber-600 hover:opacity-90 text-black text-xs font-black rounded-xl shrink-0">
+                  {copied === 'pass' ? '✅' : '📋'}
+                </button>
+              </div>
+            </div>
+          )}
+          <button onClick={() => { setShowCreds(false); startOAuthWithCreds(clientId, igUser, igPass); }}
+            className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-black text-sm uppercase tracking-widest rounded-xl mt-2">
+            🚀 Continuar a Instagram
+          </button>
+          <button onClick={() => setShowCreds(false)}
+            className="w-full py-2 text-gray-500 hover:text-gray-300 text-xs font-bold uppercase tracking-widest">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // ── Modal formulario Personal ────────────────────────────────────────────────
   if (showForm) return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -251,7 +301,7 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
 
         {/* Opción Business / Creator */}
         <button
-          onClick={() => { setShowMenu(false); startOAuthWithCreds(clientId, igUser, igPass); }}
+          onClick={() => { setShowMenu(false); setShowCreds(true); }}
           className="w-full mb-3 p-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white rounded-xl transition-opacity text-left"
         >
           <div className="flex items-center gap-3">
