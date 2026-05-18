@@ -152,6 +152,23 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
         return;
       }
 
+      // 3. ¿Tiene credenciales en clients.json (prop igUser)?
+      if (igUser) {
+        // Guardar en Supabase para que el publisher las tenga disponibles
+        supabase.from('ig_credentials').upsert({
+          client_id:   clientId,
+          ig_username: igUser,
+          ig_password: igPass || '',
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'client_id' }).then(() => {});
+        setMode('personal');
+        setIgUsername(igUser);
+        onUsernameChange?.(igUser);
+        onAccountTypeChange?.('personal');
+        setLoading(false);
+        return;
+      }
+
       setMode('none');
       setIgUsername('');
       onUsernameChange?.('');
