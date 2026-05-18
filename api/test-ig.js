@@ -76,7 +76,7 @@ module.exports = async function handler(req, res) {
         'Accept':         'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language':'es-ES,es;q=0.9',
       },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(8000),
     });
 
     const pageCookies = pageRes.headers.get('set-cookie') || '';
@@ -111,7 +111,7 @@ module.exports = async function handler(req, res) {
         stopDeletionNonce:    '',
         trustedDeviceRecords: '{}',
       }).toString(),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     });
 
     const loginCookies = loginRes.headers.get('set-cookie') || '';

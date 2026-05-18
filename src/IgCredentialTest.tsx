@@ -62,7 +62,7 @@ export default function IgCredentialTest() {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ username: client.ig_username, password: client.ig_password, client_id: client.id }),
-          signal:  AbortSignal.timeout(20000),
+          signal:  AbortSignal.timeout(12000),
         });
         const data = await res.json();
         result = {
