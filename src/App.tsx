@@ -958,7 +958,8 @@ export default function App() {
 
   // ── Guards ──
   if (isIgCallback) return <IgCallback />;
-  if (window.location.pathname === '/ig-test') return <IgCredentialTest />;
+  // ig-test DESACTIVADO — causaba alertas de seguridad en cuentas de clientes (login desde Vercel/Virginia)
+  // if (window.location.pathname === '/ig-test') return <IgCredentialTest />;
   if (isPrivacyPage) return <PrivacyPage />;
   if (showMcSettings) return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
   if (!isClientPortal && !adminAuth) return <AdminLogin onLogin={() => setAdminAuth(true)} />;
