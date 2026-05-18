@@ -768,8 +768,16 @@ export default function App() {
           setIgUsername(igCreds[clientId].ig_username);
           if (igCreds[clientId].ig_password) setIgPassword(igCreds[clientId].ig_password);
           setIgAccountType('personal');
+          return;
         }
       } catch {}
+      // 4. ¿Tiene credenciales en clients.json? → marcar como personal para habilitar publicación
+      const clientFromJson = (await import('./clients.json')).default.find((c: {id: string}) => c.id === clientId) as {ig_username?: string; ig_password?: string} | undefined;
+      if (clientFromJson?.ig_username) {
+        setIgUsername(clientFromJson.ig_username);
+        if (clientFromJson.ig_password) setIgPassword(clientFromJson.ig_password);
+        setIgAccountType('personal');
+      }
     })();
   }, [clientId]);
 
