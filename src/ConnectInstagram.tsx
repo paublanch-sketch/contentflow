@@ -226,63 +226,88 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
   );
 
   // ── Modal credenciales antes de OAuth ───────────────────────────────────────
-  if (showCreds) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-[#1a1d27] border border-gray-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <div className="text-center mb-5">
-          <span className="text-3xl">🔑</span>
-          <h3 className="font-black text-white text-base mt-2">Credenciales Instagram</h3>
-          <p className="text-gray-500 text-xs mt-1">{clientName}</p>
-          <p className="text-gray-400 text-[11px] mt-2">Copia usuario y contraseña antes de iniciar sesión en Instagram.</p>
-        </div>
-        <div className="flex flex-col gap-3">
-          {/* Usuario — usa el estado actual (Supabase), no el prop */}
-          {(igUsername || igUser) && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Usuario</span>
-              <div className="flex items-center gap-2">
-                <span className="flex-1 font-mono text-sm text-white bg-[#252836] rounded-xl px-3 py-2 break-all">
-                  {igUsername || igUser}
-                </span>
-                <button onClick={() => { navigator.clipboard.writeText(igUsername || igUser || ''); setCopied('user'); setTimeout(() => setCopied(''), 2000); }}
-                  className="px-3 py-2 bg-purple-700 hover:opacity-90 text-white text-xs font-black rounded-xl shrink-0">
-                  {copied === 'user' ? '✅' : '📋'}
-                </button>
+  // Este modal aparece SIEMPRE al pulsar "Conectar Instagram", mostrando la contraseña.
+  if (showCreds) {
+    const hasCredentials = !!(igUsername || igUser || igPassword || igPass);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="bg-[#1a1d27] border border-gray-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="text-center mb-5">
+            <span className="text-3xl">🔑</span>
+            <h3 className="font-black text-white text-base mt-2">Credenciales Instagram</h3>
+            <p className="text-gray-500 text-xs mt-1">{clientName}</p>
+            <p className="text-gray-400 text-[11px] mt-2">
+              {hasCredentials
+                ? 'Copia usuario y contraseña antes de iniciar sesión en Instagram.'
+                : 'No hay credenciales guardadas. Introduce usuario y contraseña primero.'}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            {/* Usuario — usa el estado actual (Supabase), no el prop */}
+            {(igUsername || igUser) ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Usuario</span>
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 font-mono text-sm text-white bg-[#252836] rounded-xl px-3 py-2 break-all">
+                    {igUsername || igUser}
+                  </span>
+                  <button onClick={() => { navigator.clipboard.writeText(igUsername || igUser || ''); setCopied('user'); setTimeout(() => setCopied(''), 2000); }}
+                    className="px-3 py-2 bg-purple-700 hover:opacity-90 text-white text-xs font-black rounded-xl shrink-0">
+                    {copied === 'user' ? '✅' : '📋'}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-          {/* Contraseña — usa el estado actual (Supabase), no el prop */}
-          {(igPassword || igPass) && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Contraseña</span>
-              <div className="flex items-center gap-2">
-                <span className="flex-1 font-mono text-sm text-amber-400 bg-[#252836] rounded-xl px-3 py-2 break-all">
-                  {igPassword || igPass}
-                </span>
-                <button onClick={() => { navigator.clipboard.writeText(igPassword || igPass || ''); setCopied('pass'); setTimeout(() => setCopied(''), 2000); }}
-                  className="px-3 py-2 bg-amber-600 hover:opacity-90 text-black text-xs font-black rounded-xl shrink-0">
-                  {copied === 'pass' ? '✅' : '📋'}
-                </button>
+            ) : null}
+            {/* Contraseña — siempre visible en este popup */}
+            {(igPassword || igPass) ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Contraseña</span>
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 font-mono text-sm text-amber-400 bg-[#252836] rounded-xl px-3 py-2 break-all">
+                    {igPassword || igPass}
+                  </span>
+                  <button onClick={() => { navigator.clipboard.writeText(igPassword || igPass || ''); setCopied('pass'); setTimeout(() => setCopied(''), 2000); }}
+                    className="px-3 py-2 bg-amber-600 hover:opacity-90 text-black text-xs font-black rounded-xl shrink-0">
+                    {copied === 'pass' ? '✅' : '📋'}
+                  </button>
+                </div>
               </div>
+            ) : null}
+
+            {/* Botón editar/añadir credenciales */}
+            <button onClick={() => { setShowCreds(false); setUserInput(igUsername || igUser || ''); setPassInput(igPassword || igPass || ''); setShowForm(true); }}
+              className="w-full py-2 text-gray-400 hover:text-amber-400 border border-gray-700 hover:border-amber-600 text-xs font-black uppercase tracking-widest rounded-xl transition-colors">
+              {hasCredentials ? '✏️ Cambiar usuario / contraseña' : '➕ Añadir credenciales'}
+            </button>
+
+            {/* Separador */}
+            <div className="flex items-center gap-2 my-1">
+              <div className="flex-1 h-px bg-gray-700" />
+              <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Conectar como</span>
+              <div className="flex-1 h-px bg-gray-700" />
             </div>
-          )}
-          {/* Botón editar credenciales inline */}
-          <button onClick={() => { setShowCreds(false); setUserInput(igUsername || igUser || ''); setPassInput(igPassword || igPass || ''); setShowForm(true); }}
-            className="w-full py-2 text-gray-400 hover:text-amber-400 border border-gray-700 hover:border-amber-600 text-xs font-black uppercase tracking-widest rounded-xl transition-colors">
-            ✏️ Cambiar usuario / contraseña
-          </button>
-          <button onClick={() => { setShowCreds(false); startOAuthWithCreds(clientId, igUsername || igUser, igPassword || igPass); }}
-            className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-black text-sm uppercase tracking-widest rounded-xl mt-2">
-            🚀 Continuar a Instagram
-          </button>
-          <button onClick={() => setShowCreds(false)}
-            className="w-full py-2 text-gray-500 hover:text-gray-300 text-xs font-bold uppercase tracking-widest">
-            Cancelar
-          </button>
+
+            {/* Business / Creator → OAuth */}
+            <button onClick={() => { setShowCreds(false); startOAuthWithCreds(clientId, igUsername || igUser, igPassword || igPass); }}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-black text-sm uppercase tracking-widest rounded-xl flex items-center justify-center gap-2">
+              🏢 Business / Creator (OAuth)
+            </button>
+
+            {/* Personal → guardar creds directamente si las hay, si no abrir form */}
+            <button onClick={() => { setShowCreds(false); setUserInput(igUsername || igUser || ''); setPassInput(igPassword || igPass || ''); setShowForm(true); }}
+              className="w-full py-2.5 bg-[#252836] hover:bg-[#2d3144] border border-gray-700 text-white font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-colors">
+              👤 Cuenta Personal
+            </button>
+
+            <button onClick={() => setShowCreds(false)}
+              className="w-full py-2 text-gray-500 hover:text-gray-300 text-xs font-bold uppercase tracking-widest">
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   // ── Modal formulario Personal ────────────────────────────────────────────────
   if (showForm) return (
@@ -420,8 +445,10 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
   );
 
   // ── Sin cuenta ───────────────────────────────────────────────────────────────
+  // La contraseña siempre aparece como popup primero (showCreds).
+  // Si hay credenciales, se muestran para copiar. Desde ahí se puede ir a OAuth o Personal.
   return (
-    <button onClick={() => setShowMenu(true)}
+    <button onClick={() => setShowCreds(true)}
       className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest transition-opacity">
       📸 Conectar Instagram
     </button>

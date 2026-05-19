@@ -7,15 +7,22 @@ y las guarda en Supabase. Usa la IP local → sin 2FA.
 Requisito: Chrome CERRADO antes de ejecutar.
 """
 
-import asyncio, json, requests
+import asyncio, json, requests, platform as _platform
 from pathlib import Path
-from playwright.async_api import async_playwright, TimeoutError as PWTimeout
+from playwright.async_api import async_playwright
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SUPABASE_URL = 'https://afbussamfzqfvozrycsr.supabase.co'
 SUPABASE_KEY = 'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg'
-CHROME_PROFILE = str(Path.home() / 'Library/Application Support/Google/Chrome')
 DELAY = 4  # segundos entre cuentas
+
+# ── Path de Chrome según SO ───────────────────────────────────────────────────
+if _platform.system() == 'Windows':
+    CHROME_PROFILE = str(Path.home() / 'AppData/Local/Google/Chrome/User Data')
+elif _platform.system() == 'Darwin':
+    CHROME_PROFILE = str(Path.home() / 'Library/Application Support/Google/Chrome')
+else:  # Linux
+    CHROME_PROFILE = str(Path.home() / '.config/google-chrome')
 
 # ── Mapa username → client_id ─────────────────────────────────────────────────
 USERNAME_TO_CLIENT = {
@@ -59,6 +66,7 @@ USERNAME_TO_CLIENT = {
     'integralservicesmarinabaixa':    'integral-services-marina-baixa',
     'jdiaz.mantenimientos':           'j-diaz-mantenimientos-sl',
     'cancolls':                       'joan-bigas-vidal',
+    'cancolls@gmail.com':             'joan-bigas-vidal',
     'lupovetiberica':                 'jose-manuel-gonzalez-navarro',
     'laboratoriosaverroes':           'juan-ramon-pina-membrado',
     'katiagarabitoabogados':          'katia-garabito-rubio',
@@ -141,6 +149,9 @@ PASSWORDS = {
     'lupovetiberica':              'Lupovet_España_2025',
     'laboratoriosaverroes':        'Averroes2025_',
     'katiagarabitoabogados':       '637586598Kat',
+    'cancolls':                    '972864363botiga',
+    'cancolls@gmail.com':          '972864363botiga',
+    # c_alegre95, nataliagoma, olgav → añadir contraseña cuando se conozca
     'kabio_sl':                    'kabio22',
     'livebarcelonatours':          'Eucaliptus44',
     'fresh_laundry_santadria':     'Luxa_Lerona_925_05',
@@ -181,22 +192,26 @@ def save_to_supabase(client_id, username, cookies):
         'cookies': [dict(c) for c in cookies],
         'origins': []
     }
-    r = requests.post(
-        f'{SUPABASE_URL}/rest/v1/sessions',
-        headers={
-            'Content-Type':  'application/json',
-            'apikey':        SUPABASE_KEY,
-            'Authorization': f'Bearer {SUPABASE_KEY}',
-            'Prefer':        'resolution=merge-duplicates',
-        },
-        json={
-            'client_id':     client_id,
-            'platform':      'IG',
-            'storage_state': json.dumps(storage_state),
-        },
-        timeout=10
-    )
-    return r.status_code
+    try:
+        r = requests.post(
+            f'{SUPABASE_URL}/rest/v1/sessions',
+            headers={
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_KEY,
+                'Authorization': f'Bearer {SUPABASE_KEY}',
+                'Prefer':        'resolution=merge-duplicates',
+            },
+            json={
+                'client_id':     client_id,
+                'platform':      'IG',
+                'storage_state': json.dumps(storage_state),
+            },
+            timeout=10
+        )
+        return r.status_code
+    except Exception as e:
+        print(f'[Supabase error: {e}]', end=' ')
+        return 0
 
 async def logout(page):
     try:
@@ -208,8 +223,12 @@ async def logout(page):
                 body: 'one_tap_app_login=0'
             });
         ''')
+        await page.wait_for_timeout(2000)
+        # Navegar a login para confirmar que el logout fue efectivo
+        await page.goto('https://www.instagram.com/accounts/login/',
+                        wait_until='domcontentloaded', timeout=15000)
         await page.wait_for_timeout(1500)
-    except:
+    except Exception:
         pass
 
 async def is_logged_in(page):
@@ -232,6 +251,12 @@ async def main():
     print('═'*60)
     print()
 
+    # En Windows: matar cualquier proceso Chrome residual antes de abrir
+    if _platform.system() == 'Windows':
+        import subprocess as _sp
+        _sp.run(['taskkill', '/F', '/IM', 'chrome.exe'], capture_output=True)
+        await asyncio.sleep(2)
+
     async with async_playwright() as p:
         print('📂 Abriendo Chrome con tu perfil...')
         try:
@@ -240,46 +265,39 @@ async def main():
                 channel='chrome',
                 headless=False,
                 slow_mo=200,
-                args=['--disable-blink-features=AutomationControlled'],
-                ignore_default_args=['--enable-automation'],
+                args=[],
+                ignore_default_args=['--enable-automation', '--no-sandbox',
+                                     '--disable-blink-features=AutomationControlled'],
             )
         except Exception as e:
             print(f'\n❌ Error abriendo Chrome: {e}')
             print('   → Asegúrate de que Chrome está completamente cerrado')
             return
 
-        page = await context.new_page()
+        # Usar la página que ya abrió Playwright
+        pages = context.pages
+        page = pages[0] if pages else await context.new_page()
 
-        # ── Paso 1: Ir a la página de login ──────────────────────────────────
+        # ── Paso 1: Determinar qué cuentas procesar ───────────────────────────
         print('🌐 Navegando a Instagram...\n')
-        await page.goto('https://www.instagram.com/accounts/login/', wait_until='domcontentloaded')
-        await page.wait_for_timeout(3000)
+        await page.goto('https://www.instagram.com/accounts/login/',
+                        wait_until='domcontentloaded', timeout=30000)
+        await page.wait_for_timeout(4000)
 
-        # ── Paso 2: Obtener lista de cuentas guardadas del picker ────────────────
-        import re
-
-        # Esperar a que el picker cargue
-        await page.wait_for_timeout(2000)
-
-        # Extraer usernames directamente de los elementos del picker de IG
-        # El picker muestra botones/divs con el username como texto visible
+        # Extraer usernames del picker (si aparece)
         picker_usernames = await page.evaluate('''
             () => {
                 const results = [];
-                // Selector del picker de cuentas de Instagram
                 const candidates = document.querySelectorAll(
                     'div[role="button"], button, a[role="button"]'
                 );
                 candidates.forEach(el => {
-                    const text = el.innerText?.trim() || '';
-                    // Username de IG: solo letras, números, puntos, guiones, @
-                    const lines = text.split("\\n").map(l => l.trim()).filter(Boolean);
+                    const lines = (el.innerText || '').trim().split("\\n")
+                        .map(l => l.trim()).filter(Boolean);
                     lines.forEach(line => {
                         if (/^[a-zA-Z0-9_.@]{3,50}$/.test(line) &&
-                            !line.includes(' ') &&
-                            line !== 'Iniciar sesión' &&
-                            line !== 'Log in' &&
-                            line !== 'Continue') {
+                            !['Iniciar sesión','Log in','Continue',
+                              'Iniciar','Login'].includes(line)) {
                             results.push(line);
                         }
                     });
@@ -288,113 +306,148 @@ async def main():
             }
         ''')
 
-        # Cotejar con nuestro mapa de clientes → solo los 39 guardados en Chrome
         saved_accounts = [u for u in picker_usernames
                           if u in USERNAME_TO_CLIENT or u.lower() in USERNAME_TO_CLIENT]
 
-        # Si el picker no detectó nada (IG redirigió directo), aviso
         if not saved_accounts:
-            print('⚠️  No se detectaron cuentas en el picker.')
-            print('   → Puede que Instagram haya redirigido. Revisa la ventana de Chrome.')
-            await page.wait_for_timeout(5000)
-            # Reintento más agresivo: buscar cualquier texto que coincida con nuestros usernames
-            all_text = await page.inner_text('body')
-            for u in USERNAME_TO_CLIENT:
-                if u in all_text:
-                    saved_accounts.append(u)
-            saved_accounts = list(dict.fromkeys(saved_accounts))  # dedup
+            # Fallback: procesar TODAS las cuentas del mapa usando login directo
+            print('ℹ️  Picker no detectado — se usará login directo con usuario+contraseña.')
+            saved_accounts = [u for u in USERNAME_TO_CLIENT if u in PASSWORDS]
 
-        print(f'📋 Cuentas del picker de Chrome cotejadas con clientes: {len(saved_accounts)}')
+        # Deduplicar: si hay variantes mayúsculas/minúsculas del mismo username,
+        # quedarse solo con la primera aparición (evita procesar la misma cuenta 2 veces)
+        seen_lower = set()
+        deduped = []
         for u in saved_accounts:
-            cid = USERNAME_TO_CLIENT.get(u) or USERNAME_TO_CLIENT.get(u.lower())
+            if u.lower() not in seen_lower:
+                seen_lower.add(u.lower())
+                deduped.append(u)
+        saved_accounts = deduped
+        print(f'   Procesando {len(saved_accounts)} cuentas únicas.\n')
+
+        print(f'📋 Cuentas a procesar: {len(saved_accounts)}')
+        for u in saved_accounts:
+            cid = USERNAME_TO_CLIENT.get(u) or USERNAME_TO_CLIENT.get(u.lower(), '???')
             print(f'   • @{u:<35} → {cid}')
         print()
 
-        # ── Paso 3: Procesar cada cuenta ──────────────────────────────────────
+        # ── Paso 2: Procesar cada cuenta ──────────────────────────────────────
         for idx, username in enumerate(saved_accounts, 1):
             client_id = USERNAME_TO_CLIENT.get(username) or USERNAME_TO_CLIENT.get(username.lower())
-            password   = PASSWORDS.get(username) or PASSWORDS.get(username.lower())
+            password  = PASSWORDS.get(username) or PASSWORDS.get(username.lower())
 
-            print(f'[{idx:>2}/{len(saved_accounts)}] @{username}', end=' ... ', flush=True)
+            print(f'[{idx:>2}/{len(saved_accounts)}] @{username}', end=' ', flush=True)
 
-            # Navegar al login picker
-            await page.goto('https://www.instagram.com/accounts/login/', wait_until='domcontentloaded')
-            await page.wait_for_timeout(2000)
+            if not client_id:
+                print('⚠️  Sin client_id → saltando')
+                results.append({'u': username, 'cid': '???', 's': 'no_client_id'})
+                continue
+            if not password:
+                print('❓ Sin contraseña → saltando')
+                results.append({'u': username, 'cid': client_id, 's': 'no_password'})
+                continue
 
-            # Click en la cuenta
-            clicked = await page.evaluate(f'''
-                (() => {{
-                    const all = Array.from(document.querySelectorAll('*'));
-                    const el  = all.find(e => e.children.length <= 2 && e.innerText?.trim() === {json.dumps(username)});
-                    if (!el) return false;
-                    let p = el;
-                    for (let i = 0; i < 12; i++) {{
-                        if (!p) break;
-                        if (p.onclick || p.tagName === 'BUTTON' || p.tagName === 'A' ||
-                            p.getAttribute?.('role') === 'button') {{
-                            p.click();
-                            return true;
-                        }}
-                        p = p.parentElement;
-                    }}
-                    // Fallback: click the element itself
-                    el.click();
-                    return true;
-                }})()
-            ''')
+            # ── Ir a login y esperar form ────────────────────────────────────
+            await page.goto('https://www.instagram.com/accounts/login/',
+                            wait_until='domcontentloaded')
+            await page.wait_for_timeout(3000)
 
-            await page.wait_for_timeout(2500)
-
-            # Detectar si pide contraseña
-            content = await page.content()
-            asks_password = ('type="password"' in content or
-                             'Contraseña' in content or
-                             'Password' in content)
             url_now = page.url
 
-            if asks_password:
-                if not password:
-                    print('❓ Pide contraseña → no tenemos, saltando')
-                    results.append({'u': username, 'cid': client_id, 's': 'no_password'})
-                    await page.keyboard.press('Escape')
-                    await page.wait_for_timeout(500)
+            # Si ya estamos en el feed (sesión activa), hacer logout primero
+            if 'login' not in url_now and 'instagram.com' in url_now:
+                await logout(page)
+                await page.wait_for_timeout(2000)
+                await page.goto('https://www.instagram.com/accounts/login/',
+                                wait_until='domcontentloaded')
+                await page.wait_for_timeout(3000)
+
+            # ── Intentar click en picker ─────────────────────────────────────
+            picker_clicked = False
+            try:
+                btn = page.get_by_text(username, exact=True).first
+                if await btn.is_visible(timeout=2000):
+                    await btn.click()
+                    await page.wait_for_timeout(2500)
+                    picker_clicked = True
+            except Exception:
+                pass
+
+            # ── Si picker no funcionó: rellenar form usuario + contraseña ────
+            if not picker_clicked or 'login' in page.url:
+                try:
+                    user_input = page.locator('input[name="username"]').first
+                    pass_input = page.locator('input[name="password"]').first
+                    if await user_input.is_visible(timeout=3000):
+                        await user_input.fill(username)
+                        await page.wait_for_timeout(400)
+                        await pass_input.fill(password)
+                        await page.wait_for_timeout(400)
+                        await pass_input.press('Enter')
+                        await page.wait_for_timeout(5000)
+                except Exception as e:
+                    print(f'❌ Error en form: {e}')
+                    results.append({'u': username, 'cid': client_id, 's': 'error'})
                     continue
 
-                # Escribir contraseña
+            # ── Si el picker pidió contraseña ────────────────────────────────
+            url_now = page.url
+            pwd_visible = await page.locator('input[type="password"]').is_visible()
+            if 'login' in url_now or pwd_visible:
                 try:
                     inp = page.locator('input[type="password"]').first
                     await inp.fill(password)
-                    await page.wait_for_timeout(500)
+                    await page.wait_for_timeout(400)
                     await inp.press('Enter')
-                    await page.wait_for_timeout(4000)
-                except:
+                    await page.wait_for_timeout(5000)
+                except Exception:
                     pass
 
-                url_now = page.url
+            url_now = page.url
 
-            # Comprobar resultado
-            if await is_logged_in(page):
-                cookies = await get_ig_cookies(context)
-                has_session = any(c['name'] == 'sessionid' for c in cookies)
-                sc = save_to_supabase(client_id, username, cookies) if has_session else 0
-                if has_session:
-                    print(f'✅ Guardado en Supabase (HTTP {sc})')
-                    results.append({'u': username, 'cid': client_id, 's': 'ok'})
-                else:
-                    print('⚠️  Logueado pero sin sessionid')
-                    results.append({'u': username, 'cid': client_id, 's': 'no_session'})
-                await logout(page)
-
-            elif 'challenge' in url_now or 'checkpoint' in url_now:
-                print('⚠️  Checkpoint (2FA) — saltando')
+            # ── Checkpoint / 2FA ─────────────────────────────────────────────
+            if 'challenge' in url_now or 'checkpoint' in url_now:
+                print('⚠️  Checkpoint/2FA — saltando')
                 results.append({'u': username, 'cid': client_id, 's': 'checkpoint'})
-                await page.goto('https://www.instagram.com/accounts/login/')
+                await page.goto('https://www.instagram.com/accounts/login/',
+                                wait_until='domcontentloaded', timeout=15000)
                 await page.wait_for_timeout(1500)
+                continue
 
-            else:
+            # ── Verificar login ──────────────────────────────────────────────
+            if not await is_logged_in(page):
                 print(f'❌ Sin login — {url_now[:60]}')
                 results.append({'u': username, 'cid': client_id, 's': 'error'})
+                continue
 
+            # ── Confirmar que es la cuenta correcta ──────────────────────────
+            # (solo si el username es un handle válido, no un email)
+            if '@' not in username:
+                try:
+                    await page.goto(f'https://www.instagram.com/{username}/',
+                                    wait_until='domcontentloaded', timeout=15000)
+                    await page.wait_for_timeout(2000)
+                except Exception:
+                    pass
+
+            # ── Extraer y guardar cookies ─────────────────────────────────────
+            cookies = await get_ig_cookies(context)
+            has_session = any(c['name'] == 'sessionid' for c in cookies)
+
+            if not has_session:
+                print('⚠️  Sin sessionid — saltando')
+                results.append({'u': username, 'cid': client_id, 's': 'no_session'})
+            else:
+                sc = save_to_supabase(client_id, username, cookies)
+                if sc in (200, 201):
+                    print(f'✅ Guardado (HTTP {sc})')
+                    results.append({'u': username, 'cid': client_id, 's': 'ok'})
+                else:
+                    print(f'⚠️  Supabase HTTP {sc}')
+                    results.append({'u': username, 'cid': client_id, 's': f'supabase_{sc}'})
+
+            # ── Logout antes de la siguiente cuenta ───────────────────────────
+            await logout(page)
             await asyncio.sleep(DELAY)
 
         await context.close()
@@ -416,7 +469,7 @@ async def main():
     # Guardar CSV
     import csv, datetime
     fn = f'ig_sessions_{datetime.date.today()}.csv'
-    with open(fn, 'w', newline='') as f:
+    with open(fn, 'w', newline='', encoding='utf-8') as f:
         w = csv.DictWriter(f, ['u','cid','s'])
         w.writeheader(); w.writerows(results)
     print(f'\n📄 Resultado guardado en: {fn}')

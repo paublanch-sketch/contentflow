@@ -192,13 +192,20 @@ function AddClientModal({
       notes:       finalNotes,
     };
 
-    // Guardar credenciales IG en localStorage si se han introducido
+    // Guardar credenciales IG en localStorage + Supabase para que sean visibles desde cualquier navegador
     if ((platforms.includes('IG') || platforms.includes('IG2')) && igUser) {
       try {
         const igCreds = JSON.parse(localStorage.getItem('cf_ig_local') || '{}');
         igCreds[id] = { ig_username: igUser, ig_password: igPass };
         localStorage.setItem('cf_ig_local', JSON.stringify(igCreds));
       } catch {}
+      // También en Supabase para persistencia cross-browser
+      supabase.from('ig_credentials').upsert({
+        client_id:   id,
+        ig_username: igUser.replace(/^@/, ''),
+        ig_password: igPass,
+        updated_at:  new Date().toISOString(),
+      }, { onConflict: 'client_id' }).then(() => {});
     }
 
     onAdd(newClient, platforms.slice(1));
@@ -635,7 +642,7 @@ export default function App() {
     try { return new Set(JSON.parse(localStorage.getItem(LS_DELETED_CLIENTS) || '[]')); } catch { return new Set(); }
   });
 
-  // ── Cargar clientes dinámicos desde Supabase al montar ──
+  // ── Cargar clientes dinámicos y extra_platforms desde Supabase al montar ──
   useEffect(() => {
     supabase
       .from('clients')
@@ -643,6 +650,24 @@ export default function App() {
       .then(({ data, error }) => {
         if (error || !data) return; // tabla no existe aún → sin problema
         const staticIds = new Set((clientsData as Client[]).map(c => c.id));
+
+        // Cargar extra_platforms de TODOS los clientes (estáticos y dinámicos)
+        const extraFromSupabase: Record<string, string[]> = {};
+        for (const c of data as (Client & { extra_platforms?: string[] })[]) {
+          if (c.extra_platforms && Array.isArray(c.extra_platforms) && c.extra_platforms.length > 0) {
+            extraFromSupabase[c.id] = c.extra_platforms;
+          }
+        }
+        if (Object.keys(extraFromSupabase).length > 0) {
+          setPlatformsExtra(prev => {
+            // Supabase es la fuente de verdad; localStorage se usa como fallback local
+            const merged = { ...prev, ...extraFromSupabase };
+            try { localStorage.setItem(LS_PLATFORMS_EXTRA, JSON.stringify(merged)); } catch {}
+            return merged;
+          });
+        }
+
+        // Cargar clientes dinámicos (solo los que no están en el JSON estático)
         const remoteOnly = (data as Client[]).filter(c => !staticIds.has(c.id));
         if (remoteOnly.length === 0) return;
         setDynamicClients(prev => {
@@ -900,6 +925,8 @@ export default function App() {
       const extra = { ...platformsExtra, [newClient.id]: extraPlatforms };
       setPlatformsExtra(extra);
       try { localStorage.setItem(LS_PLATFORMS_EXTRA, JSON.stringify(extra)); } catch {}
+      // Guardar extra_platforms en Supabase también
+      supabase.from('clients').update({ extra_platforms: extraPlatforms }).eq('id', newClient.id).then(() => {});
     }
 
     setShowAddClientModal(false);
@@ -909,18 +936,30 @@ export default function App() {
   // ── Añadir red social extra a cliente existente ──
   const handleAddSocial = (platform: string, igUser: string, igPass: string, _profileUrl: string) => {
     const current = platformsExtra[clientId] ?? [];
-    const updated  = { ...platformsExtra, [clientId]: [...current, platform] };
+    const updatedExtra = [...current, platform];
+    const updated  = { ...platformsExtra, [clientId]: updatedExtra };
     setPlatformsExtra(updated);
     try { localStorage.setItem(LS_PLATFORMS_EXTRA, JSON.stringify(updated)); } catch {}
 
-    // Guardar credenciales si es IG
+    // Guardar extra_platforms en Supabase para persistencia cross-browser
+    supabase.from('clients').update({ extra_platforms: updatedExtra }).eq('id', clientId).then(() => {});
+
+    // Guardar credenciales si es IG — SIEMPRE en Supabase (fuente principal) + localStorage (fallback)
     if ((platform === 'IG' || platform === 'IG2') && igUser) {
+      const key = platform === 'IG2' ? `${clientId}_ig2` : clientId;
+      // localStorage fallback
       try {
         const igCreds = JSON.parse(localStorage.getItem('cf_ig_local') || '{}');
-        const key = platform === 'IG2' ? `${clientId}_ig2` : clientId;
         igCreds[key] = { ig_username: igUser, ig_password: igPass };
         localStorage.setItem('cf_ig_local', JSON.stringify(igCreds));
       } catch {}
+      // Supabase — fuente principal para todos los navegadores
+      supabase.from('ig_credentials').upsert({
+        client_id:   key,
+        ig_username: igUser.replace(/^@/, ''),
+        ig_password: igPass,
+        updated_at:  new Date().toISOString(),
+      }, { onConflict: 'client_id' }).then(() => {});
     }
 
     setShowAddSocialModal(false);
