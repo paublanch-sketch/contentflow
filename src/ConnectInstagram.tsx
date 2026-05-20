@@ -154,24 +154,8 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
         return;
       }
 
-      // 3. ¿Tiene credenciales en clients.json (prop igUser)?
-      if (igUser) {
-        // Guardar en Supabase para que el publisher las tenga disponibles
-        supabase.from('ig_credentials').upsert({
-          client_id:   clientId,
-          ig_username: igUser,
-          ig_password: igPass || '',
-          updated_at:  new Date().toISOString(),
-        }, { onConflict: 'client_id' }).then(() => {});
-        setMode('personal');
-        setIgUsername(igUser);
-        setIgPassword(igPass || '');
-        onUsernameChange?.(igUser);
-        onAccountTypeChange?.('personal');
-        setLoading(false);
-        return;
-      }
-
+      // 3. igUser (clients.json) ya NO auto-conecta — solo pre-rellena el form al hacer click
+      // El usuario debe autenticarse manualmente para que quede como conectado.
       setMode('none');
       setIgUsername('');
       onUsernameChange?.('');
@@ -182,6 +166,10 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
 
   // ── Guardar credenciales personales ─────────────────────────────────────────
   const handleSavePersonal = async () => {
+    if (!clientId) {
+      setError('Error: cliente no identificado todavía. Espera un momento y vuelve a intentarlo.');
+      return;
+    }
     if (!userInput.trim() || !passInput.trim()) {
       setError('Usuario y contraseña obligatorios');
       return;

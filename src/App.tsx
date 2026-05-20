@@ -616,6 +616,8 @@ export default function App() {
   const [emailBody, setEmailBody]         = useState('');
   const [igJustConnected, setIgJustConnected] = useState(false);
   const [igRefreshKey,   setIgRefreshKey]     = useState(0);
+  // Slug del portal pendiente de resolver (cliente dinámico aún no cargado de Supabase)
+  const [portalSlug, setPortalSlug] = useState<string>('');
   const searchRef                   = useRef<HTMLDivElement>(null);
 
   // ── Detectar retorno de OAuth IG ──────────────────────────────────────────
@@ -743,8 +745,11 @@ export default function App() {
         setIsClientPortal(true);
         return;
       }
+      // Cliente no encontrado todavía — puede ser dinámico (Supabase aún no respondió).
+      // Marcamos portal activo + guardamos slug; un segundo effect lo resolverá.
       setIsAdmin(false);
       setIsClientPortal(true);
+      setPortalSlug(slug);
       return;
     }
     setIsAdmin(true);
@@ -763,6 +768,18 @@ export default function App() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Resolver cliente portal cuando Supabase carga clientes dinámicos ──
+  useEffect(() => {
+    if (!portalSlug || clientId) return; // ya resuelto o no hay slug pendiente
+    const found = ALL_CLIENTS.find(c => c.id === portalSlug);
+    if (found) {
+      setClientId(found.id);
+      setSearch(found.name);
+      setPortalSlug('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicClients, portalSlug]);
 
   // ── Cargar ig_username y tipo de cuenta cuando cambia el cliente o vuelve de OAuth ──
   useEffect(() => {
@@ -799,13 +816,7 @@ export default function App() {
           return;
         }
       } catch {}
-      // 4. ¿Tiene credenciales en clients.json? → marcar como personal para habilitar publicación
-      const clientFromJson = (await import('./clients.json')).default.find((c: {id: string}) => c.id === clientId) as {ig_username?: string; ig_password?: string} | undefined;
-      if (clientFromJson?.ig_username) {
-        setIgUsername(clientFromJson.ig_username);
-        if (clientFromJson.ig_password) setIgPassword(clientFromJson.ig_password);
-        setIgAccountType('personal');
-      }
+      // 4. clients.json ya NO auto-conecta — requiere autenticación real en ConnectInstagram
     })();
   }, [clientId, igRefreshKey]);
 

@@ -1755,6 +1755,8 @@ function PostCard({
             setPublishStatus('running');
             setPublishMessage('Programando en Instagram...');
             setPublishJobId('_api_sched');
+            // ⚠️ Persistir ANTES del fetch — si el usuario cierra el browser, el post queda como 'scheduling'
+            await onUpdatePost(post.id, { status: 'scheduling' });
             const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
             try {
               const res  = await fetch(`${FUNCTIONS_URL}/publish-instagram`, {
@@ -1768,10 +1770,12 @@ function PostCard({
                 setPublishMessage(`✅ Programado para el ${new Date(dt).toLocaleString('es-ES', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}h`);
                 await onUpdatePost(post.id, { status: 'scheduled', webhook_sent_at: new Date(dt).toISOString() });
               } else {
+                await onUpdatePost(post.id, { status: 'approved' }); // revertir si falla
                 setPublishStatus('error');
                 setPublishMessage(data.error || 'Error programando');
               }
             } catch (e: any) {
+              await onUpdatePost(post.id, { status: 'approved' }); // revertir si falla
               setPublishStatus('error');
               setPublishMessage(e.message);
             }
