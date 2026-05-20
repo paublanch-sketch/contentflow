@@ -116,12 +116,22 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
   const [error,      setError]      = useState('');
   const [copied,     setCopied]     = useState<string>('');
 
+  // ── Helper: hay sesión/cookies reales guardadas ─────────────────────────────
+  const checkHasSession = async (cid: string): Promise<boolean> => {
+    const { count, error } = await supabase
+      .from('sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', cid);
+    if (error) return false; // tabla no accesible → asumir sin sesión
+    return (count ?? 0) > 0;
+  };
+
   // ── Cargar estado al montar ──────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       setLoading(true);
 
-      // 1. ¿Hay token OAuth (Business)?
+      // 1. ¿Hay token OAuth (Business)? → conectado siempre (API)
       const { data: token } = await supabase
         .from('ig_tokens')
         .select('ig_username')
@@ -137,7 +147,7 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
         return;
       }
 
-      // 2. ¿Hay credenciales (Personal)?
+      // 2. ¿Hay credenciales personales en Supabase?
       const { data: creds } = await supabase
         .from('ig_credentials')
         .select('ig_username, ig_password')
@@ -145,23 +155,48 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
         .maybeSingle();
 
       if (creds?.ig_username) {
-        setMode('personal');
+        // Pre-cargar siempre para que el popup pueda mostrarlas
         setIgUsername(creds.ig_username);
         setIgPassword(creds.ig_password || '');
         onUsernameChange?.(creds.ig_username);
-        onAccountTypeChange?.('personal');
+        // Solo "Cuenta Conectada" si hay cookies/sesión guardadas — si no, botón "Conectar"
+        const hasSession = await checkHasSession(clientId);
+        if (hasSession) {
+          setMode('personal');
+          onAccountTypeChange?.('personal');
+        } else {
+          setMode('none'); // creds guardadas pero sin sesión → mostrar botón conectar
+          onAccountTypeChange?.('none');
+        }
         setLoading(false);
         return;
       }
 
-      // 3. igUser (clients.json) ya NO auto-conecta — solo pre-rellena el form al hacer click
-      // El usuario debe autenticarse manualmente para que quede como conectado.
+      // 3. igUser (clients.json) → guardar en Supabase y pre-cargar (sin auto-conectar)
+      if (igUser) {
+        supabase.from('ig_credentials').upsert({
+          client_id:   clientId,
+          ig_username: igUser,
+          ig_password: igPass || '',
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'client_id' }).then(() => {});
+        setIgUsername(igUser);
+        setIgPassword(igPass || '');
+        onUsernameChange?.(igUser);
+        const hasSession = await checkHasSession(clientId);
+        setMode(hasSession ? 'personal' : 'none');
+        onAccountTypeChange?.(hasSession ? 'personal' : 'none');
+        setLoading(false);
+        return;
+      }
+
       setMode('none');
       setIgUsername('');
       onUsernameChange?.('');
       onAccountTypeChange?.('none');
       setLoading(false);
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   // ── Guardar credenciales personales ─────────────────────────────────────────
@@ -186,11 +221,12 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
     } else {
       const u = userInput.trim().replace(/^@/, '');
       const pw = passInput.trim();
-      setMode('personal');
+      // Guardar creds ≠ conectado: sin sesión → mode='none' con creds pre-cargadas
       setIgUsername(u);
       setIgPassword(pw);
+      setMode('none');
       onUsernameChange?.(u);
-      onAccountTypeChange?.('personal');
+      onAccountTypeChange?.('none');
       setShowForm(false);
       setUserInput(''); setPassInput('');
     }
@@ -432,9 +468,35 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
     </div>
   );
 
-  // ── Sin cuenta ───────────────────────────────────────────────────────────────
-  // La contraseña siempre aparece como popup primero (showCreds).
-  // Si hay credenciales, se muestran para copiar. Desde ahí se puede ir a OAuth o Personal.
+  // ── Sin sesión (mode='none') ─────────────────────────────────────────────────
+  // Si hay credenciales pre-cargadas → mostrar estado "creds guardadas, sin sesión"
+  // Si no hay nada → botón normal "Conectar Instagram"
+  if (igUsername) {
+    // Credenciales guardadas pero sin sesión/cookies → pendiente de conectar via publisher_server.py
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowCreds(true)}
+          className="flex items-center gap-2 bg-amber-950 border border-amber-700 rounded-xl px-3 py-1.5 hover:border-amber-500 transition-colors"
+          title="Clic para ver credenciales · Sin sesión guardada aún"
+        >
+          <span className="text-amber-400 text-base">🔑</span>
+          <div className="flex flex-col text-left">
+            <span className="text-[9px] font-bold text-amber-600 uppercase tracking-widest">Creds guardadas · Sin sesión</span>
+            <span className="text-xs font-black text-white">📸 @{igUsername.replace(/^@/, '')}</span>
+          </div>
+        </button>
+        <button onClick={() => { setUserInput(igUsername); setPassInput(igPassword); setShowForm(true); }} title="Editar credenciales"
+          className="text-[10px] text-gray-500 hover:text-amber-400 border border-gray-700 hover:border-amber-600 px-2 py-1 rounded-lg transition-colors font-bold">✏️</button>
+        <button onClick={handleDisconnect} title="Borrar credenciales"
+          className="text-[10px] text-gray-500 hover:text-red-400 border border-gray-700 hover:border-red-500 px-2 py-1 rounded-lg transition-colors font-bold uppercase tracking-widest">
+          Borrar
+        </button>
+      </div>
+    );
+  }
+
+  // Sin credenciales → botón para conectar
   return (
     <button onClick={() => setShowCreds(true)}
       className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest transition-opacity">

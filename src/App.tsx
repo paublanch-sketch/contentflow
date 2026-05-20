@@ -649,11 +649,56 @@ export default function App() {
     supabase
       .from('clients')
       .select('*')
-      .then(({ data, error }) => {
-        if (error || !data) return; // tabla no existe aún → sin problema
+      .then(async ({ data, error }) => {
+        // ── A. Migrar clientes de localStorage → Supabase (primera vez o cliente sin sync) ──
+        // Esto garantiza que cualquier cliente creado antes de que existiera la tabla
+        // también quede en Supabase y sea visible en todos los navegadores.
+        const localDynamic: Client[] = (() => {
+          try { return JSON.parse(localStorage.getItem(LS_DYNAMIC_CLIENTS) || '[]'); } catch { return []; }
+        })();
+
+        if (localDynamic.length > 0) {
+          const remoteIds = new Set((data || []).map((c: any) => c.id));
+          const toMigrate = localDynamic.filter(c => !remoteIds.has(c.id));
+          for (const c of toMigrate) {
+            supabase.from('clients').upsert({
+              id:          c.id,
+              name:        c.name,
+              platform:    c.platform,
+              estado:      c.estado  || '-',
+              stage:       c.stage   || '-',
+              tecnico:     c.tecnico || '-',
+              contact:     c.contact || '-',
+              email:       c.email   || '-',
+              profile_url: c.profile_url || '-',
+              folder:      c.folder  || '-',
+              notes:       c.notes   || '-',
+            }, { onConflict: 'id' }).then(() => {});
+          }
+        }
+
+        // ── B. Migrar credenciales IG de cf_ig_local → ig_credentials en Supabase ──
+        try {
+          const igCredsLocal: Record<string, { ig_username?: string; ig_password?: string }> =
+            JSON.parse(localStorage.getItem('cf_ig_local') || '{}');
+          for (const [key, val] of Object.entries(igCredsLocal)) {
+            if (val?.ig_username) {
+              supabase.from('ig_credentials').upsert({
+                client_id:   key,
+                ig_username: val.ig_username,
+                ig_password: val.ig_password || '',
+                updated_at:  new Date().toISOString(),
+              }, { onConflict: 'client_id' }).then(() => {});
+            }
+          }
+        } catch {}
+
+        // Si la tabla aún no existe o hay error, usar solo localStorage
+        if (error || !data) return;
+
         const staticIds = new Set((clientsData as Client[]).map(c => c.id));
 
-        // Cargar extra_platforms de TODOS los clientes (estáticos y dinámicos)
+        // ── C. Cargar extra_platforms de Supabase (fuente de verdad) ──
         const extraFromSupabase: Record<string, string[]> = {};
         for (const c of data as (Client & { extra_platforms?: string[] })[]) {
           if (c.extra_platforms && Array.isArray(c.extra_platforms) && c.extra_platforms.length > 0) {
@@ -662,14 +707,13 @@ export default function App() {
         }
         if (Object.keys(extraFromSupabase).length > 0) {
           setPlatformsExtra(prev => {
-            // Supabase es la fuente de verdad; localStorage se usa como fallback local
             const merged = { ...prev, ...extraFromSupabase };
             try { localStorage.setItem(LS_PLATFORMS_EXTRA, JSON.stringify(merged)); } catch {}
             return merged;
           });
         }
 
-        // Cargar clientes dinámicos (solo los que no están en el JSON estático)
+        // ── D. Cargar clientes dinámicos (los que no están en el JSON estático) ──
         const remoteOnly = (data as Client[]).filter(c => !staticIds.has(c.id));
         if (remoteOnly.length === 0) return;
         setDynamicClients(prev => {
