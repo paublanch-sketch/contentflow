@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const igUserIdReal = userData.id ? String(userData.id) : igUserId;
     console.log('[Step 3] ✓ real ig_user_id:', igUserIdReal, 'username:', igUsername);
 
-    // ── 4. Guardar en Supabase ───────────────────────────────────────────────────
+    // ── 4. Guardar en Supabase (misma estrategia que clientes: upsert con onConflict) ──
     const { error: upsertErr } = await sb.from('ig_tokens').upsert({
       client_id,
       ig_user_id:   igUserIdReal,
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       access_token: longToken,
       expires_at:   new Date(Date.now() + expiresInMs).toISOString(),
       updated_at:   new Date().toISOString(),
-    });
+    }, { onConflict: 'client_id' });
     if (upsertErr) throw new Error(`BD: ${upsertErr.message}`);
 
     console.log('[SUCCESS]', igUsername);
