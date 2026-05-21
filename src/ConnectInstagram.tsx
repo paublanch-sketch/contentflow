@@ -172,20 +172,13 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
         return;
       }
 
-      // 3. igUser (clients.json) → guardar en Supabase y pre-cargar (sin auto-conectar)
+      // 3. igUser (clients.json) → solo referencia visual en el modal (NO auto-guardar, NO activar estado)
+      // Las creds del JSON se muestran al abrir el popup via igUser/igPass props.
+      // El estado "CREDS GUARDADAS" solo se activa cuando el usuario guarda explícitamente.
       if (igUser) {
-        supabase.from('ig_credentials').upsert({
-          client_id:   clientId,
-          ig_username: igUser,
-          ig_password: igPass || '',
-          updated_at:  new Date().toISOString(),
-        }, { onConflict: 'client_id' }).then(() => {});
-        setIgUsername(igUser);
-        setIgPassword(igPass || '');
-        onUsernameChange?.(igUser);
-        const hasSession = await checkHasSession(clientId);
-        setMode(hasSession ? 'personal' : 'none');
-        onAccountTypeChange?.(hasSession ? 'personal' : 'none');
+        setMode('none');
+        onUsernameChange?.('');
+        onAccountTypeChange?.('none');
         setLoading(false);
         return;
       }
@@ -215,7 +208,7 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
       ig_username: userInput.trim().replace(/^@/, ''),
       ig_password: passInput.trim(),
       updated_at:  new Date().toISOString(),
-    });
+    }, { onConflict: 'client_id' });
     if (err) {
       setError('Error: ' + err.message);
     } else {

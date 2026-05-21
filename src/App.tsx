@@ -713,15 +713,25 @@ export default function App() {
           });
         }
 
-        // ── D. Cargar clientes dinámicos (los que no están en el JSON estático) ──
-        const remoteOnly = (data as Client[]).filter(c => !staticIds.has(c.id));
-        if (remoteOnly.length === 0) return;
-        setDynamicClients(prev => {
-          const existingIds = new Set(prev.map(c => c.id));
-          const merged = [...prev, ...remoteOnly.filter(c => !existingIds.has(c.id))];
-          try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(merged)); } catch {}
-          return merged;
-        });
+        // ── D. Supabase es la fuente de verdad (clientes activos + borrados) ──
+        type ClientRow = Client & { deleted?: boolean };
+
+        // IDs borrados en Supabase → actualizar deletedClientIds (cubre incógnito y otros navegadores)
+        const remoteDeletedIds = (data as ClientRow[])
+          .filter(c => c.deleted)
+          .map(c => c.id);
+        if (remoteDeletedIds.length > 0) {
+          setDeletedClientIds(prev => {
+            const merged = new Set([...prev, ...remoteDeletedIds]);
+            try { localStorage.setItem(LS_DELETED_CLIENTS, JSON.stringify([...merged])); } catch {}
+            return merged;
+          });
+        }
+
+        // Clientes activos remotos (no estáticos, no borrados)
+        const remoteClients = (data as ClientRow[]).filter(c => !staticIds.has(c.id) && !c.deleted);
+        setDynamicClients(remoteClients);
+        try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(remoteClients)); } catch {};
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -841,13 +851,18 @@ export default function App() {
         setIgAccountType('business');
         return;
       }
-      // 2. ¿Tiene credenciales personales en Supabase?
+      // 2. ¿Tiene credenciales personales en Supabase? → solo "personal" si hay sesión real
       const { data: creds } = await supabase
         .from('ig_credentials').select('ig_username, ig_password').eq('client_id', clientId).maybeSingle();
       if (creds?.ig_username) {
         setIgUsername(creds.ig_username);
         if (creds?.ig_password) setIgPassword(creds.ig_password);
-        setIgAccountType('personal');
+        // Verificar sesión real antes de marcar como conectado
+        const { count } = await supabase
+          .from('sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', clientId);
+        setIgAccountType((count ?? 0) > 0 ? 'personal' : 'none');
         return;
       }
       // 3. ¿Tiene credenciales en localStorage? (clientes añadidos dinámicamente)
@@ -951,27 +966,28 @@ export default function App() {
 
   // ── Añadir cliente dinámico ──
   const handleAddClient = async (newClient: Client, extraPlatforms: string[]) => {
-    // 1. Guardar en Supabase para que todos lo vean
+    // 1. Guardar en Supabase (fuente de verdad)
     const { error } = await supabase.from('clients').upsert({
-      id:          newClient.id,
-      name:        newClient.name,
-      platform:    newClient.platform,
-      estado:      newClient.estado,
-      stage:       newClient.stage,
-      tecnico:     newClient.tecnico,
-      contact:     newClient.contact,
-      email:       newClient.email,
-      profile_url: newClient.profile_url,
-      folder:      newClient.folder,
-      notes:       newClient.notes,
+      id:               newClient.id,
+      name:             newClient.name,
+      platform:         newClient.platform,
+      estado:           newClient.estado,
+      stage:            newClient.stage,
+      tecnico:          newClient.tecnico,
+      contact:          newClient.contact,
+      email:            newClient.email,
+      profile_url:      newClient.profile_url,
+      folder:           newClient.folder,
+      notes:            newClient.notes,
+      extra_platforms:  extraPlatforms.length > 0 ? extraPlatforms : null,
     }, { onConflict: 'id' });
 
     if (error) {
-      console.warn('Supabase clients insert error:', error.message);
-      // Si falla (tabla no existe), seguimos igual con localStorage
+      alert(`Error al guardar cliente: ${error.message}`);
+      return; // No continuar si Supabase falla
     }
 
-    // 2. Actualizar estado local + localStorage como fallback
+    // 2. Actualizar estado local (refleja Supabase)
     const updated = [...dynamicClients, newClient];
     setDynamicClients(updated);
     try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updated)); } catch {}
@@ -980,8 +996,6 @@ export default function App() {
       const extra = { ...platformsExtra, [newClient.id]: extraPlatforms };
       setPlatformsExtra(extra);
       try { localStorage.setItem(LS_PLATFORMS_EXTRA, JSON.stringify(extra)); } catch {}
-      // Guardar extra_platforms en Supabase también
-      supabase.from('clients').update({ extra_platforms: extraPlatforms }).eq('id', newClient.id).then(() => {});
     }
 
     setShowAddClientModal(false);
@@ -1020,20 +1034,35 @@ export default function App() {
     setShowAddSocialModal(false);
   };
 
-  // ── Borrar cliente (estático o dinámico) ──
+  // ── Borrar cliente (soft-delete: deleted=true en Supabase, persiste en todos los navegadores) ──
   const handleDeleteClient = async () => {
     if (!clientId) return;
-    const deletedId = clientId;
+    const deletedId  = clientId;
+    const clientData = ALL_CLIENTS.find(c => c.id === deletedId);
 
-    // Borrar de Supabase (solo si existe allí)
-    await supabase.from('clients').delete().eq('id', deletedId);
+    // Soft-delete en Supabase: upsert con deleted=true
+    // Funciona tanto para clientes dinámicos (ya en Supabase) como estáticos (del JSON, se insertan por primera vez)
+    await supabase.from('clients').upsert({
+      id:          deletedId,
+      name:        clientData?.name        || deletedId,
+      platform:    clientData?.platform    || 'IG',
+      estado:      clientData?.estado      || '-',
+      stage:       clientData?.stage       || '-',
+      tecnico:     clientData?.tecnico     || '-',
+      contact:     clientData?.contact     || '-',
+      email:       clientData?.email       || '-',
+      profile_url: clientData?.profile_url || '-',
+      folder:      clientData?.folder      || '-',
+      notes:       clientData?.notes       || '-',
+      deleted:     true,
+    }, { onConflict: 'id' });
 
-    // Borrar de estado local + localStorage (clientes dinámicos)
+    // Quitar de estado local + localStorage
     const updatedDynamic = dynamicClients.filter(c => c.id !== deletedId);
     setDynamicClients(updatedDynamic);
     try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updatedDynamic)); } catch {}
 
-    // Registrar el ID como eliminado (cubre también clientes estáticos del JSON)
+    // Registrar como eliminado localmente (fuente rápida para esta sesión)
     const updatedDeleted = new Set(deletedClientIds);
     updatedDeleted.add(deletedId);
     setDeletedClientIds(updatedDeleted);
