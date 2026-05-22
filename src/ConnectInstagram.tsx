@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
 // Instagram Business Login - URL exacta que genera Meta en el paso 4 del setup
-const META_APP_ID  = '1124977686473073';
+const META_APP_ID  = '972574845424224';
 const REDIRECT_URI = 'https://contentflow-4wos.vercel.app/ig-callback';
 const OAUTH_URL = (clientId: string) =>
   `https://www.instagram.com/oauth/authorize` +
