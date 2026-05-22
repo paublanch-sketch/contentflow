@@ -1,8 +1,7 @@
 // supabase/functions/publish-instagram/index.ts
 // Publica o programa en Instagram via Graph API oficial (Business/Creator)
+// Usa Authorization: Bearer para tokens IGAAN... (nueva Instagram Login for Business API)
 // POST body: { post_id, scheduled_time? }
-//   scheduled_time = ISO string → programa para esa fecha/hora
-//   sin scheduled_time          → publica inmediatamente
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -13,6 +12,33 @@ const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper: POST a graph.instagram.com con Bearer header (IGAAN tokens)
+async function igPost(path: string, token: string, body: Record<string, unknown>) {
+  const res = await fetch(`https://graph.instagram.com/v21.0${path}`, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  console.log(`[ig-post] ${path}:`, JSON.stringify(data));
+  return data;
+}
+
+// Helper: GET a graph.instagram.com con Bearer header
+async function igGet(path: string, token: string, params: Record<string, string> = {}) {
+  const qs  = new URLSearchParams(params).toString();
+  const url = `https://graph.instagram.com/v21.0${path}${qs ? '?' + qs : ''}`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await res.json();
+  console.log(`[ig-get] ${path}:`, JSON.stringify(data));
+  return data;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -37,6 +63,15 @@ Deno.serve(async (req) => {
     );
 
     const { access_token, ig_user_id } = tokenRow;
+    console.log('[publish-ig] ig_user_id:', ig_user_id, '| token prefix:', access_token?.slice(0, 10));
+
+    // Debug: verificar permisos y tipo de cuenta del token
+    try {
+      const meData = await igGet('/me', access_token, { fields: 'id,username,name,account_type' });
+      console.log('[publish-ig] /me:', JSON.stringify(meData));
+    } catch(e: any) {
+      console.log('[publish-ig] /me error:', e.message);
+    }
 
     // 3. Caption
     const hashtags = (Array.isArray(post.hashtags) ? post.hashtags : [])
@@ -59,26 +94,19 @@ Deno.serve(async (req) => {
       : null;
     const isScheduled = !!schedUnix;
 
-    // 6. Crear contenedor(es)
+    // 6. Crear contenedor(es) — Bearer header, sin access_token en body
     let creationId: string;
 
     if (imageUrls.length === 1) {
       const body: Record<string, unknown> = {
         image_url: imageUrls[0],
         caption,
-        access_token,
       };
       if (isScheduled) {
-        body.published             = false;
+        body.published              = false;
         body.scheduled_publish_time = schedUnix;
       }
-      const res  = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      console.log('[publish-ig] Single media response:', JSON.stringify(data));
+      const data = await igPost(`/${ig_user_id}/media`, access_token, body);
       if (data.error) throw new Error(`Error creando contenedor: ${data.error.message}`);
       creationId = data.id;
 
@@ -86,13 +114,10 @@ Deno.serve(async (req) => {
       // Carrusel: hijos primero
       const childIds: string[] = [];
       for (const url of imageUrls) {
-        const res  = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token }),
+        const data = await igPost(`/${ig_user_id}/media`, access_token, {
+          image_url:        url,
+          is_carousel_item: true,
         });
-        const data = await res.json();
-        console.log('[publish-ig] Carousel child response:', JSON.stringify(data));
         if (data.error) throw new Error(`Error en imagen de carrusel: ${data.error.message}`);
         childIds.push(data.id);
       }
@@ -100,24 +125,17 @@ Deno.serve(async (req) => {
         media_type: 'CAROUSEL',
         children:   childIds.join(','),
         caption,
-        access_token,
       };
       if (isScheduled) {
         carouselBody.published              = false;
         carouselBody.scheduled_publish_time = schedUnix;
       }
-      const res  = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(carouselBody),
-      });
-      const data = await res.json();
-      console.log('[publish-ig] Carousel container response:', JSON.stringify(data));
+      const data = await igPost(`/${ig_user_id}/media`, access_token, carouselBody);
       if (data.error) throw new Error(`Error creando carrusel: ${data.error.message}`);
       creationId = data.id;
     }
 
-    // 7. Si es programado: guardar y devolver (Instagram lo publica solo a su hora)
+    // 7. Si es programado: guardar y devolver
     if (isScheduled) {
       await sb.from('posts').update({
         status:          'scheduled',
@@ -125,12 +143,7 @@ Deno.serve(async (req) => {
       }).eq('id', post_id);
 
       return new Response(
-        JSON.stringify({
-          success:          true,
-          scheduled:        true,
-          scheduled_time,
-          ig_container_id: creationId,
-        }),
+        JSON.stringify({ success: true, scheduled: true, scheduled_time, ig_container_id: creationId }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -138,25 +151,18 @@ Deno.serve(async (req) => {
     // 8. Si es inmediato: esperar contenedor listo y publicar
     for (let i = 0; i < 10; i++) {
       await new Promise(r => setTimeout(r, 3000));
-      const sr = await fetch(
-        `https://graph.instagram.com/v21.0/${creationId}?fields=status_code&access_token=${access_token}`
-      );
-      const statusData = await sr.json();
-      console.log(`[publish-ig] Container status check ${i+1}:`, statusData.status_code);
+      const statusData = await igGet(`/${creationId}`, access_token, { fields: 'status_code' });
       const { status_code } = statusData;
+      console.log(`[publish-ig] Container status check ${i+1}:`, status_code);
       if (status_code === 'FINISHED') break;
       if (status_code === 'ERROR') throw new Error(
         'Instagram rechazó la imagen. Comprueba que sea JPG/PNG < 8MB y URL pública.'
       );
     }
 
-    const publishRes = await fetch(`https://graph.instagram.com/v21.0/${ig_user_id}/media_publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creation_id: creationId, access_token }),
+    const published = await igPost(`/${ig_user_id}/media_publish`, access_token, {
+      creation_id: creationId,
     });
-    const published = await publishRes.json();
-    console.log('[publish-ig] Publish response:', JSON.stringify(published));
     if (published.error) throw new Error(`Error publicando: ${published.error.message}`);
 
     await sb.from('posts').update({
@@ -170,6 +176,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (err: any) {
+    console.error('[publish-ig] ERROR:', err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
