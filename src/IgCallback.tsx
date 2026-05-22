@@ -27,8 +27,19 @@ export default function IgCallback() {
         const { data, error: fnError } = await supabase.functions.invoke('ig-oauth-callback', {
           body: { code, client_id: clientId, redirect_uri: 'https://contentflow-4wos.vercel.app/ig-callback' },
         });
-        if (fnError) throw fnError;
-        if (data?.error) throw new Error(data.error);
+        if (fnError) {
+          // Extraer body del error para debug
+          let detail = fnError.message;
+          try {
+            const ctx = (fnError as any).context;
+            if (ctx) {
+              const txt = typeof ctx.text === 'function' ? await ctx.text() : JSON.stringify(ctx);
+              detail = txt || detail;
+            }
+          } catch {}
+          throw new Error(`[FN_ERROR] ${detail}`);
+        }
+        if (data?.error) throw new Error(`[DATA_ERROR] ${data.error}`);
 
         setStatus('success');
         setMessage(`✅ Instagram conectado: @${data.ig_username}\n\nVolviendo a ContentFlow...`);
