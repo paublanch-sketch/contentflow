@@ -51,13 +51,17 @@ Deno.serve(async (req) => {
     console.log('[Step 1] ✓ user_id:', igUserId);
 
     // ── 2. short → long-lived token (60 días) ───────────────────────────────────
-    const longRes = await fetch(
-      `https://graph.instagram.com/access_token` +
-      `?grant_type=ig_exchange_token` +
-      `&client_id=${META_APP_ID}` +
-      `&client_secret=${META_APP_SECRET}` +
-      `&access_token=${shortToken}`
-    );
+    // Instagram Login for Business API requiere POST (no GET como la antigua Basic Display API)
+    const longRes = await fetch('https://graph.instagram.com/access_token', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'ig_exchange_token',
+        client_id:     META_APP_ID,
+        client_secret: META_APP_SECRET,
+        access_token:  shortToken,
+      }),
+    });
     const longRaw = await longRes.text();
     console.log('[Step 2] status:', longRes.status, '| body:', longRaw);
 
