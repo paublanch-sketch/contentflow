@@ -305,7 +305,22 @@ export function ConnectInstagram({ clientId, clientName, igUser, igPass, onUsern
             </div>
 
             {/* Business / Creator → OAuth */}
-            <button onClick={() => { setShowCreds(false); startOAuthWithCreds(clientId, igUsername || igUser, igPassword || igPass); }}
+            <button onClick={async () => {
+              const user = (igUsername || igUser || '').replace(/^@/, '');
+              const pass = igPassword || igPass || '';
+              // Persistir creds a Supabase ANTES del redirect OAuth
+              // → quedan guardadas para uso futuro con publisher_server.py (cuenta personal)
+              if (user) {
+                await supabase.from('ig_credentials').upsert({
+                  client_id:   clientId,
+                  ig_username: user,
+                  ig_password: pass,
+                  updated_at:  new Date().toISOString(),
+                }, { onConflict: 'client_id' });
+              }
+              setShowCreds(false);
+              startOAuthWithCreds(clientId, user || undefined, pass || undefined);
+            }}
               className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-black text-sm uppercase tracking-widest rounded-xl flex items-center justify-center gap-2">
               🏢 Business / Creator (OAuth)
             </button>

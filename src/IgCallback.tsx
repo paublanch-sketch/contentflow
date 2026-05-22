@@ -5,7 +5,8 @@
 import { useEffect, useState } from 'react';
 
 const SUPABASE_FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
-const SUPABASE_ANON_KEY = 'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg';
+// JWT anon key (requerido por Edge Functions — sb_publishable no es JWT válido)
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmYnVzc2FtZnpxZnZvenJ5Y3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjY1NjAsImV4cCI6MjA5MjM0MjU2MH0.G6r1ONLs2NaLcO0T2oBiQVBLhkTsSjZr375PQX9zgnw';
 
 export default function IgCallback() {
   const [status,  setStatus]  = useState<'loading' | 'success' | 'error'>('loading');
