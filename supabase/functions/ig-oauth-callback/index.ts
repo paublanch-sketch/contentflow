@@ -59,24 +59,25 @@ Deno.serve(async (req) => {
     let igUsername = igUserId;
     let igUserIdReal = igUserId;
     try {
-      // Intento 1: api.instagram.com (misma base que el token exchange)
+      // Nueva Instagram Login API: usa Authorization Bearer, no query param
       const userRes1 = await fetch(
-        `https://api.instagram.com/v1.0/me?fields=id,username&access_token=${longToken}`
+        `https://graph.instagram.com/v21.0/me?fields=id,username,name`,
+        { headers: { 'Authorization': `Bearer ${longToken}` } }
       );
       const userData1 = await userRes1.json();
-      console.log('[Step 2a] api.instagram.com:', JSON.stringify(userData1));
-      if (!userData1.error && userData1.username) {
-        igUsername = userData1.username;
-        igUserIdReal = String(userData1.id || igUserId);
+      console.log('[Step 2a] bearer me:', JSON.stringify(userData1));
+      if (!userData1.error && (userData1.username || userData1.name)) {
+        igUsername    = userData1.username || userData1.name;
+        igUserIdReal  = String(userData1.id || igUserId);
       } else {
-        // Intento 2: graph.instagram.com con user_id en path
+        // Fallback: query param clásico sobre user_id directo
         const userRes2 = await fetch(
-          `https://graph.instagram.com/${igUserId}?fields=username,name&access_token=${longToken}`
+          `https://graph.instagram.com/v21.0/${igUserId}?fields=username,name&access_token=${longToken}`
         );
         const userData2 = await userRes2.json();
-        console.log('[Step 2b] graph por id:', JSON.stringify(userData2));
-        if (!userData2.error) {
-          igUsername = userData2.username || userData2.name || igUserId;
+        console.log('[Step 2b] id direct:', JSON.stringify(userData2));
+        if (!userData2.error && (userData2.username || userData2.name)) {
+          igUsername   = userData2.username || userData2.name;
           igUserIdReal = String(userData2.id || igUserId);
         }
       }
