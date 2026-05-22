@@ -54,15 +54,35 @@ Deno.serve(async (req) => {
     const expiresInMs = 5184000 * 1000; // 60 días por defecto
     console.log('[Step 1] ✓ user_id:', igUserId, '| token long-lived directo');
 
-    // ── 2. Obtener username ──────────────────────────────────────────────────────
-    const userRes  = await fetch(
-      `https://graph.instagram.com/v21.0/me?fields=id,username,name&access_token=${longToken}`
-    );
-    const userData = await userRes.json();
-    console.log('[Step 2] user:', JSON.stringify(userData));
-    if (userData.error) throw new Error(userData.error.message);
-    const igUsername = userData.username || userData.name || igUserId;
-    const igUserIdReal = userData.id ? String(userData.id) : igUserId;
+    // ── 2. Obtener username vía Instagram Login API ─────────────────────────────
+    // Los tokens IGAAN... usan api.instagram.com, no graph.instagram.com
+    let igUsername = igUserId;
+    let igUserIdReal = igUserId;
+    try {
+      // Intento 1: api.instagram.com (misma base que el token exchange)
+      const userRes1 = await fetch(
+        `https://api.instagram.com/v1.0/me?fields=id,username&access_token=${longToken}`
+      );
+      const userData1 = await userRes1.json();
+      console.log('[Step 2a] api.instagram.com:', JSON.stringify(userData1));
+      if (!userData1.error && userData1.username) {
+        igUsername = userData1.username;
+        igUserIdReal = String(userData1.id || igUserId);
+      } else {
+        // Intento 2: graph.instagram.com con user_id en path
+        const userRes2 = await fetch(
+          `https://graph.instagram.com/${igUserId}?fields=username,name&access_token=${longToken}`
+        );
+        const userData2 = await userRes2.json();
+        console.log('[Step 2b] graph por id:', JSON.stringify(userData2));
+        if (!userData2.error) {
+          igUsername = userData2.username || userData2.name || igUserId;
+          igUserIdReal = String(userData2.id || igUserId);
+        }
+      }
+    } catch(e: any) {
+      console.log('[Step 2] fetch error:', e.message, '— usando user_id como username');
+    }
     console.log('[Step 2] ✓ ig_user_id:', igUserIdReal, 'username:', igUsername);
 
     // ── 4. Guardar en Supabase (misma estrategia que clientes: upsert con onConflict) ──
