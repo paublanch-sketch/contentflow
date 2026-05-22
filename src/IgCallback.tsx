@@ -44,8 +44,9 @@ export default function IgCallback() {
         sessionStorage.removeItem('ig_oauth_client_id');
         sessionStorage.removeItem('ig_oauth_return_url');
 
-        // Añadir ?ig_connected=1 para que la app sepa que acaba de conectar
-        const returnUrl = rawReturn.split('?')[0] + '?ig_connected=1';
+        // Pasar ig_connected=1 + ig_client para que la app seleccione el cliente correcto
+        // (crítico en incógnito donde no hay localStorage con el cliente guardado)
+        const returnUrl = rawReturn.split('?')[0] + `?ig_connected=1&ig_client=${encodeURIComponent(clientId)}`;
         setTimeout(() => { window.location.replace(returnUrl); }, 1500);
 
       } catch (err: any) {

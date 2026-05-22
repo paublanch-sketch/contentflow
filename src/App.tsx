@@ -620,19 +620,51 @@ export default function App() {
   const [portalSlug, setPortalSlug] = useState<string>('');
   const searchRef                   = useRef<HTMLDivElement>(null);
 
+  // ── Cliente pendiente de seleccionar tras OAuth (llega en ?ig_client=) ──────
+  const [pendingIgClient, setPendingIgClient] = useState<string>('');
+
   // ── Detectar retorno de OAuth IG ──────────────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('ig_connected') === '1') {
       setIgJustConnected(true);
-      // Forzar re-fetch de ig_tokens y re-mount de ConnectInstagram
-      setIgRefreshKey(k => k + 1);
+      const igClient = params.get('ig_client') || '';
       // Limpiar URL sin recargar
       window.history.replaceState({}, '', window.location.pathname);
-      // Limpiar banner tras 4s
+
+      if (igClient) {
+        // Intentar seleccionar ya (cliente estático) o marcar pendiente (dinámico, aún cargando)
+        const found = [...CLIENTS, ...JSON.parse(localStorage.getItem(LS_DYNAMIC_CLIENTS) || '[]')]
+          .find((c: Client) => c.id === igClient);
+        if (found) {
+          setClientId(found.id);
+          setSearch(found.name);
+          try { localStorage.setItem(LS_KEY, found.id); } catch {}
+          setIgRefreshKey(k => k + 1);
+        } else {
+          // Cliente dinámico aún no cargado de Supabase → resolver cuando lleguen
+          setPendingIgClient(igClient);
+        }
+      } else {
+        setIgRefreshKey(k => k + 1);
+      }
       setTimeout(() => setIgJustConnected(false), 4000);
     }
   }, []);
+
+  // ── Resolver cliente pendiente de OAuth cuando Supabase carga dinámicos ───
+  useEffect(() => {
+    if (!pendingIgClient) return;
+    const found = ALL_CLIENTS.find(c => c.id === pendingIgClient);
+    if (found) {
+      setClientId(found.id);
+      setSearch(found.name);
+      try { localStorage.setItem(LS_KEY, found.id); } catch {}
+      setIgRefreshKey(k => k + 1);
+      setPendingIgClient('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicClients, pendingIgClient]);
 
   // ── Nuevos clientes añadidos dinámicamente (Supabase + localStorage fallback) ──
   const [dynamicClients, setDynamicClients] = useState<Client[]>(() => {
