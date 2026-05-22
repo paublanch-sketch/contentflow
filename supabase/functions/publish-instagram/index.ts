@@ -13,9 +13,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper: POST a graph.instagram.com con Bearer header (IGAAN tokens)
+// Tokens IGAAN... (nueva Instagram Login for Business API) usan api.instagram.com
+const IG_API = 'https://api.instagram.com/v21.0';
+
+// Helper: POST con Bearer header
 async function igPost(path: string, token: string, body: Record<string, unknown>) {
-  const res = await fetch(`https://graph.instagram.com/v21.0${path}`, {
+  const res = await fetch(`${IG_API}${path}`, {
     method:  'POST',
     headers: {
       'Content-Type':  'application/json',
@@ -28,10 +31,10 @@ async function igPost(path: string, token: string, body: Record<string, unknown>
   return data;
 }
 
-// Helper: GET a graph.instagram.com con Bearer header
+// Helper: GET con Bearer header
 async function igGet(path: string, token: string, params: Record<string, string> = {}) {
   const qs  = new URLSearchParams(params).toString();
-  const url = `https://graph.instagram.com/v21.0${path}${qs ? '?' + qs : ''}`;
+  const url = `${IG_API}${path}${qs ? '?' + qs : ''}`;
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` },
   });

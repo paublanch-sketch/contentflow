@@ -54,32 +54,19 @@ Deno.serve(async (req) => {
     const expiresInMs = 5184000 * 1000; // 60 días por defecto
     console.log('[Step 1] ✓ user_id:', igUserId, '| token long-lived directo');
 
-    // ── 2. Obtener username vía Instagram Login API ─────────────────────────────
-    // Los tokens IGAAN... usan api.instagram.com, no graph.instagram.com
+    // ── 2. Obtener username vía api.instagram.com (tokens IGAAN usan esta URL, NO graph.instagram.com)
     let igUsername = igUserId;
     let igUserIdReal = igUserId;
     try {
-      // Nueva Instagram Login API: usa Authorization Bearer, no query param
-      const userRes1 = await fetch(
-        `https://graph.instagram.com/v21.0/me?fields=id,username,name`,
+      const userRes = await fetch(
+        `https://api.instagram.com/v21.0/me?fields=id,username,name`,
         { headers: { 'Authorization': `Bearer ${longToken}` } }
       );
-      const userData1 = await userRes1.json();
-      console.log('[Step 2a] bearer me:', JSON.stringify(userData1));
-      if (!userData1.error && (userData1.username || userData1.name)) {
-        igUsername    = userData1.username || userData1.name;
-        igUserIdReal  = String(userData1.id || igUserId);
-      } else {
-        // Fallback: query param clásico sobre user_id directo
-        const userRes2 = await fetch(
-          `https://graph.instagram.com/v21.0/${igUserId}?fields=username,name&access_token=${longToken}`
-        );
-        const userData2 = await userRes2.json();
-        console.log('[Step 2b] id direct:', JSON.stringify(userData2));
-        if (!userData2.error && (userData2.username || userData2.name)) {
-          igUsername   = userData2.username || userData2.name;
-          igUserIdReal = String(userData2.id || igUserId);
-        }
+      const userData = await userRes.json();
+      console.log('[Step 2] api.instagram.com/me:', JSON.stringify(userData));
+      if (!userData.error && (userData.username || userData.name)) {
+        igUsername   = userData.username || userData.name;
+        igUserIdReal = String(userData.id || igUserId);
       }
     } catch(e: any) {
       console.log('[Step 2] fetch error:', e.message, '— usando user_id como username');
