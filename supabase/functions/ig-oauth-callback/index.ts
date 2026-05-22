@@ -48,41 +48,22 @@ Deno.serve(async (req) => {
     }
     const shortToken = shortData.access_token;
     const igUserId   = String(shortData.user_id);
-    console.log('[Step 1] ✓ user_id:', igUserId);
+    // La nueva Instagram Login for Business API devuelve tokens ya long-lived (60 días)
+    // El endpoint graph.instagram.com/access_token es de la antigua Basic Display API → no aplica
+    const longToken   = shortToken;
+    const expiresInMs = 5184000 * 1000; // 60 días por defecto
+    console.log('[Step 1] ✓ user_id:', igUserId, '| token long-lived directo');
 
-    // ── 2. short → long-lived token (60 días) ───────────────────────────────────
-    // Instagram Login for Business API requiere POST (no GET como la antigua Basic Display API)
-    const longRes = await fetch('https://graph.instagram.com/access_token', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type:    'ig_exchange_token',
-        client_id:     META_APP_ID,
-        client_secret: META_APP_SECRET,
-        access_token:  shortToken,
-      }),
-    });
-    const longRaw = await longRes.text();
-    console.log('[Step 2] status:', longRes.status, '| body:', longRaw);
-
-    let longData: any;
-    try { longData = JSON.parse(longRaw); } catch { throw new Error(`Parse long: ${longRaw}`); }
-    if (longData.error) throw new Error(longData.error.message);
-    const longToken   = longData.access_token;
-    const expiresInMs = (longData.expires_in || 5184000) * 1000;
-    console.log('[Step 2] ✓ expires_in:', longData.expires_in, 's');
-
-    // ── 3. Obtener username ──────────────────────────────────────────────────────
+    // ── 2. Obtener username ──────────────────────────────────────────────────────
     const userRes  = await fetch(
-      `https://graph.instagram.com/me?fields=id,username,name&access_token=${longToken}`
+      `https://graph.instagram.com/v21.0/me?fields=id,username,name&access_token=${longToken}`
     );
     const userData = await userRes.json();
-    console.log('[Step 3] user:', JSON.stringify(userData));
+    console.log('[Step 2] user:', JSON.stringify(userData));
     if (userData.error) throw new Error(userData.error.message);
     const igUsername = userData.username || userData.name || igUserId;
-    // userData.id es el IG User ID real necesario para Content Publishing API
     const igUserIdReal = userData.id ? String(userData.id) : igUserId;
-    console.log('[Step 3] ✓ real ig_user_id:', igUserIdReal, 'username:', igUsername);
+    console.log('[Step 2] ✓ ig_user_id:', igUserIdReal, 'username:', igUsername);
 
     // ── 4. Guardar en Supabase (misma estrategia que clientes: upsert con onConflict) ──
     const { error: upsertErr } = await sb.from('ig_tokens').upsert({
