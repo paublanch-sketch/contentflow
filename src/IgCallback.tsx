@@ -3,10 +3,7 @@
 // Intercambia código → token → guarda en Supabase ig_tokens
 
 import { useEffect, useState } from 'react';
-
-const SUPABASE_FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
-// JWT anon key (requerido por Edge Functions — sb_publishable no es JWT válido)
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmYnVzc2FtZnpxZnZvenJ5Y3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjY1NjAsImV4cCI6MjA5MjM0MjU2MH0.G6r1ONLs2NaLcO0T2oBiQVBLhkTsSjZr375PQX9zgnw';
+import { supabase } from './lib/supabase';
 
 export default function IgCallback() {
   const [status,  setStatus]  = useState<'loading' | 'success' | 'error'>('loading');
@@ -26,16 +23,12 @@ export default function IgCallback() {
 
       try {
         setMessage('Intercambiando código por token...');
-        // Llamar a Edge Function que hace el exchange (protege App Secret)
-        const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/ig-oauth-callback`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ code, client_id: clientId, redirect_uri: 'https://contentflow-4wos.vercel.app/ig-callback' }),
+        // Usar supabase.functions.invoke — maneja auth correctamente con cualquier formato de key
+        const { data, error: fnError } = await supabase.functions.invoke('ig-oauth-callback', {
+          body: { code, client_id: clientId, redirect_uri: 'https://contentflow-4wos.vercel.app/ig-callback' },
         });
-        const rawText = await res.text();
-        let data: any = {};
-        try { data = JSON.parse(rawText); } catch { data = { error: rawText }; }
-        if (!res.ok || data.error) throw new Error(data.error || data.message || `HTTP ${res.status}: ${rawText}`);
+        if (fnError) throw fnError;
+        if (data?.error) throw new Error(data.error);
 
         setStatus('success');
         setMessage(`✅ Instagram conectado: @${data.ig_username}\n\nVolviendo a ContentFlow...`);
