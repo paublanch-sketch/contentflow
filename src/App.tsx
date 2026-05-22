@@ -652,20 +652,6 @@ export default function App() {
     }
   }, []);
 
-  // ── Resolver cliente pendiente de OAuth cuando Supabase carga dinámicos ───
-  useEffect(() => {
-    if (!pendingIgClient) return;
-    const found = ALL_CLIENTS.find(c => c.id === pendingIgClient);
-    if (found) {
-      setClientId(found.id);
-      setSearch(found.name);
-      try { localStorage.setItem(LS_KEY, found.id); } catch {}
-      setIgRefreshKey(k => k + 1);
-      setPendingIgClient('');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dynamicClients, pendingIgClient]);
-
   // ── Nuevos clientes añadidos dinámicamente (Supabase + localStorage fallback) ──
   const [dynamicClients, setDynamicClients] = useState<Client[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_DYNAMIC_CLIENTS) || '[]'); } catch { return []; }
@@ -854,6 +840,21 @@ export default function App() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Resolver cliente pendiente de OAuth cuando Supabase carga dinámicos ─────
+  // (aquí sí: dynamicClients y ALL_CLIENTS ya están declarados)
+  useEffect(() => {
+    if (!pendingIgClient) return;
+    const found = ALL_CLIENTS.find(c => c.id === pendingIgClient);
+    if (found) {
+      setClientId(found.id);
+      setSearch(found.name);
+      try { localStorage.setItem(LS_KEY, found.id); } catch {}
+      setIgRefreshKey(k => k + 1);
+      setPendingIgClient('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicClients, pendingIgClient]);
 
   // ── Resolver cliente portal cuando Supabase carga clientes dinámicos ──
   useEffect(() => {
