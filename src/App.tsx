@@ -1373,15 +1373,25 @@ export default function App() {
               Portal de Aprobación
             </h1>
           </div>
-          {isClientPortal && clientId && (
-            <button
-              onClick={() => handleCreatePost('client')}
-              disabled={creatingPost}
-              className="text-[11px] font-black bg-[#2d6a4f] text-white px-4 py-2 rounded-xl hover:bg-[#1b4332] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+          <div className="flex items-center gap-4">
+            <a
+              href="/p/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-gray-400 hover:text-[#2d6a4f] transition-colors underline underline-offset-2 hidden sm:block"
             >
-              {creatingPost ? '...' : '＋ Añadir post'}
-            </button>
-          )}
+              Política de Privacidad
+            </a>
+            {isClientPortal && clientId && (
+              <button
+                onClick={() => handleCreatePost('client')}
+                disabled={creatingPost}
+                className="text-[11px] font-black bg-[#2d6a4f] text-white px-4 py-2 rounded-xl hover:bg-[#1b4332] transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+              >
+                {creatingPost ? '...' : '＋ Añadir post'}
+              </button>
+            )}
+          </div>
         </nav>
       )}
 

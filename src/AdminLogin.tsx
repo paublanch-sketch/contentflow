@@ -91,6 +91,15 @@ export default function AdminLogin({ onLogin }: Props) {
             {loading ? '⏳ Accediendo...' : 'Acceder'}
           </button>
         </form>
+
+        <div className="mt-6 text-center">
+          <a
+            href="/p/privacy"
+            className="text-[11px] text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2"
+          >
+            Política de Privacidad
+          </a>
+        </div>
       </div>
 
       <style>{`
