@@ -502,7 +502,7 @@ function AddSocialModal({
   );
 }
 
-// ─── Política de Privacidad (ruta pública /p/privacy) ────────────────────────
+// ─── Política de Privacidad completa (ruta pública /p/privacy) ───────────────
 function PrivacyPage() {
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 760, margin: '0 auto', padding: '40px 20px 80px', color: '#1a1a1a', lineHeight: 1.7 }}>
@@ -563,14 +563,14 @@ function PrivacyPage() {
         )},
         { title: '7. Derechos del usuario y eliminación de datos', content: (
           <>
-            <p>Puedes solicitar acceso, rectificación o eliminación de tus datos enviando un correo a <a href="mailto:hola@interactivos.net" style={{ color:'#2d6a4f' }}>hola@interactivos.net</a> con el asunto <em>"Eliminación de datos ContentFlow"</em>. Respondemos en un máximo de 30 días.</p>
+            <p>Puedes solicitar acceso, rectificación o eliminación de tus datos enviando un correo a <a href="mailto:pau.blanch@interactivos.net" style={{ color:'#2d6a4f' }}>pau.blanch@interactivos.net</a> con el asunto <em>"Eliminación de datos ContentFlow"</em>. Respondemos en un máximo de 30 días.</p>
             <p>También puedes revocar los permisos desde Instagram: <strong>Configuración → Seguridad → Aplicaciones y sitios web</strong>.</p>
           </>
         )},
         { title: '8. Contacto', content: (
           <ul style={{ marginLeft:24, marginBottom:14 }}>
             <li><strong>Empresa:</strong> Interactivos Digital S.L.</li>
-            <li><strong>Email:</strong> <a href="mailto:hola@interactivos.net" style={{ color:'#2d6a4f' }}>hola@interactivos.net</a></li>
+            <li><strong>Email:</strong> <a href="mailto:pau.blanch@interactivos.net" style={{ color:'#2d6a4f' }}>pau.blanch@interactivos.net</a></li>
             <li><strong>Web:</strong> <a href="https://www.interactivos.net" style={{ color:'#2d6a4f' }}>www.interactivos.net</a></li>
           </ul>
         )},
@@ -588,6 +588,50 @@ function PrivacyPage() {
   );
 }
 
+// ─── Política de Privacidad simplificada (ruta pública /p/privacyapp) ─────────
+function PrivacyPageApp() {
+  return (
+    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 680, margin: '0 auto', padding: '48px 24px 80px', color: '#1a1a1a', lineHeight: 1.8 }}>
+      <div style={{ borderBottom: '2px solid #e5e5e5', marginBottom: 40, paddingBottom: 20 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Política de Privacidad</h1>
+        <p style={{ color: '#666', fontSize: 14 }}>ContentFlow — Desarrollado por <strong>Interactivos Digital S.L.</strong></p>
+      </div>
+
+      <div style={{ fontSize: 15 }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700, marginTop: 36, marginBottom: 10, paddingLeft: 12, borderLeft: '4px solid #52b788' }}>
+          1. Información general
+        </h2>
+        <p>ContentFlow es una herramienta interna de gestión y publicación de contenido en redes sociales desarrollada por <strong>Interactivos Digital S.L.</strong>, agencia adherida al programa <strong>Kit Digital</strong> del Gobierno de España.</p>
+        <p style={{ marginTop: 10 }}>ContentFlow se utiliza exclusivamente por Interactivos Digital S.L. para gestionar y publicar contenido en las redes sociales de sus clientes empresariales dentro del marco del servicio de <em>Gestión de Redes Sociales</em> del Kit Digital. Los clientes autorizan expresamente a Interactivos a publicar en su nombre al contratar el servicio.</p>
+
+        <h2 style={{ fontSize: 17, fontWeight: 700, marginTop: 36, marginBottom: 10, paddingLeft: 12, borderLeft: '4px solid #52b788' }}>
+          2. Datos que recopilamos
+        </h2>
+        <p>ContentFlow recopila únicamente los datos estrictamente necesarios:</p>
+        <ul style={{ marginLeft: 20, marginTop: 10, marginBottom: 10 }}>
+          <li style={{ marginBottom: 6 }}><strong>Token de acceso de Instagram:</strong> almacenado de forma segura para publicar en tu nombre.</li>
+          <li style={{ marginBottom: 6 }}><strong>Nombre de usuario de Instagram:</strong> para identificar la cuenta conectada.</li>
+          <li style={{ marginBottom: 6 }}><strong>ID de usuario de Instagram:</strong> identificador técnico para las llamadas a la API.</li>
+          <li style={{ marginBottom: 6 }}><strong>Contenido de publicaciones:</strong> textos, imágenes y hashtags introducidos en la plataforma.</li>
+        </ul>
+        <p><strong>No recopilamos</strong> contraseñas, datos bancarios ni documentos de identidad.</p>
+
+        <h2 style={{ fontSize: 17, fontWeight: 700, marginTop: 36, marginBottom: 10, paddingLeft: 12, borderLeft: '4px solid #52b788' }}>
+          3. Finalidad del tratamiento
+        </h2>
+        <ul style={{ marginLeft: 20, marginTop: 10 }}>
+          <li style={{ marginBottom: 6 }}>Publicar o programar contenido en Instagram mediante la API oficial de Meta.</li>
+          <li style={{ marginBottom: 6 }}>Identificar qué cuenta de Instagram está asociada a cada cliente en ContentFlow.</li>
+        </ul>
+      </div>
+
+      <div style={{ marginTop: 56, paddingTop: 20, borderTop: '1px solid #e5e5e5', fontSize: 12, color: '#aaa' }}>
+        © 2025 Interactivos Digital S.L. · ContentFlow
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function App() {
   const [clientId, setClientId]     = useState<string>('');
@@ -597,6 +641,7 @@ export default function App() {
   const [isClientPortal, setIsClientPortal] = useState(false);
   const [isIgCallback, setIsIgCallback] = useState(false);
   const [isPrivacyPage, setIsPrivacyPage] = useState(false);
+  const [isPrivacyPageApp, setIsPrivacyPageApp] = useState(false);
   const [adminAuth, setAdminAuth]   = useState<boolean>(
     () => sessionStorage.getItem('cf_admin_auth') === '1'
   );
@@ -804,6 +849,11 @@ export default function App() {
 
     if (path === '/p/privacy' || path === '/privacy') {
       setIsPrivacyPage(true);
+      return;
+    }
+
+    if (path === '/p/privacyapp') {
+      setIsPrivacyPageApp(true);
       return;
     }
 
@@ -1120,6 +1170,7 @@ export default function App() {
   // ig-test DESACTIVADO — causaba alertas de seguridad en cuentas de clientes (login desde Vercel/Virginia)
   // if (window.location.pathname === '/ig-test') return <IgCredentialTest />;
   if (isPrivacyPage) return <PrivacyPage />;
+  if (isPrivacyPageApp) return <PrivacyPageApp />;
   if (showMcSettings) return <MetricoolSettingsModal onClose={() => setShowMcSettings(false)} />;
   if (!isClientPortal && !adminAuth) return <AdminLogin onLogin={() => setAdminAuth(true)} />;
 
@@ -1375,7 +1426,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="/p/privacy"
+              href="/p/privacyapp"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[11px] text-gray-400 hover:text-[#2d6a4f] transition-colors underline underline-offset-2 hidden sm:block"

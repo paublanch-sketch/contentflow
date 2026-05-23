@@ -94,7 +94,7 @@ export default function AdminLogin({ onLogin }: Props) {
 
         <div className="mt-6 text-center">
           <a
-            href="/p/privacy"
+            href="/p/privacyapp"
             className="text-[11px] text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2"
           >
             Política de Privacidad
