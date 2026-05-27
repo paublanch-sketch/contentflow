@@ -856,6 +856,50 @@ function useVideoUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
   return { uploadingVideoId, handleVideoFile };
 }
 
+// ─── Hook para subir miniatura de reel a Supabase Storage ────────────────────
+function useThumbnailUpload(clientId: string, onUpdatePost: Props['onUpdatePost']) {
+  const [uploadingThumbId, setUploadingThumbId] = useState<string | null>(null);
+
+  const handleThumbnailFile = async (
+    postId: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ): Promise<{ ok: boolean; msg?: string }> => {
+    const file = e.target.files?.[0];
+    if (!file) return { ok: false, msg: 'Sin archivo' };
+    setUploadingThumbId(postId);
+    const ts  = Date.now();
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const fileName = `${clientId}/${postId}_thumb_${ts}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('post-images')
+      .upload(fileName, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      setUploadingThumbId(null);
+      e.target.value = '';
+      return { ok: false, msg: uploadError.message };
+    }
+
+    const { data } = supabase.storage.from('post-images').getPublicUrl(fileName);
+    const url = `${data.publicUrl}?v=${ts}`;
+    const { error: dbError } = await (supabase.from('posts').update({ reel_thumbnail_url: url }).eq('id', postId) as any);
+
+    if (dbError) {
+      setUploadingThumbId(null);
+      e.target.value = '';
+      return { ok: false, msg: `BD: ${dbError.message}` };
+    }
+
+    await onUpdatePost(postId, { reel_thumbnail_url: url });
+    setUploadingThumbId(null);
+    e.target.value = '';
+    return { ok: true };
+  };
+
+  return { uploadingThumbId, handleThumbnailFile };
+}
+
 // ─── Notificaciones email vía Supabase Edge Function + Resend ────────────────
 const SUPABASE_FUNCTIONS_URL = 'https://afbussamfzqfvozrycsr.supabase.co/functions/v1';
 const SUPABASE_ANON_KEY      = 'sb_publishable_v70AbmzkIGerl7EQgxWE7g_JGSiShMg';
@@ -1200,6 +1244,7 @@ async function loadImgFromUrl(url: string): Promise<HTMLImageElement> {
 function PostCard({
   post, allPosts, clientId, clientName, clientPlatform, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, uploadingId, handleFile, handleUrl,
   uploadingVideoId, handleVideoFile,
+  uploadingThumbId, handleThumbnailFile,
   shareMode, isSelected, onToggleSelect,
 }: {
   post: Post;
@@ -1217,6 +1262,8 @@ function PostCard({
   handleUrl:  (id: string, existing: string[], mode: 'replace'|'add', idx?: number) => void;
   uploadingVideoId: string | null;
   handleVideoFile: (id: string, e: React.ChangeEvent<HTMLInputElement>) => Promise<{ ok: boolean; msg?: string }>;
+  uploadingThumbId: string | null;
+  handleThumbnailFile: (id: string, e: React.ChangeEvent<HTMLInputElement>) => Promise<{ ok: boolean; msg?: string }>;
   shareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -1308,17 +1355,28 @@ function PostCard({
         providers:       [{ network }],
       };
       // Metricool: media = array de strings (URLs directas), saveExternalMediaFiles: true
-      if (imageUrls.length > 0) {
+      // Si hay reel, el vídeo va como primera media; si además hay miniatura, se pasa como coverUrl
+      if (post.reel_url) {
+        body.media = [post.reel_url.split('?')[0], ...imageUrls.map(u => u.split('?')[0])];
+        body.saveExternalMediaFiles = true;
+      } else if (imageUrls.length > 0) {
         body.media = imageUrls.map(u => u.split('?')[0]);
         body.saveExternalMediaFiles = true;
       }
-      // autoPublish también dentro del objeto de datos de red (cubre todos los formatos de la API)
+      // autoPublish + thumbnail dentro del objeto de datos de red
+      const thumbnailUrl = post.reel_thumbnail_url ? post.reel_thumbnail_url.split('?')[0] : undefined;
       if (network === 'INSTAGRAM') {
-        body.instagramData = { autoPublish: true };
+        body.instagramData = {
+          autoPublish: true,
+          ...(thumbnailUrl ? { coverUrl: thumbnailUrl } : {}),
+        };
       } else if (network === 'LINKEDIN') {
         body.linkedInData = { autoPublish: true };
       } else if (network === 'FACEBOOK') {
-        body.facebookData = { autoPublish: true };
+        body.facebookData = {
+          autoPublish: true,
+          ...(thumbnailUrl ? { coverUrl: thumbnailUrl } : {}),
+        };
       }
 
       // Llamamos a la Vercel Serverless Function (sin CORS, sin servidor local)
@@ -2028,7 +2086,7 @@ function PostCard({
 
       {/* ── Sección Reel / Vídeo ── */}
       {(post.reel_url || (isAdmin || canClientEdit)) && (
-        <div className="border-t border-gray-100 px-4 py-2.5 flex items-center gap-2 bg-gray-50/60">
+        <div className="border-t border-gray-100 px-4 py-2.5 flex flex-wrap items-center gap-2 bg-gray-50/60">
           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">🎬 Reel</span>
           {uploadingVideoId === post.id
             ? <Loader2 size={14} className="animate-spin text-[#2d6a4f]" />
@@ -2059,9 +2117,57 @@ function PostCard({
                 )
               )
           }
+
+          {/* ── Miniatura del reel ── (solo si hay reel subido) */}
+          {post.reel_url && (isAdmin || canClientEdit) && (
+            uploadingThumbId === post.id
+              ? <Loader2 size={14} className="animate-spin text-purple-500" />
+              : post.reel_thumbnail_url
+                ? (
+                  <div className="flex items-center gap-1.5">
+                    <img
+                      src={post.reel_thumbnail_url}
+                      alt="Miniatura"
+                      className="w-7 h-7 rounded object-cover border border-purple-300 shadow-sm"
+                      title="Miniatura del reel"
+                    />
+                    {/* Reemplazar miniatura */}
+                    {isAdmin && (
+                      <label className="cursor-pointer text-[10px] font-bold text-purple-400 hover:text-purple-600" title="Cambiar miniatura">
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={async e => {
+                            const res = await handleThumbnailFile(post.id, e);
+                            if (!res.ok) setToast({ msg: `Error miniatura: ${res.msg}`, type: 'err' });
+                          }}
+                        />
+                        🔄
+                      </label>
+                    )}
+                  </div>
+                )
+                : (
+                  <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-purple-500 hover:text-purple-700 bg-white border border-purple-200 hover:border-purple-400 px-2.5 py-1 rounded-lg transition-colors shadow-sm">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={async e => {
+                        const res = await handleThumbnailFile(post.id, e);
+                        if (!res.ok) setToast({ msg: `Error miniatura: ${res.msg}`, type: 'err' });
+                        else showToast('✅ Miniatura añadida', 'ok');
+                      }}
+                    />
+                    🖼 Añadir miniatura
+                  </label>
+                )
+          )}
+
           {/* Reemplazar vídeo si ya hay uno — solo admin */}
           {isAdmin && post.reel_url && (
-            <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 ml-auto">
+            <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 ml-auto" title="Cambiar vídeo">
               <input
                 type="file"
                 className="hidden"
@@ -2963,7 +3069,8 @@ function PostCard({
 // ─── Grid principal ───────────────────────────────────────────────────────────
 export default function ApprovalWall({ posts, clientId, clientName, clientPlatform, isAdmin, isClientPortal = false, igAccountType = 'none', onUpdatePost, onDeletePost, shareMode, selectedPosts, onToggleSelect }: Props) {
   const { uploadingId, handleFile, handleUrl } = useImageUpload(clientId, onUpdatePost);
-  const { uploadingVideoId, handleVideoFile }  = useVideoUpload(clientId, onUpdatePost);
+  const { uploadingVideoId, handleVideoFile }     = useVideoUpload(clientId, onUpdatePost);
+  const { uploadingThumbId, handleThumbnailFile } = useThumbnailUpload(clientId, onUpdatePost);
 
   // Portal cliente: filtrar por ?show=1,3,5 si existe
   const visiblePosts = (() => {
@@ -2995,6 +3102,8 @@ export default function ApprovalWall({ posts, clientId, clientName, clientPlatfo
     handleUrl,
     uploadingVideoId,
     handleVideoFile,
+    uploadingThumbId,
+    handleThumbnailFile,
     shareMode,
     isSelected: selectedPosts?.has(post.post_number) ?? false,
     onToggleSelect: () => onToggleSelect?.(post.post_number),

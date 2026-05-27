@@ -25,6 +25,7 @@ export type Post = {
   feedback: string;
   image_url: string;
   reel_url?: string;
+  reel_thumbnail_url?: string;
   webhook_sent_at: string | null;
   created_by?: 'admin' | 'client' | null;
   admin_comment?: string;
@@ -991,7 +992,7 @@ export default function App() {
     setPosts(prev =>
       prev.map(p => p.id === postId ? { ...p, ...updates } : p)
     );
-    const allowed = ['status', 'feedback', 'image_url', 'reel_url', 'webhook_sent_at', 'copy', 'hashtags', 'headline_visual', 'visual_prompt', 'admin_comment'] as const;
+    const allowed = ['status', 'feedback', 'image_url', 'reel_url', 'reel_thumbnail_url', 'webhook_sent_at', 'copy', 'hashtags', 'headline_visual', 'visual_prompt', 'admin_comment'] as const;
     const dbUpdates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in updates) dbUpdates[key] = (updates as any)[key];
