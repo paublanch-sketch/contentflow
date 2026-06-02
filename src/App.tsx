@@ -871,11 +871,21 @@ export default function App() {
         setIsClientPortal(true);
         return;
       }
-      // Cliente no encontrado todavía — puede ser dinámico (Supabase aún no respondió).
+        // Cliente no encontrado todavía — puede ser borrado o dinámico aún no cargado.
       // Marcamos portal activo + guardamos slug; un segundo effect lo resolverá.
+      // Si en 3s Supabase no lo resuelve, forzamos clientId con el slug directamente.
       setIsAdmin(false);
       setIsClientPortal(true);
       setPortalSlug(slug);
+      setTimeout(() => {
+        setPortalSlug(prev => {
+          if (prev === slug) {
+            setClientId(slug); // forzar carga de posts aunque el cliente esté borrado
+            return '';
+          }
+          return prev;
+        });
+      }, 3000);
       return;
     }
     setIsAdmin(true);
@@ -917,6 +927,14 @@ export default function App() {
     if (found) {
       setClientId(found.id);
       setSearch(found.name);
+      setPortalSlug('');
+      return;
+    }
+    // Cliente borrado o no en la lista activa — usamos el slug directamente como client_id
+    // para que el portal pueda cargar sus posts igualmente (cliente aprobó antes de que se borrara)
+    if (dynamicClients !== undefined) {
+      // Supabase ya respondió y sigue sin encontrarse → forzar clientId con el slug
+      setClientId(portalSlug);
       setPortalSlug('');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

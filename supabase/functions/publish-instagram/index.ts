@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const IG_API               = 'https://graph.instagram.com/v21.0';
+const IG_API_NEW           = 'https://api.instagram.com/v21.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
