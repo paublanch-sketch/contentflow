@@ -31,7 +31,7 @@ export default function AdminLogin({ onLogin }: Props) {
       setPass('');
       setTimeout(() => setShake(false), 500);
     } else {
-      sessionStorage.setItem('cf_admin_auth', '1');
+      localStorage.setItem('cf_admin_auth', '1');
       onLogin();
     }
     setLoading(false);

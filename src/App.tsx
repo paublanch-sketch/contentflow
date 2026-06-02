@@ -644,7 +644,7 @@ export default function App() {
   const [isPrivacyPage, setIsPrivacyPage] = useState(false);
   const [isPrivacyPageApp, setIsPrivacyPageApp] = useState(false);
   const [adminAuth, setAdminAuth]   = useState<boolean>(
-    () => sessionStorage.getItem('cf_admin_auth') === '1'
+    () => localStorage.getItem('cf_admin_auth') === '1'
   );
   const [search, setSearch]         = useState('');
   const [showDrop, setShowDrop]     = useState(false);
