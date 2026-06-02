@@ -708,6 +708,9 @@ export default function App() {
     try { return new Set(JSON.parse(localStorage.getItem(LS_DELETED_CLIENTS) || '[]')); } catch { return new Set(); }
   });
 
+  // ── Clientes borrados completos (para poder restaurarlos) ──
+  const [deletedClients, setDeletedClients] = useState<Client[]>([]);
+
   // ── Cargar clientes dinámicos y extra_platforms desde Supabase al montar ──
   useEffect(() => {
     supabase
@@ -781,15 +784,15 @@ export default function App() {
         type ClientRow = Client & { deleted?: boolean };
 
         // IDs borrados en Supabase → actualizar deletedClientIds (cubre incógnito y otros navegadores)
-        const remoteDeletedIds = (data as ClientRow[])
-          .filter(c => c.deleted)
-          .map(c => c.id);
+        const remoteDeleted = (data as ClientRow[]).filter(c => c.deleted);
+        const remoteDeletedIds = remoteDeleted.map(c => c.id);
         if (remoteDeletedIds.length > 0) {
           setDeletedClientIds(prev => {
             const merged = new Set([...prev, ...remoteDeletedIds]);
             try { localStorage.setItem(LS_DELETED_CLIENTS, JSON.stringify([...merged])); } catch {}
             return merged;
           });
+          setDeletedClients(remoteDeleted as Client[]);
         }
 
         // Clientes activos remotos (no estáticos, no borrados)
@@ -1118,6 +1121,31 @@ export default function App() {
     setShowAddSocialModal(false);
   };
 
+  // ── Restaurar cliente borrado ──
+  const handleRestoreClient = async (clientToRestore: Client) => {
+    await supabase.from('clients').update({ deleted: false }).eq('id', clientToRestore.id);
+
+    // Quitar de deletedClientIds
+    const updatedDeleted = new Set(deletedClientIds);
+    updatedDeleted.delete(clientToRestore.id);
+    setDeletedClientIds(updatedDeleted);
+    try { localStorage.setItem(LS_DELETED_CLIENTS, JSON.stringify([...updatedDeleted])); } catch {}
+
+    // Quitar de deletedClients
+    setDeletedClients(prev => prev.filter(c => c.id !== clientToRestore.id));
+
+    // Añadir a dynamicClients si no es estático
+    const staticIds = new Set((clientsData as Client[]).map(c => c.id));
+    if (!staticIds.has(clientToRestore.id)) {
+      const updated = [...dynamicClients, clientToRestore];
+      setDynamicClients(updated);
+      try { localStorage.setItem(LS_DYNAMIC_CLIENTS, JSON.stringify(updated)); } catch {}
+    }
+
+    setShowDrop(false);
+    selectClient(clientToRestore.id);
+  };
+
   // ── Borrar cliente (soft-delete: deleted=true en Supabase, persiste en todos los navegadores) ──
   const handleDeleteClient = async () => {
     if (!clientId) return;
@@ -1208,7 +1236,7 @@ export default function App() {
               </div>
 
               {/* Dropdown */}
-              {showDrop && filteredClients.length > 0 && (
+              {showDrop && (filteredClients.length > 0 || deletedClients.filter(c => !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())).length > 0) && (
                 <div className="absolute top-full left-0 mt-1 w-80 bg-[#1a1d27] border border-gray-700 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
                   {filteredClients.length === ALL_CLIENTS.length && (
                     <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-700">
@@ -1230,7 +1258,32 @@ export default function App() {
                       ))}
                     </button>
                   ))}
-                  {filteredClients.length === 0 && (
+                  {/* ── Clientes borrados restaurables ── */}
+                  {(() => {
+                    const filtered = deletedClients.filter(c =>
+                      !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())
+                    );
+                    if (filtered.length === 0) return null;
+                    return (
+                      <>
+                        <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-red-500 border-t border-gray-700 mt-1">
+                          🗑 Borrados — click para restaurar
+                        </div>
+                        {filtered.map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => handleRestoreClient(c)}
+                            className="w-full text-left px-3 py-2 hover:bg-red-950 flex items-center gap-2 transition-colors text-gray-500 hover:text-red-300"
+                          >
+                            <PlatformBadge p={c.platform} small />
+                            <span className="text-sm font-bold truncate line-through">{c.name}</span>
+                            <span className="text-[9px] text-red-500 font-bold uppercase ml-auto shrink-0">Restaurar</span>
+                          </button>
+                        ))}
+                      </>
+                    );
+                  })()}
+                  {filteredClients.length === 0 && deletedClients.filter(c => !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())).length === 0 && (
                     <div className="px-3 py-4 text-xs text-gray-500 text-center">Sin resultados</div>
                   )}
                 </div>
