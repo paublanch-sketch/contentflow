@@ -1,5 +1,5 @@
 // supabase/functions/ig-oauth-callback/index.ts
-// Instagram Login API (sub-app 972574845424224): code → short token → LONG token (exchange real) → user_id+username para publicar
+// Instagram Login API (sub-app 972574845424224): code → short token → long token → username
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -47,51 +47,29 @@ Deno.serve(async (req) => {
       throw new Error(shortData.error_message || shortData.error?.message || JSON.stringify(shortData));
     }
     const shortToken = shortData.access_token;
-    const oauthUserId = String(shortData.user_id); // ID del flujo OAuth — NO sirve para publicar
+    const igUserId   = String(shortData.user_id);
+    // La nueva Instagram Login for Business API devuelve tokens ya long-lived (60 días)
+    // El endpoint graph.instagram.com/access_token es de la antigua Basic Display API → no aplica
+    const longToken   = shortToken;
+    const expiresInMs = 5184000 * 1000; // 60 días por defecto
+    console.log('[Step 1] ✓ user_id:', igUserId, '| token long-lived directo');
 
-    // ── 1b. Intercambiar short-lived (1h) → long-lived (60 días) DE VERDAD ────────
-    // La Instagram Login API NO devuelve tokens largos automáticamente: hay que
-    // llamar a graph.instagram.com/access_token?grant_type=ig_exchange_token.
-    let longToken   = shortToken;
-    let expiresInMs = 60 * 60 * 1000; // fallback conservador: 1h (lo que dura el short)
+    // ── 2. Obtener username vía api.instagram.com (tokens IGAAN usan esta URL, NO graph.instagram.com)
+    let igUsername = igUserId;
+    let igUserIdReal = igUserId;
     try {
-      const exchUrl = `https://graph.instagram.com/access_token`
-        + `?grant_type=ig_exchange_token`
-        + `&client_secret=${encodeURIComponent(META_APP_SECRET)}`
-        + `&access_token=${encodeURIComponent(shortToken)}`;
-      const exchRes = await fetch(exchUrl);
-      const exchData = await exchRes.json();
-      console.log('[Step 1b] exchange:', JSON.stringify(exchData));
-      if (exchData.access_token) {
-        longToken   = exchData.access_token;
-        // Usar el expires_in REAL que devuelve Meta (en segundos), no un valor inventado
-        expiresInMs = (Number(exchData.expires_in) || 5184000) * 1000;
-      }
-    } catch (e: any) {
-      console.log('[Step 1b] exchange error:', e.message, '— usando short token');
-    }
-
-    // ── 2. Obtener el user_id REAL para publicar vía graph.instagram.com/me ───────
-    // (mismo host que usa publish-instagram; token como query param, NO Bearer)
-    let igUsername   = oauthUserId;
-    let igUserIdReal = oauthUserId;
-    try {
-      const meUrl = `https://graph.instagram.com/v21.0/me`
-        + `?fields=user_id,username,account_type`
-        + `&access_token=${encodeURIComponent(longToken)}`;
-      const userRes = await fetch(meUrl);
+      const userRes = await fetch(
+        `https://api.instagram.com/v21.0/me?fields=id,username,name`,
+        { headers: { 'Authorization': `Bearer ${longToken}` } }
+      );
       const userData = await userRes.json();
-      console.log('[Step 2] graph.instagram.com/me:', JSON.stringify(userData));
-      if (!userData.error) {
-        // user_id es el Instagram-scoped ID válido para /{id}/media; id como respaldo
-        if (userData.user_id || userData.id) igUserIdReal = String(userData.user_id || userData.id);
-        if (userData.username) igUsername = userData.username;
-        if (userData.account_type) console.log('[Step 2] account_type:', userData.account_type);
-      } else {
-        console.log('[Step 2] me error:', JSON.stringify(userData.error));
+      console.log('[Step 2] api.instagram.com/me:', JSON.stringify(userData));
+      if (!userData.error && (userData.username || userData.name)) {
+        igUsername   = userData.username || userData.name;
+        igUserIdReal = String(userData.id || igUserId);
       }
     } catch(e: any) {
-      console.log('[Step 2] fetch error:', e.message, '— usando oauth user_id');
+      console.log('[Step 2] fetch error:', e.message, '— usando user_id como username');
     }
     console.log('[Step 2] ✓ ig_user_id:', igUserIdReal, 'username:', igUsername);
 
@@ -108,7 +86,7 @@ Deno.serve(async (req) => {
 
     console.log('[SUCCESS]', igUsername);
     return new Response(
-      JSON.stringify({ success: true, ig_username: igUsername, ig_user_id: igUserIdReal }),
+      JSON.stringify({ success: true, ig_username: igUsername, ig_user_id: igUserId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
